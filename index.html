@@ -549,7 +549,7 @@ body { font-family:var(--font); background:var(--bg); color:var(--text); height:
     <button class="auth-tab" onclick="switchTab('register')">Регистрация</button>
   </div>
   <div class="auth-form">
-    <input class="inp" id="authLogin" placeholder="Логин" autocomplete="off" autocapitalize="none" onkeydown="if(e.key==='Enter')doAuth()">
+    <input class="inp" id="authLogin" placeholder="Логин" autocomplete="off" autocapitalize="none" onkeydown="if(event.key==='Enter')doAuth()">
     <input class="inp" id="authPass" type="password" placeholder="Пароль" onkeydown="if(event.key==='Enter')doAuth()">
     <input class="inp" id="authPass2" type="password" placeholder="Повторите пароль" style="display:none" onkeydown="if(event.key==='Enter')doAuth()">
     <div class="auth-err" id="authErr"></div>
