@@ -90,9 +90,14 @@ body { font-family:var(--font); background:var(--bg); color:var(--text); height:
   background:var(--chat-bg);
 }
 @media(max-width:768px){
-  .sidebar { width:100%; max-width:100%; }
-  .chat-view { position:absolute; inset:0; z-index:5; transform:translateX(100%); transition:transform .25s; }
+  .sidebar { width:100%; max-width:100%; z-index:10; }
+  .chat-view { 
+    position:fixed; inset:0; z-index:20; 
+    transform:translateX(100%); transition:transform .3s cubic-bezier(.4,0,.2,1);
+    background:var(--chat-bg);
+  }
   .chat-view.open { transform:translateX(0); }
+  #activeChat { width:100%; }
 }
 @media(min-width:769px){
   .sidebar { position:relative; width:360px; }
