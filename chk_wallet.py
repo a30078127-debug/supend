@@ -1,0 +1,5 @@
+﻿f=open('ui/gui.py',encoding='utf-8')
+c=f.read()
+f.close()
+idx=c.find('sup_wallet')
+print(repr(c[idx-20:idx+120]))

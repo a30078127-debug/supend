@@ -1,0 +1,5 @@
+﻿f=open('ui/gui.py',encoding='utf-8')
+c=f.read()
+f.close()
+idx=c.find('_ts(msg.timestamp)')
+print(repr(c[idx-200:idx+50]))

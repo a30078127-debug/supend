@@ -1,0 +1,5 @@
+﻿f=open('ui/gui.py',encoding='utf-8')
+c=f.read()
+f.close()
+idx=c.find('prof.avatar')
+print(repr(c[idx-10:idx+100]))

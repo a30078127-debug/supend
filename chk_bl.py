@@ -1,0 +1,5 @@
+﻿f=open('ui/gui.py',encoding='utf-8')
+c=f.read()
+f.close()
+idx=c.find('ctxBlockBtn')
+print(repr(c[idx-50:idx+150]))

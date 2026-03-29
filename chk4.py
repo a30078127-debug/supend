@@ -1,0 +1,7 @@
+﻿f=open('ui/gui.py',encoding='utf-8')
+c=f.read()
+f.close()
+idx=c.find('isBlocked')
+print(repr(c[idx:idx+100]))
+idx2=c.find('updateBlockedBar')
+print(repr(c[idx2-50:idx2+150]))

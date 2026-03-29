@@ -1,0 +1,7 @@
+﻿f=open('ui/gui.py',encoding='utf-8')
+c=f.read()
+f.close()
+print('asyncio import:', 'import asyncio' in c)
+print('register line:', 'await self.tracker.register' in c)
+idx=c.find('await self.tracker.register')
+if idx>=0: print(repr(c[idx-4:idx+80]))

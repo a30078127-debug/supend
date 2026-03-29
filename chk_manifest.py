@@ -1,0 +1,5 @@
+﻿f=open('ui/gui.py',encoding='utf-8')
+c=f.read()
+f.close()
+print('manifest route:', '/manifest.json' in c)
+print('manifest handler:', '_manifest' in c)

@@ -1,0 +1,5 @@
+﻿f=open('ui/gui.py',encoding='utf-8')
+c=f.read()
+f.close()
+idx=c.find("elif c == 'search'")
+print(repr(c[idx:idx+400]))

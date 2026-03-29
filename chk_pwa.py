@@ -1,0 +1,5 @@
+﻿f=open('ui/gui.py',encoding='utf-8')
+c=f.read()
+f.close()
+print('charset found:', '<meta charset' in c)
+print('manifest found:', 'manifest.json' in c)

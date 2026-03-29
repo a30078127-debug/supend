@@ -1,0 +1,5 @@
+﻿f=open('main.py',encoding='utf-8')
+c=f.read()
+f.close()
+idx=c.find('GUIServer')
+print(repr(c[idx:idx+200]))
