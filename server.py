@@ -1,243 +1,169 @@
-"""Supend Web Server — простой мессенджер для браузера."""
-import asyncio, json, os, hashlib, time, uuid
+"""Supend Web Server."""
+import asyncio, json, os, hashlib, time, uuid, base64, mimetypes
 from aiohttp import web
 
-# ── База данных в памяти ──────────────────────────────────────────────────────
-users = {}      # username -> {password_hash, bio, avatar, created_at}
-sessions = {}   # token -> username
-online = {}     # username -> ws
-messages = {}   # chat_id -> [{id, from, text, time, type}]
-calls = {}      # call_id -> {from, to, type, status}
+users = {}
+online = {}
+messages = {}
+media = {}
 
-def hash_password(p): return hashlib.sha256(p.encode()).hexdigest()
-def chat_id(a, b): return '_'.join(sorted([a, b]))
+def hash_pw(p): return hashlib.sha256(p.encode()).hexdigest()
+def cid(a, b): return '_'.join(sorted([a, b]))
 def ts(): return int(time.time() * 1000)
 
-# ── WebSocket handler ─────────────────────────────────────────────────────────
 async def ws_handler(request):
-    ws = web.WebSocketResponse()
+    ws = web.WebSocketResponse(max_msg_size=50*1024*1024)
     await ws.prepare(request)
-    
-    current_user = None
-    
-    async def send(data):
-        try: await ws.send_str(json.dumps(data))
+    me = None
+
+    async def send(d):
+        try: await ws.send_str(json.dumps(d))
         except: pass
 
-    async def broadcast_to(username, data):
-        if username in online:
-            try: await online[username].send_str(json.dumps(data))
+    async def push(to, d):
+        if to in online:
+            try: await online[to].send_str(json.dumps(d))
             except: pass
 
-    async for msg in ws:
-        if msg.type != web.WSMsgType.TEXT:
-            break
+    async for raw in ws:
+        if raw.type not in (web.WSMsgType.TEXT, web.WSMsgType.BINARY): break
         try:
-            data = json.loads(msg.data)
-            cmd = data.get('cmd')
+            d = json.loads(raw.data)
+            c = d.get('cmd')
 
-            # ── Регистрация ───────────────────────────────────────────────────
-            if cmd == 'register':
-                u = data['username'].strip().lower()
-                p = data['password']
-                if not u or not p:
-                    await send({'type': 'error', 'msg': 'Введи логин и пароль'}); continue
-                if len(u) < 3:
-                    await send({'type': 'error', 'msg': 'Логин минимум 3 символа'}); continue
-                if not u.replace('_','').isalnum():
-                    await send({'type': 'error', 'msg': 'Только буквы, цифры и _'}); continue
-                if u in users:
-                    await send({'type': 'register_error', 'msg': 'Логин занят'}); continue
-                users[u] = {
-                    'password': hash_password(p),
-                    'bio': data.get('bio', ''),
-                    'avatar': data.get('avatar', ''),
-                    'created_at': ts()
-                }
-                token = str(uuid.uuid4())
-                sessions[token] = u
-                current_user = u
-                online[u] = ws
-                await send({'type': 'auth_ok', 'username': u, 'token': token,
-                           'bio': users[u]['bio'], 'avatar': users[u]['avatar']})
+            if c == 'register':
+                u = d['username'].strip().lower()
+                p = d['password']
+                if not u or not p: await send({'type':'register_error','msg':'Введи логин и пароль'}); continue
+                if len(u) < 3 or not u.replace('_','').isalnum(): await send({'type':'register_error','msg':'Логин: 3+ букв/цифр/_'}); continue
+                if u in users: await send({'type':'register_error','msg':'Логин занят'}); continue
+                users[u] = {'password':hash_pw(p),'bio':d.get('bio',''),'avatar':d.get('avatar',''),'created_at':ts()}
+                me = u; online[u] = ws
+                await send({'type':'auth_ok','username':u,'bio':users[u]['bio'],'avatar':users[u]['avatar']})
 
-            # ── Вход ─────────────────────────────────────────────────────────
-            elif cmd == 'login':
-                u = data['username'].strip().lower()
-                p = data['password']
-                if u not in users:
-                    await send({'type': 'login_error', 'msg': 'Пользователь не найден'}); continue
-                if users[u]['password'] != hash_password(p):
-                    await send({'type': 'login_error', 'msg': 'Неверный пароль'}); continue
-                token = str(uuid.uuid4())
-                sessions[token] = u
-                current_user = u
-                online[u] = ws
-                await send({'type': 'auth_ok', 'username': u, 'token': token,
-                           'bio': users[u]['bio'], 'avatar': users[u]['avatar']})
-                # Уведомить контакты что онлайн
-                for cid, msgs in messages.items():
-                    if u in cid.split('_'):
-                        other = [x for x in cid.split('_') if x != u]
-                        if other and other[0] in online:
-                            await broadcast_to(other[0], {'type': 'user_online', 'username': u})
+            elif c == 'login':
+                u = d['username'].strip().lower(); p = d['password']
+                if u not in users: await send({'type':'login_error','msg':'Пользователь не найден'}); continue
+                if users[u]['password'] != hash_pw(p): await send({'type':'login_error','msg':'Неверный пароль'}); continue
+                me = u; online[u] = ws
+                await send({'type':'auth_ok','username':u,'bio':users[u]['bio'],'avatar':users[u]['avatar']})
+                for ck in messages:
+                    if u in ck.split('_'):
+                        other = [x for x in ck.split('_') if x != u]
+                        if other: await push(other[0], {'type':'user_online','username':u})
 
-            # ── Поиск пользователя ────────────────────────────────────────────
-            elif cmd == 'search':
-                if not current_user:
-                    await send({'type': 'error', 'msg': 'Не авторизован'}); continue
-                q = data.get('username', '').strip().lower()
-                if q in users and q != current_user:
-                    u_data = users[q]
-                    await send({'type': 'search_result', 'found': True,
-                               'username': q, 'bio': u_data.get('bio', ''),
-                               'avatar': u_data.get('avatar', ''),
-                               'online': q in online})
+            elif c == 'save_profile':
+                if not me: continue
+                users[me]['bio'] = d.get('bio','')
+                if d.get('avatar'): users[me]['avatar'] = d['avatar']
+
+            elif c == 'search':
+                if not me: continue
+                q = d.get('username','').strip().lower()
+                if q in users and q != me:
+                    await send({'type':'search_result','found':True,'username':q,'bio':users[q].get('bio',''),'avatar':users[q].get('avatar',''),'online':q in online})
                 else:
-                    await send({'type': 'search_result', 'found': False})
+                    await send({'type':'search_result','found':False})
 
-            # ── Отправка сообщения ────────────────────────────────────────────
-            elif cmd == 'send_msg':
-                if not current_user: continue
-                to = data['to']
-                text = data.get('text', '')
-                msg_type = data.get('type', 'text')
+            elif c == 'send_msg':
+                if not me: continue
+                to = d.get('to','')
                 if not to or to not in users: continue
+                msg_type = d.get('type','text')
+                text = d.get('text','')
                 if msg_type == 'text' and not text.strip(): continue
-                cid = chat_id(current_user, to)
-                if cid not in messages: messages[cid] = []
-                msg_obj = {
-                    'id': str(uuid.uuid4()),
-                    'from': current_user,
-                    'to': to,
-                    'text': text,
-                    'time': ts(),
-                    'type': msg_type,
-                    'url': data.get('url', ''),
-                    'filename': data.get('filename', ''),
-                    'duration': data.get('duration', ''),
-                    'reply_to': data.get('reply_to'),
-                    'reply_to_text': data.get('reply_to_text', ''),
-                }
-                messages[cid].append(msg_obj)
-                # Отправить отправителю (эхо)
-                await send({'type': 'message', **msg_obj})
-                # Отправить получателю если онлайн
-                if to in online:
-                    await broadcast_to(to, {'type': 'message', **msg_obj})
+                url = d.get('url','')
+                if url and url.startswith('data:'):
+                    try:
+                        header, b64 = url.split(',',1)
+                        file_bytes = base64.b64decode(b64)
+                        mime = header.split(':')[1].split(';')[0]
+                        ext = mimetypes.guess_extension(mime) or '.bin'
+                        fid = str(uuid.uuid4()) + ext
+                        media[fid] = (file_bytes, mime)
+                        url = f'/media/{fid}'
+                    except Exception as e:
+                        print('media err:', e); url = ''
+                ck = cid(me, to)
+                if ck not in messages: messages[ck] = []
+                msg = {'id':str(uuid.uuid4()),'from':me,'to':to,'text':text,'time':ts(),
+                       'type':msg_type,'url':url,'filename':d.get('filename',''),
+                       'duration':d.get('duration',''),'reply_to':d.get('reply_to'),
+                       'reply_to_text':d.get('reply_to_text','')}
+                messages[ck].append(msg)
+                await send({'type':'message',**msg})
+                await push(to, {'type':'message',**msg})
 
-            # ── Загрузка истории ──────────────────────────────────────────────
-            elif cmd == 'get_history':
-                if not current_user: continue
-                with_user = data.get('with')
-                if not with_user: continue
-                cid = chat_id(current_user, with_user)
-                msgs = messages.get(cid, [])[-100:]  # последние 100
-                await send({'type': 'history', 'with': with_user, 'messages': msgs})
+            elif c == 'get_history':
+                if not me: continue
+                w = d.get('with',''); ck = cid(me,w)
+                await send({'type':'history','with':w,'messages':messages.get(ck,[])[-100:]})
 
-            # ── WebRTC сигналинг ──────────────────────────────────────────────
-            elif cmd == 'call_signal':
-                if not current_user: continue
-                to = data.get('to')
-                if to and to in online:
-                    await broadcast_to(to, {
-                        'type': 'call_signal',
-                        'from': current_user,
-                        'signal': data.get('signal'),
-                        'call_type': data.get('call_type', 'voice')
-                    })
-
-            # ── Статус звонка ─────────────────────────────────────────────────
-            elif cmd == 'call_status':
-                if not current_user: continue
-                to = data.get('to')
-                if to and to in online:
-                    await broadcast_to(to, {
-                        'type': 'call_status',
-                        'from': current_user,
-                        'status': data.get('status')
-                    })
-
-            # ── Получить список чатов ─────────────────────────────────────────
-            elif cmd == 'save_profile':
-                if not current_user: continue
-                users[current_user]['bio'] = data.get('bio', '')
-                users[current_user]['avatar'] = data.get('avatar', '')
-
-            elif cmd == 'get_chats':
-                if not current_user: continue
+            elif c == 'get_chats':
+                if not me: continue
                 chats = []
-                for cid, msgs in messages.items():
-                    if current_user in cid.split('_') and msgs:
-                        other = [x for x in cid.split('_') if x != current_user][0]
+                for ck, msgs in messages.items():
+                    if me in ck.split('_') and msgs:
+                        other = [x for x in ck.split('_') if x != me][0]
                         last = msgs[-1]
-                        unread = sum(1 for m in msgs if m['from'] != current_user and not m.get('read'))
-                        chats.append({
-                            'username': other,
-                            'last_msg': last['text'],
-                            'last_time': last['time'],
-                            'unread': unread,
-                            'online': other in online,
-                            'avatar': users.get(other, {}).get('avatar', ''),
-                            'bio': users.get(other, {}).get('bio', ''),
-                        })
-                chats.sort(key=lambda x: x['last_time'], reverse=True)
-                await send({'type': 'chats', 'chats': chats})
+                        unread = sum(1 for m in msgs if m['from']!=me and not m.get('read'))
+                        lt = last['text'] or ('🎤' if last['type']=='voice' else '📷' if last['type']=='image' else '📎')
+                        chats.append({'username':other,'last_msg':lt,'last_time':last['time'],'unread':unread,
+                                      'online':other in online,'avatar':users.get(other,{}).get('avatar',''),'bio':users.get(other,{}).get('bio','')})
+                chats.sort(key=lambda x:x['last_time'],reverse=True)
+                await send({'type':'chats','chats':chats})
 
-            # ── Прочитать сообщения ───────────────────────────────────────────
-            elif cmd == 'mark_read':
-                if not current_user: continue
-                with_user = data.get('with')
-                cid = chat_id(current_user, with_user)
-                for m in messages.get(cid, []):
-                    if m['from'] != current_user:
-                        m['read'] = True
+            elif c == 'mark_read':
+                if not me: continue
+                ck = cid(me, d.get('with',''))
+                for m in messages.get(ck,[]): 
+                    if m['from'] != me: m['read'] = True
+
+            elif c == 'call_signal':
+                if not me: continue
+                await push(d.get('to',''), {'type':'call_signal','from':me,'signal':d.get('signal'),'call_type':d.get('call_type','voice')})
+
+            elif c == 'call_status':
+                if not me: continue
+                await push(d.get('to',''), {'type':'call_status','from':me,'status':d.get('status')})
 
         except Exception as e:
-            print(f'WS error: {e}')
+            print(f'WS err: {e}')
 
-    # Отключение
-    if current_user:
-        online.pop(current_user, None)
-        # Уведомить контакты
-        for cid in messages:
-            if current_user in cid.split('_'):
-                other = [x for x in cid.split('_') if x != current_user]
-                if other and other[0] in online:
-                    await broadcast_to(other[0], {'type': 'user_offline', 'username': current_user})
+    if me:
+        online.pop(me, None)
+        for ck in messages:
+            if me in ck.split('_'):
+                other = [x for x in ck.split('_') if x != me]
+                if other: await push(other[0], {'type':'user_offline','username':me})
     return ws
 
-# ── HTTP handler (отдаёт HTML) ────────────────────────────────────────────────
 async def index_handler(request):
-    html = open('index.html', encoding='utf-8').read()
-    return web.Response(text=html, content_type='text/html')
+    return web.Response(text=open('index.html',encoding='utf-8').read(), content_type='text/html')
+
+async def media_handler(request):
+    fid = request.match_info['fid']
+    if fid not in media: raise web.HTTPNotFound()
+    data, mime = media[fid]
+    return web.Response(body=data, content_type=mime, headers={'Cache-Control':'public,max-age=86400'})
 
 async def manifest_handler(request):
-    m = {
-        "name": "Supend",
-        "short_name": "Supend",
-        "start_url": "/",
-        "display": "standalone",
-        "background_color": "#ffffff",
-        "theme_color": "#1ABC9C",
-        "icons": [
-            {"src": "/icon.png", "sizes": "192x192", "type": "image/png"},
-            {"src": "/icon.png", "sizes": "512x512", "type": "image/png"}
-        ]
-    }
+    m = {"name":"Supend","short_name":"Supend","start_url":"/","display":"standalone",
+         "background_color":"#ffffff","theme_color":"#1ABC9C",
+         "icons":[{"src":"/icon.png","sizes":"192x192","type":"image/png"}]}
     return web.Response(text=json.dumps(m), content_type='application/json')
 
-# ── Запуск ────────────────────────────────────────────────────────────────────
 async def main():
     port = int(os.environ.get('PORT', 8080))
-    app = web.Application()
+    app = web.Application(client_max_size=50*1024*1024)
     app.router.add_get('/', index_handler)
     app.router.add_get('/ws', ws_handler)
+    app.router.add_get('/media/{fid}', media_handler)
     app.router.add_get('/manifest.json', manifest_handler)
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, '0.0.0.0', port).start()
-    print(f'[*] Supend запущен на порту {port}')
+    print(f'[*] Supend на порту {port}')
     await asyncio.Event().wait()
 
 if __name__ == '__main__':
