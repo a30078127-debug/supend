@@ -1,1 +1,1 @@
-web: python main.py --gui --no-history --tracker caboose.proxy.rlwy.net:48109 --gui-port $PORT
+web: python server.py
