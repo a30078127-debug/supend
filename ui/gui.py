@@ -1551,7 +1551,8 @@ window.addEventListener('DOMContentLoaded',()=>{
 });
 
 function connectWS(){
-  ws=new WebSocket('ws://'+location.host+'/ws');
+  const proto=location.protocol==='https:'?'wss':'ws';
+  ws=new WebSocket(proto+'://'+location.host+'/ws');
   ws.onopen=()=>setWs(true);
   ws.onclose=()=>{setWs(false);setTimeout(connectWS,2000)};
   ws.onerror=()=>setWs(false);
