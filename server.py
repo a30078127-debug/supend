@@ -100,8 +100,10 @@ async def ws_handler(request):
             elif cmd == 'send_msg':
                 if not current_user: continue
                 to = data['to']
-                text = data.get('text', '').strip()
-                if not text or to not in users: continue
+                text = data.get('text', '')
+                msg_type = data.get('type', 'text')
+                if not to or to not in users: continue
+                if msg_type == 'text' and not text.strip(): continue
                 cid = chat_id(current_user, to)
                 if cid not in messages: messages[cid] = []
                 msg_obj = {
@@ -110,11 +112,15 @@ async def ws_handler(request):
                     'to': to,
                     'text': text,
                     'time': ts(),
-                    'type': 'text',
+                    'type': msg_type,
+                    'url': data.get('url', ''),
+                    'filename': data.get('filename', ''),
+                    'duration': data.get('duration', ''),
                     'reply_to': data.get('reply_to'),
+                    'reply_to_text': data.get('reply_to_text', ''),
                 }
                 messages[cid].append(msg_obj)
-                # Отправить отправителю
+                # Отправить отправителю (эхо)
                 await send({'type': 'message', **msg_obj})
                 # Отправить получателю если онлайн
                 if to in online:
@@ -153,6 +159,11 @@ async def ws_handler(request):
                     })
 
             # ── Получить список чатов ─────────────────────────────────────────
+            elif cmd == 'save_profile':
+                if not current_user: continue
+                users[current_user]['bio'] = data.get('bio', '')
+                users[current_user]['avatar'] = data.get('avatar', '')
+
             elif cmd == 'get_chats':
                 if not current_user: continue
                 chats = []

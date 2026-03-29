@@ -923,7 +923,7 @@ function openChatWith(username, avatar, online) {
   // Show chat
   document.getElementById('noChatPlaceholder').style.display = 'none';
   const ac = document.getElementById('activeChat');
-  ac.style.display = 'flex';
+  ac.style.cssText = 'display:flex;flex-direction:column;height:100dvh;width:100%;';
 
   // Mobile: show chat view
   document.getElementById('chatView').classList.add('open');
@@ -957,15 +957,53 @@ function renderHistory(d) {
 
 function onMessage(m) {
   const isActive = (m.from === activeChat) || (m.to === activeChat && m.from === myUsername);
-  if (isActive || m.from === myUsername) {
+  // Show message in chat immediately
+  if (isActive) {
     appendBubble(m);
     const msgs = document.getElementById('messages');
     msgs.scrollTop = msgs.scrollHeight;
   }
-  if (m.from !== myUsername) {
-    cmd({ cmd: 'get_chats' });
-    if (!isActive) toast('Сообщение от @' + m.from + ': ' + m.text.slice(0, 40));
+  // Update chat list instantly
+  const other = m.from === myUsername ? m.to : m.from;
+  updateChatListItem(other, m);
+  // Notify if not active chat
+  if (m.from !== myUsername && !isActive) {
+    toast('💬 @' + m.from + ': ' + (m.text || 'Медиа').slice(0, 40));
   }
+}
+
+function updateChatListItem(username, lastMsg) {
+  const list = document.getElementById('chatsList');
+  const empty = document.getElementById('emptyChats');
+  empty.style.display = 'none';
+  let el = document.getElementById('ci_' + username);
+  const data = chatsData[username] || { username, online: false, avatar: '', unread: 0 };
+  data.last_msg = lastMsg.text || (lastMsg.type === 'voice' ? '🎤 Голосовое' : lastMsg.type === 'image' ? '📷 Фото' : '📎 Файл');
+  data.last_time = lastMsg.time;
+  if (lastMsg.from !== myUsername) data.unread = (data.unread || 0) + 1;
+  chatsData[username] = data;
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'chat-item' + (activeChat === username ? ' active' : '');
+    el.id = 'ci_' + username;
+    el.onclick = () => openChatWith(username, data.avatar, data.online);
+    list.prepend(el);
+  }
+  const avHtml = data.avatar ? `<img src="${data.avatar}">` : username[0].toUpperCase();
+  const dot = data.online ? '<div class="online-dot"></div>' : '';
+  const badge = data.unread > 0 ? `<div class="unread-badge">${data.unread}</div>` : '';
+  el.className = 'chat-item' + (activeChat === username ? ' active' : '');
+  el.innerHTML = `
+    <div class="ci-av">${avHtml}${dot}</div>
+    <div class="ci-body">
+      <div class="ci-top">
+        <div class="ci-name">@${username}</div>
+        <div class="ci-right">${badge}<div class="ci-time">${formatTime(data.last_time)}</div></div>
+      </div>
+      <div class="ci-last">${esc(data.last_msg || '')}</div>
+    </div>`;
+  el.onclick = () => openChatWith(username, data.avatar, data.online);
+  list.prepend(el);
 }
 
 function appendBubble(m) {
@@ -982,21 +1020,22 @@ function appendBubble(m) {
 
   let content = '';
   if (m.type === 'image') {
-    content = `<img class="msg-img" src="${m.url}" onclick="openLightbox('${m.url}')">`;
+    content = `<img class="msg-img" src="${m.url}" onclick="openLightbox('${m.url}')" onerror="this.style.display='none'">`;
   } else if (m.type === 'video') {
-    content = `<video controls style="max-width:220px;border-radius:12px" src="${m.url}"></video>`;
+    content = `<video controls style="max-width:220px;border-radius:12px;display:block" src="${m.url}"></video>`;
   } else if (m.type === 'voice') {
-    const bars = Array.from({length:20}, (_,i) =>
+    const bars = Array.from({length:20}, () =>
       `<div class="voice-bar" style="height:${8+Math.random()*20}px"></div>`).join('');
+    const dur = m.duration || '0:00';
     content = `<div class="voice-bubble">
       <button class="voice-play" onclick="playVoice('${m.url}',this)">▶</button>
       <div class="voice-bars">${bars}</div>
-      <span class="voice-dur">${m.duration||'0:00'}</span>
+      <span class="voice-dur">${dur}</span>
     </div>`;
   } else if (m.type === 'file') {
     content = `<div class="msg-file">📎 <span>${esc(m.filename||'Файл')}</span></div>`;
   } else {
-    content = esc(m.text || '');
+    content = esc(m.text || '').replace(/\n/g,'<br>');
   }
 
   wrap.innerHTML = `
