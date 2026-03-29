@@ -975,22 +975,24 @@ function renderHistory(d) {
 }
 
 function onMessage(m) {
-  const isActive = (m.from === activeChat) || (m.to === activeChat && m.from === myUsername);
-  // Не дублировать свои сообщения (уже показаны локально)
-  if (m.from === myUsername && isActive) {
-    // Обновить ID локального сообщения если нужно
-    updateChatListItem(activeChat, m);
-    return;
-  }
-  if (isActive) {
-    appendBubble(m);
-    const msgs = document.getElementById('messages');
-    msgs.scrollTop = msgs.scrollHeight;
-  }
   const other = m.from === myUsername ? m.to : m.from;
-  updateChatListItem(other, m);
-  if (m.from !== myUsername && !isActive) {
-    toast('💬 @' + m.from + ': ' + (m.text || 'Медиа').slice(0, 40));
+  const isActive = other === activeChat;
+  
+  // Сообщение от другого пользователя — показать в чате и обновить список
+  if (m.from !== myUsername) {
+    if (isActive) {
+      appendBubble(m);
+      const msgs = document.getElementById('messages');
+      msgs.scrollTop = msgs.scrollHeight;
+      cmd({ cmd: 'mark_read', with: m.from });
+    } else {
+      toast('💬 @' + m.from + ': ' + (m.text || 'Медиа').slice(0, 40));
+    }
+    updateChatListItem(other, m);
+  } else {
+    // Эхо своего сообщения от сервера — только обновить список чатов
+    // (сообщение уже показано локально через localMsg)
+    updateChatListItem(other, m);
   }
 }
 
@@ -1130,18 +1132,43 @@ function autoH(el) {
 }
 
 // ── File sending ─────────────────────────────────────────────────────────────
-function sendFile(inp) {
+async function uploadMedia(file) {
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const r = await fetch('/upload', { method: 'POST', body: form });
+    const j = await r.json();
+    return j.url;
+  } catch(e) {
+    toast('Ошибка загрузки файла'); return null;
+  }
+}
+
+async function sendFile(inp) {
   if (!activeChat || !inp.files.length) return;
-  Array.from(inp.files).forEach(file => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const isImg = file.type.startsWith('image/');
-      const isVid = file.type.startsWith('video/');
-      const type = isImg ? 'image' : isVid ? 'video' : 'file';
-      cmd({ cmd: 'send_msg', to: activeChat, type, url: reader.result, filename: file.name, text: file.name });
+  for (const file of inp.files) {
+    const isImg = file.type.startsWith('image/');
+    const isVid = file.type.startsWith('video/');
+    const isAud = file.type.startsWith('audio/');
+    const type = isImg ? 'image' : isVid ? 'video' : isAud ? 'voice' : 'file';
+    
+    // Показать локально сразу (с blob URL)
+    const blobUrl = URL.createObjectURL(file);
+    const localMsg = {
+      id: 'local_' + Date.now(),
+      from: myUsername, to: activeChat,
+      text: file.name, time: Date.now(),
+      type, url: blobUrl, filename: file.name,
     };
-    reader.readAsDataURL(file);
-  });
+    appendBubble(localMsg);
+    document.getElementById('messages').scrollTop = 999999;
+    updateChatListItem(activeChat, localMsg);
+
+    // Загрузить на сервер и отправить реальный URL
+    const url = await uploadMedia(file);
+    if (!url) continue;
+    cmd({ cmd: 'send_msg', to: activeChat, type, url, filename: file.name, text: file.name });
+  }
   inp.value = '';
 }
 
@@ -1152,14 +1179,26 @@ async function startRec() {
     mediaRec = new MediaRecorder(stream);
     const chunks = [];
     mediaRec.ondataavailable = e => chunks.push(e.data);
-    mediaRec.onstop = () => {
+    mediaRec.onstop = async () => {
       const blob = new Blob(chunks, { type: 'audio/webm' });
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dur = formatDur(recSecs);
-        cmd({ cmd: 'send_msg', to: activeChat, type: 'voice', url: reader.result, duration: dur, text: 'Голосовое сообщение' });
+      const dur = formatDur(recSecs);
+      
+      // Показать локально сразу (blob URL)
+      const blobUrl = URL.createObjectURL(blob);
+      const localMsg = {
+        id: 'local_' + Date.now(),
+        from: myUsername, to: activeChat,
+        text: 'Голосовое', time: Date.now(),
+        type: 'voice', url: blobUrl, duration: dur,
       };
-      reader.readAsDataURL(blob);
+      appendBubble(localMsg);
+      document.getElementById('messages').scrollTop = 999999;
+      updateChatListItem(activeChat, localMsg);
+
+      // Загрузить на сервер
+      const file = new File([blob], 'voice.webm', { type: 'audio/webm' });
+      const url = await uploadMedia(file);
+      if (url) cmd({ cmd: 'send_msg', to: activeChat, type: 'voice', url, duration: dur, text: 'Голосовое' });
       stream.getTracks().forEach(t => t.stop());
     };
     mediaRec.start();

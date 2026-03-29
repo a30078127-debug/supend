@@ -73,17 +73,6 @@ async def ws_handler(request):
                 text = d.get('text','')
                 if msg_type == 'text' and not text.strip(): continue
                 url = d.get('url','')
-                if url and url.startswith('data:'):
-                    try:
-                        header, b64 = url.split(',',1)
-                        file_bytes = base64.b64decode(b64)
-                        mime = header.split(':')[1].split(';')[0]
-                        ext = mimetypes.guess_extension(mime) or '.bin'
-                        fid = str(uuid.uuid4()) + ext
-                        media[fid] = (file_bytes, mime)
-                        url = f'/media/{fid}'
-                    except Exception as e:
-                        print('media err:', e); url = ''
                 ck = cid(me, to)
                 if ck not in messages: messages[ck] = []
                 msg = {'id':str(uuid.uuid4()),'from':me,'to':to,'text':text,'time':ts(),
@@ -147,6 +136,24 @@ async def media_handler(request):
     data, mime = media[fid]
     return web.Response(body=data, content_type=mime, headers={'Cache-Control':'public,max-age=86400'})
 
+async def upload_handler(request):
+    try:
+        reader = await request.multipart()
+        field = await reader.next()
+        if not field:
+            raise web.HTTPBadRequest()
+        filename = field.filename or 'file'
+        data = await field.read()
+        mime = field.headers.get('Content-Type', 'application/octet-stream')
+        ext = os.path.splitext(filename)[1] or mimetypes.guess_extension(mime) or '.bin'
+        fid = str(uuid.uuid4()) + ext
+        media[fid] = (data, mime)
+        return web.Response(text=json.dumps({'url': f'/media/{fid}'}), content_type='application/json')
+    except Exception as e:
+        print(f'Upload err: {e}')
+        raise web.HTTPInternalServerError()
+
+
 async def manifest_handler(request):
     m = {"name":"Supend","short_name":"Supend","start_url":"/","display":"standalone",
          "background_color":"#ffffff","theme_color":"#1ABC9C",
@@ -158,6 +165,7 @@ async def main():
     app = web.Application(client_max_size=50*1024*1024)
     app.router.add_get('/', index_handler)
     app.router.add_get('/ws', ws_handler)
+    app.router.add_post('/upload', upload_handler)
     app.router.add_get('/media/{fid}', media_handler)
     app.router.add_get('/manifest.json', manifest_handler)
     runner = web.AppRunner(app)
