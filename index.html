@@ -1034,22 +1034,25 @@ function closeChat() {
 // ── Messages ─────────────────────────────────────────────────────────────────
 function renderHistory(d) {
   const msgs = document.getElementById('messages');
-  const existingIds = new Set([...msgs.querySelectorAll('.msg-wrap')].map(e => e.id.replace('msg_','')));
+  // Собираем ID уже отображённых сообщений (настоящих, не local_)
+  const existingIds = new Set(
+    [...msgs.querySelectorAll('.msg-wrap')]
+      .map(e => e.id.replace('msg_',''))
+      .filter(id => !id.startsWith('local_'))
+  );
+  // Удаляем локальные «оптимистичные» пузыри — сервер пришлёт настоящие
+  msgs.querySelectorAll('.msg-wrap').forEach(e => {
+    if (e.id.startsWith('msg_local_')) e.remove();
+  });
+  // Добавляем только те, которых ещё нет
   let added = 0;
   d.messages.forEach(m => {
-    if (!existingIds.has(m.id) && !existingIds.has('local_')) {
+    if (!existingIds.has(m.id)) {
       appendBubble(m);
       added++;
     }
   });
-  if (added > 0 || msgs.children.length === 0) {
-    // Если это первая загрузка — показать всё
-    if (msgs.children.length === d.messages.length) {
-      msgs.innerHTML = '';
-      d.messages.forEach(m => appendBubble(m));
-    }
-    msgs.scrollTop = msgs.scrollHeight;
-  }
+  if (added > 0) msgs.scrollTop = msgs.scrollHeight;
 }
 
 function onMessage(m) {
@@ -1058,19 +1061,39 @@ function onMessage(m) {
   const isActive = other === activeLower;
   dbg('onMessage from=' + m.from + ' to=' + m.to + ' activeChat=' + activeChat + ' isActive=' + isActive);
 
-  if (m.from !== myUsername) {
-    if (isActive) {
+  if (isActive) {
+    const msgs = document.getElementById('messages');
+    // Для медиафайлов от нас — заменить local_ пузырь на настоящий (с реальным URL)
+    if (m.from === myUsername && (m.type === 'image' || m.type === 'video' || m.type === 'voice' || m.type === 'file')) {
+      const locals = msgs.querySelectorAll('[id^="msg_local_"]');
+      if (locals.length > 0) {
+        // Заменить последний local_ пузырь
+        const last = locals[locals.length - 1];
+        last.id = 'msg_' + m.id;
+        // Обновить src если нужно
+        const img = last.querySelector('img.msg-img');
+        if (img && m.url) img.src = m.url;
+        const vid = last.querySelector('video');
+        if (vid && m.url) vid.src = m.url;
+        const aud = last.querySelector('audio');
+        if (aud && m.url) aud.src = m.url;
+      } else {
+        appendBubble(m);
+      }
+    } else if (m.from === myUsername) {
+      // Текстовое эхо — просто показать
       appendBubble(m);
-      const msgs = document.getElementById('messages');
-      msgs.scrollTop = msgs.scrollHeight;
-      cmd({ cmd: 'mark_read', with: m.from });
     } else {
-      toast('💬 @' + m.from + ': ' + (m.text || 'Медиа').slice(0, 40));
+      // Входящее сообщение
+      appendBubble(m);
+      cmd({ cmd: 'mark_read', with: m.from });
     }
-    updateChatListItem(other, m);
-  } else {
-    updateChatListItem(other, m);
+    msgs.scrollTop = msgs.scrollHeight;
+  } else if (m.from !== myUsername) {
+    toast('💬 @' + m.from + ': ' + (m.text || 'Медиа').slice(0, 40));
   }
+  updateChatListItem(other, m);
+}
 }
 
 function updateChatListItem(username, lastMsg) {
@@ -1175,22 +1198,6 @@ function sendMsg() {
   const text = inp.value.trim();
   if (!text) return;
   
-  // Показать сразу локально
-  const localMsg = {
-    id: 'local_' + Date.now(),
-    from: myUsername,
-    to: activeChat,
-    text,
-    time: Date.now(),
-    type: 'text',
-    reply_to: replyToId,
-    reply_to_text: replyToText,
-  };
-  appendBubble(localMsg);
-  const msgs = document.getElementById('messages');
-  msgs.scrollTop = msgs.scrollHeight;
-  updateChatListItem(activeChat, localMsg);
-
   const msg = { cmd: 'send_msg', to: activeChat, text };
   if (replyToId) { msg.reply_to = replyToId; msg.reply_to_text = replyToText; }
   cmd(msg);
