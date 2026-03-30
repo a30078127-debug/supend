@@ -731,7 +731,29 @@ body { font-family:var(--font); background:var(--bg); color:var(--text); height:
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Debug panel (tap 5x on logo to show) -->
+<div id="dbg" style="display:none;position:fixed;bottom:0;left:0;right:0;height:40vh;background:#111;color:#0f0;font-size:11px;font-family:monospace;overflow-y:auto;z-index:9999;padding:8px;"></div>
+
 <script>
+// ── Debug ─────────────────────────────────────────────────────────────────────
+let dbgTaps = 0;
+function dbg(msg) {
+  const el = document.getElementById('dbg');
+  if (!el) return;
+  const t = new Date().toTimeString().slice(0,8);
+  el.innerHTML += `<div>[${t}] ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+  console.log('[DBG]', msg);
+}
+document.querySelector('.auth-logo')?.addEventListener('click', () => {
+  dbgTaps++;
+  if (dbgTaps >= 5) {
+    const el = document.getElementById('dbg');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    dbgTaps = 0;
+  }
+});
+
 // ── State ────────────────────────────────────────────────────────────────────
 let ws = null;
 let myUsername = '';
@@ -755,14 +777,28 @@ let isMuted = false;
 // ── WebSocket ────────────────────────────────────────────────────────────────
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}/ws`);
-  ws.onopen = () => {};
-  ws.onclose = () => { setTimeout(connect, 2000); };
-  ws.onmessage = e => { try { handle(JSON.parse(e.data)); } catch(err) {} };
+  const url = `${proto}://${location.host}/ws`;
+  dbg('Connecting to ' + url);
+  ws = new WebSocket(url);
+  ws.onopen = () => { dbg('WS connected ✓'); };
+  ws.onclose = (e) => { dbg('WS closed: ' + e.code + ' ' + e.reason); setTimeout(connect, 2000); };
+  ws.onerror = (e) => { dbg('WS error: ' + JSON.stringify(e.type)); };
+  ws.onmessage = e => { 
+    try { 
+      const d = JSON.parse(e.data);
+      dbg('← ' + d.type + (d.from ? ' from:' + d.from : '') + (d.to ? ' to:' + d.to : ''));
+      handle(d); 
+    } catch(err) { dbg('Parse err: ' + err); }
+  };
 }
 
 function cmd(o) {
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify(o));
+  if (ws && ws.readyState === 1) {
+    dbg('→ ' + o.cmd + (o.to ? ' to:' + o.to : '') + (o.text ? ' "' + o.text.slice(0,20) + '"' : ''));
+    ws.send(JSON.stringify(o));
+  } else {
+    dbg('cmd FAILED (ws state=' + (ws ? ws.readyState : 'null') + '): ' + o.cmd);
+  }
 }
 
 // ── Handle messages ──────────────────────────────────────────────────────────
