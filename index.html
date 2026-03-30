@@ -1053,10 +1053,11 @@ function renderHistory(d) {
 }
 
 function onMessage(m) {
-  const other = m.from === myUsername ? m.to : m.from;
-  const isActive = other === activeChat;
-  
-  // Сообщение от другого пользователя — показать в чате и обновить список
+  const other = (m.from === myUsername ? m.to : m.from).trim().toLowerCase();
+  const activeLower = (activeChat || '').trim().toLowerCase();
+  const isActive = other === activeLower;
+  dbg('onMessage from=' + m.from + ' to=' + m.to + ' activeChat=' + activeChat + ' isActive=' + isActive);
+
   if (m.from !== myUsername) {
     if (isActive) {
       appendBubble(m);
@@ -1068,8 +1069,6 @@ function onMessage(m) {
     }
     updateChatListItem(other, m);
   } else {
-    // Эхо своего сообщения от сервера — только обновить список чатов
-    // (сообщение уже показано локально через localMsg)
     updateChatListItem(other, m);
   }
 }
