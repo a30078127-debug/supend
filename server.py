@@ -157,7 +157,7 @@ async def upload_handler(request):
         print(f'Upload err: {e}')
         raise web.HTTPInternalServerError()
 
-
+async def manifest_handler(request):
     m = {"name":"Supend","short_name":"Supend","start_url":"/","display":"standalone",
          "background_color":"#ffffff","theme_color":"#1ABC9C",
          "icons":[{"src":"/icon.png","sizes":"192x192","type":"image/png"}]}
