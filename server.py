@@ -31,6 +31,10 @@ async def ws_handler(request):
             d = json.loads(raw.data)
             c = d.get('cmd')
 
+            if c == 'ping':
+                await send({'type': 'pong'})
+                continue
+
             if c == 'register':
                 u = d['username'].strip().lower()
                 p = d['password']
@@ -154,7 +158,6 @@ async def upload_handler(request):
         raise web.HTTPInternalServerError()
 
 
-async def manifest_handler(request):
     m = {"name":"Supend","short_name":"Supend","start_url":"/","display":"standalone",
          "background_color":"#ffffff","theme_color":"#1ABC9C",
          "icons":[{"src":"/icon.png","sizes":"192x192","type":"image/png"}]}

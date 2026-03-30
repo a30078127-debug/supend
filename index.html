@@ -773,6 +773,7 @@ let callType = '';
 let callWith = '';
 let pendingOffer = null;
 let isMuted = false;
+let myPassword = ''; // сохраняем для переавторизации после реконнекта
 
 // ── WebSocket ────────────────────────────────────────────────────────────────
 function connect() {
@@ -780,9 +781,25 @@ function connect() {
   const url = `${proto}://${location.host}/ws`;
   dbg('Connecting to ' + url);
   ws = new WebSocket(url);
-  ws.onopen = () => { dbg('WS connected ✓'); };
-  ws.onclose = (e) => { dbg('WS closed: ' + e.code + ' ' + e.reason); setTimeout(connect, 2000); };
-  ws.onerror = (e) => { dbg('WS error: ' + JSON.stringify(e.type)); };
+  ws.onopen = () => {
+    dbg('WS connected ✓');
+    // Переавторизоваться если уже были залогинены (после обрыва)
+    if (myUsername && myPassword) {
+      dbg('Re-auth: ' + myUsername);
+      ws.send(JSON.stringify({ cmd: 'login', username: myUsername, password: myPassword }));
+    }
+    // Ping каждые 25 сек чтобы Railway не закрыл соединение
+    clearInterval(window._ping);
+    window._ping = setInterval(() => {
+      if (ws && ws.readyState === 1) ws.send(JSON.stringify({ cmd: 'ping' }));
+    }, 25000);
+  };
+  ws.onclose = (e) => {
+    dbg('WS closed: ' + e.code);
+    clearInterval(window._ping);
+    setTimeout(connect, 2000);
+  };
+  ws.onerror = (e) => { dbg('WS error: ' + e.type); };
   ws.onmessage = e => { 
     try { 
       const d = JSON.parse(e.data);
@@ -870,8 +887,10 @@ function doAuth() {
   }
   document.getElementById('authBtn').disabled = true;
   if (authMode === 'login') {
+    myPassword = pass;
     cmd({ cmd: 'login', username: login, password: pass });
   } else {
+    myPassword = pass;
     cmd({ cmd: 'register', username: login, password: pass });
   }
 }
