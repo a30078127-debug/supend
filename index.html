@@ -788,11 +788,11 @@ function connect() {
       dbg('Re-auth: ' + myUsername);
       ws.send(JSON.stringify({ cmd: 'login', username: myUsername, password: myPassword }));
     }
-    // Ping каждые 25 сек чтобы Railway не закрыл соединение
+    // Ping каждые 10 сек чтобы Railway не закрыл соединение
     clearInterval(window._ping);
     window._ping = setInterval(() => {
       if (ws && ws.readyState === 1) ws.send(JSON.stringify({ cmd: 'ping' }));
-    }, 25000);
+    }, 10000);
   };
   ws.onclose = (e) => {
     dbg('WS closed: ' + e.code);
@@ -825,8 +825,14 @@ function handle(d) {
     myBio = d.bio || '';
     myAvatar = d.avatar || '';
     myToken = d.token || '';
-    showApp();
+    if (!document.getElementById('app').classList.contains('visible')) {
+      showApp();
+    }
     cmd({ cmd: 'get_chats' });
+    // После переподключения обновить открытый чат
+    if (activeChat) {
+      cmd({ cmd: 'get_history', with: activeChat });
+    }
   }
   else if (d.type === 'login_error' || d.type === 'register_error') {
     document.getElementById('authErr').textContent = d.msg;
@@ -1024,9 +1030,22 @@ function closeChat() {
 // ── Messages ─────────────────────────────────────────────────────────────────
 function renderHistory(d) {
   const msgs = document.getElementById('messages');
-  msgs.innerHTML = '';
-  d.messages.forEach(m => appendBubble(m));
-  msgs.scrollTop = msgs.scrollHeight;
+  const existingIds = new Set([...msgs.querySelectorAll('.msg-wrap')].map(e => e.id.replace('msg_','')));
+  let added = 0;
+  d.messages.forEach(m => {
+    if (!existingIds.has(m.id) && !existingIds.has('local_')) {
+      appendBubble(m);
+      added++;
+    }
+  });
+  if (added > 0 || msgs.children.length === 0) {
+    // Если это первая загрузка — показать всё
+    if (msgs.children.length === d.messages.length) {
+      msgs.innerHTML = '';
+      d.messages.forEach(m => appendBubble(m));
+    }
+    msgs.scrollTop = msgs.scrollHeight;
+  }
 }
 
 function onMessage(m) {
