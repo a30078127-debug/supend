@@ -84,8 +84,13 @@ async def ws_handler(request):
                        'duration':d.get('duration',''),'reply_to':d.get('reply_to'),
                        'reply_to_text':d.get('reply_to_text','')}
                 messages[ck].append(msg)
+                print(f'[MSG] {me} -> {to} | online users: {list(online.keys())} | {to} online: {to in online}')
                 await send({'type':'message',**msg})
-                await push(to, {'type':'message',**msg})
+                if to in online:
+                    print(f'[PUSH] pushing to {to}')
+                    await push(to, {'type':'message',**msg})
+                    # Уведомить получателя обновить список чатов
+                    await push(to, {'type':'new_chat','from':me,'avatar':users.get(me,{}).get('avatar',''),'bio':users.get(me,{}).get('bio','')})
 
             elif c == 'get_history':
                 if not me: continue

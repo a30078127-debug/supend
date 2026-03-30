@@ -856,6 +856,10 @@ function handle(d) {
   else if (d.type === 'user_offline') {
     onUserOnline(d.username, false);
   }
+  else if (d.type === 'new_chat') {
+    // Новый чат появился — обновить список
+    cmd({ cmd: 'get_chats' });
+  }
   else if (d.type === 'call_signal') {
     handleCallSignal(d);
   }
