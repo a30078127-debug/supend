@@ -1479,8 +1479,6 @@ async function uploadMedia(file) {
 }
 
 // ── Voice recording ────────────────────────────────────────────────────────
-let recStream = null; // сохраняем stream отдельно чтобы точно остановить
-
 async function startRec() {
   if (mediaRec) return;
   if (!activeChat) { toast('Открой чат перед записью'); return; }
