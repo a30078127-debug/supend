@@ -301,21 +301,26 @@ async def ws_handler(request):
                 name    = d.get('name','').strip()
                 members = d.get('members', [])
                 avatar  = d.get('avatar','')
+                desc    = d.get('desc','')
                 if not name: continue
                 gid = str(uuid.uuid4())[:8]
-                member_map = {me: 'owner'}
+                member_map = {me: {'role':'owner'}}
                 for uid in members:
-                    if uid in users: member_map[uid] = 'member'
+                    if uid in users: member_map[uid] = {'role':'member'}
                 groups[gid] = {
-                    'id': gid, 'name': name, 'avatar': avatar,
+                    'id': gid, 'name': name, 'avatar': avatar, 'desc': desc,
                     'owner': me, 'members': member_map,
                     'messages': [], 'pinned_id': None, 'pinned_text': ''
                 }
+                # my_role для создателя
                 payload = {'type':'group_created','gid':gid,'name':name,
-                    'avatar':avatar,'owner':me,'members':member_map}
+                    'avatar':avatar,'desc':desc,'owner':me,
+                    'members':{uid: (v if isinstance(v,str) else v.get('role','member')) for uid,v in member_map.items()},
+                    'my_role':'owner'}
                 await send(payload)
                 for uid in member_map:
-                    if uid != me: await push(uid, payload)
+                    if uid != me and uid in online:
+                        await push(uid, {**payload, 'my_role':'member'})
 
             # ── Group actions ─────────────────────────────────────────────────
             elif c == 'group_add_member':
@@ -337,7 +342,29 @@ async def ws_handler(request):
                 await push_group(gid, {'type':'group_member_removed','gid':gid,'uid':uid})
                 await push(uid, {'type':'group_kicked','gid':gid})
 
-            elif c == 'group_set_role':
+            elif c == 'get_group_info':
+                gid = d.get('gid','')
+                g = groups.get(gid)
+                if not g or me not in g.get('members',{}): continue
+                my_role = g['members'].get(me, {})
+                if isinstance(my_role, dict): my_role = my_role.get('role','member')
+                # Build members with username from users dict
+                members_out = {}
+                for uid, role_data in g['members'].items():
+                    role = role_data if isinstance(role_data, str) else role_data.get('role','member')
+                    ud = users.get(uid, {})
+                    members_out[uid] = {
+                        'username': ud.get('username', uid),
+                        'avatar': ud.get('avatar',''),
+                        'role': role,
+                        'rights': role_data.get('rights',{}) if isinstance(role_data, dict) else {}
+                    }
+                await send({'type':'group_info','gid':gid,'name':g['name'],
+                    'avatar':g.get('avatar',''),'desc':g.get('desc',''),
+                    'owner':g.get('owner',''),'my_role':my_role,
+                    'members':members_out,'member_count':len(members_out)})
+
+
                 gid = d.get('gid',''); uid = d.get('uid',''); role = d.get('role','member')
                 g = groups.get(gid)
                 if not g or g.get('owner') != me: continue

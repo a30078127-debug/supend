@@ -431,7 +431,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
     <div class="chats-list" id="chatsList"></div>
     <!-- Fab group -->
     <div style="position:absolute;right:16px;bottom:16px;z-index:11">
-      <button onclick="openCreateGroup()" title="Создать группу" style="width:52px;height:52px;border-radius:50%;background:var(--ac);border:none;color:#fff;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(26,188,156,.4);display:flex;align-items:center;justify-content:center">👥</button>
+      <button onclick="openCreateGroup()" title="Создать группу" style="width:52px;height:52px;border-radius:50%;background:var(--ac);border:none;cursor:pointer;box-shadow:0 4px 16px rgba(26,188,156,.4);display:flex;align-items:center;justify-content:center;transition:transform .15s" onmousedown="this.style.transform='scale(.92)'" onmouseup="this.style.transform='scale(1)'" ontouchstart="this.style.transform='scale(.92)'" ontouchend="this.style.transform='scale(1)'">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          <line x1="20" y1="8" x2="20" y2="14"/>
+          <line x1="17" y1="11" x2="23" y2="11"/>
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -638,36 +647,130 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 
 <!-- Group info modal -->
 <div class="modal-overlay" id="groupInfoModal">
-  <div class="modal-sheet">
+  <div class="modal-sheet" style="max-height:92dvh">
     <div class="modal-handle"></div>
-    <div class="modal-title">Группа</div>
-    <div class="prof-av-wrap"><div class="prof-av" id="groupInfoAv">👥</div></div>
-    <div style="text-align:center;margin-bottom:20px">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="modal-title" style="margin:0">Группа</div>
+      <button id="groupEditBtn" onclick="startEditGroup()" style="border:none;background:var(--ac-l);color:var(--ac);padding:6px 14px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:var(--font);display:none">Изменить</button>
+    </div>
+    <!-- Avatar + name -->
+    <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:20px">
+      <div class="prof-av" id="groupInfoAv" style="margin-bottom:12px;position:relative">
+        <input type="file" id="groupAvEditInp" accept="image/*" style="display:none" onchange="onGroupAvChange(this)">
+      </div>
       <div style="font-size:20px;font-weight:800" id="groupInfoName"></div>
       <div style="font-size:13px;color:var(--txt2);margin-top:4px" id="groupInfoCount"></div>
+      <div style="font-size:13px;color:var(--txt2);margin-top:6px;text-align:center;padding:0 20px" id="groupInfoDesc"></div>
     </div>
-    <div id="groupMembersList"></div>
-    <div id="groupAdminActions" style="margin-top:16px;display:none">
-      <button class="btn-save" onclick="openAddMember()">Добавить участника</button>
+    <!-- Members list -->
+    <div style="font-size:12px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Участники</div>
+    <div id="groupMembersList" style="display:flex;flex-direction:column;gap:0"></div>
+    <!-- Admin add button -->
+    <div id="groupAdminActions" style="margin-top:14px;display:none">
+      <button onclick="openAddMemberFromContacts()" style="width:100%;padding:13px;border:1.5px dashed var(--ac);border-radius:14px;background:var(--ac-l);color:var(--ac);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer">
+        + Добавить участника
+      </button>
     </div>
-    <button class="btn-danger" onclick="leaveGroup()">Покинуть группу</button>
+    <button class="btn-danger" style="margin-top:12px" onclick="leaveGroup()">Покинуть группу</button>
   </div>
 </div>
 
-<!-- Create group modal -->
+<!-- Member action sheet -->
+<div class="modal-overlay" id="memberActionModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="memberActionTitle">Участник</div>
+    <button onclick="memberKick()" class="btn-danger" style="margin-bottom:10px">Удалить из группы</button>
+    <button id="memberMakeAdminBtn" onclick="openAdminRightsModal()" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--ac);color:#fff;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer">Назначить администратором</button>
+    <button id="memberRemoveAdminBtn" onclick="memberRemoveAdmin()" style="width:100%;padding:13px;border:none;border-radius:14px;background:#f5f5f5;color:var(--danger);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;margin-top:10px;display:none">Снять права администратора</button>
+    <button onclick="closeModal('memberActionModal')" style="width:100%;padding:13px;border:1.5px solid var(--brd);border-radius:14px;background:none;font-family:var(--font);font-size:15px;cursor:pointer;margin-top:10px;color:var(--txt2)">Отмена</button>
+  </div>
+</div>
+
+<!-- Admin rights modal -->
+<div class="modal-overlay" id="adminRightsModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Права администратора</div>
+    <div style="font-size:13px;color:var(--txt2);margin-bottom:16px">Выбери что может делать этот администратор</div>
+    <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:24px">
+      <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+        <span style="font-size:15px">Удалять участников</span>
+        <input type="checkbox" id="ar_kick" checked style="width:20px;height:20px;accent-color:var(--ac)">
+      </label>
+      <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+        <span style="font-size:15px">Добавлять участников</span>
+        <input type="checkbox" id="ar_add" checked style="width:20px;height:20px;accent-color:var(--ac)">
+      </label>
+      <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+        <span style="font-size:15px">Менять название группы</span>
+        <input type="checkbox" id="ar_name" checked style="width:20px;height:20px;accent-color:var(--ac)">
+      </label>
+      <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+        <span style="font-size:15px">Менять аватарку и описание</span>
+        <input type="checkbox" id="ar_avatar" checked style="width:20px;height:20px;accent-color:var(--ac)">
+      </label>
+      <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+        <span style="font-size:15px">Назначать администраторов</span>
+        <input type="checkbox" id="ar_admin" style="width:20px;height:20px;accent-color:var(--ac)">
+      </label>
+    </div>
+    <button onclick="confirmMakeAdmin()" class="btn-save">Назначить администратором</button>
+    <button onclick="closeModal('adminRightsModal')" style="width:100%;padding:13px;border:1.5px solid var(--brd);border-radius:14px;background:none;font-family:var(--font);font-size:15px;cursor:pointer;margin-top:10px;color:var(--txt2)">Отмена</button>
+  </div>
+</div>
+
+<!-- Create group step 1: name + avatar + description -->
 <div class="modal-overlay" id="createGroupModal">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
-    <div class="modal-title">Новая группа</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <button onclick="closeModal('createGroupModal')" style="border:none;background:none;font-size:22px;cursor:pointer;color:var(--txt2);padding:0">‹</button>
+      <div class="modal-title" style="margin:0;flex:1">Новая группа</div>
+      <div style="font-size:13px;color:var(--txt2)">Шаг 1 из 2</div>
+    </div>
+    <!-- Avatar picker -->
+    <div style="display:flex;justify-content:center;margin-bottom:20px">
+      <div id="cgAvPreview" onclick="document.getElementById('cgAvInp').click()" style="width:80px;height:80px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(26,188,156,.3);position:relative;overflow:hidden">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <input type="file" id="cgAvInp" accept="image/*" style="display:none" onchange="onCgAvChange(this)">
+      </div>
+    </div>
+    <div style="text-align:center;font-size:12px;color:var(--txt2);margin-bottom:20px">Нажми чтобы добавить фото</div>
     <div class="modal-field">
-      <div class="modal-label">Название</div>
-      <input class="modal-inp" id="groupName" placeholder="Название группы...">
+      <div class="modal-label">Название группы *</div>
+      <input class="modal-inp" id="cgName" placeholder="Например: Команда проекта">
     </div>
     <div class="modal-field">
-      <div class="modal-label">Участники (через запятую)</div>
-      <input class="modal-inp" id="groupMembers" placeholder="@user1, @user2...">
+      <div class="modal-label">Описание (необязательно)</div>
+      <textarea class="modal-textarea" id="cgDesc" placeholder="О чём эта группа..."></textarea>
     </div>
-    <button class="btn-save" onclick="createGroup()">Создать группу</button>
+    <button class="btn-save" onclick="cgStep2()">Далее →</button>
+  </div>
+</div>
+
+<!-- Create group step 2: add members -->
+<div class="modal-overlay" id="createGroupModal2">
+  <div class="modal-sheet" style="max-height:90dvh">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <button onclick="cgBack()" style="border:none;background:none;font-size:22px;cursor:pointer;color:var(--txt2);padding:0">‹</button>
+      <div class="modal-title" style="margin:0;flex:1">Добавить участников</div>
+      <div style="font-size:13px;color:var(--txt2)">Шаг 2 из 2</div>
+    </div>
+    <!-- Selected members chips -->
+    <div id="cgSelectedChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;min-height:16px"></div>
+    <!-- Contacts list -->
+    <div style="font-size:12px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Твои контакты</div>
+    <div id="cgContactsList" style="display:flex;flex-direction:column;gap:0;max-height:45dvh;overflow-y:auto;border:1.5px solid var(--brd);border-radius:14px"></div>
+    <div id="cgNoContacts" style="display:none;text-align:center;padding:20px;color:var(--txt2);font-size:14px">Нет контактов. Сначала начни переписку с кем-нибудь.</div>
+    <button class="btn-save" style="margin-top:16px" onclick="confirmCreateGroup()">Создать группу</button>
   </div>
 </div>
 
@@ -871,6 +974,7 @@ function handle(d) {
     case 'new_chat':      cmd({cmd:'get_chats'}); break;
     case 'profile_update': onProfileUpdate(d); break;
     case 'group_created': onGroupCreated(d);  break;
+    case 'group_info':    onGroupInfoResponse(d); break;
     case 'group_invited': onGroupInvited(d);  break;
     case 'group_msg_added':
     case 'group_member_added':
@@ -2114,17 +2218,156 @@ function writeToPeer() {
   if (viewingPeer) openChatWith(viewingPeer, chatsData[viewingPeer]?.avatar, chatsData[viewingPeer]?.online);
 }
 
+// ── Group info ─────────────────────────────────────────────────────────────
+let groupInfoData = {}; // кэш данных группы включая members
+let memberActionTarget = null; // uid участника для action sheet
+
 function openGroupInfo() {
   if (activeType !== 'group') return;
   const g = chatsData[activeChat];
   if (!g) return;
+
+  const av = document.getElementById('groupInfoAv');
+  if (g.avatar) av.innerHTML = `<img src="${g.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"><input type="file" id="groupAvEditInp" accept="image/*" style="display:none" onchange="onGroupAvChange(this)">`;
+  else { av.innerHTML = `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><input type="file" id="groupAvEditInp" accept="image/*" style="display:none" onchange="onGroupAvChange(this)">`; }
+
   document.getElementById('groupInfoName').textContent = g.name || '';
   document.getElementById('groupInfoCount').textContent = `${g.member_count||0} участников`;
-  const av = document.getElementById('groupInfoAv');
-  av.innerHTML = g.avatar ? `<img src="${g.avatar}">` : '👥';
-  // Members — request from server would be needed; show what we have
-  document.getElementById('groupMembersList').innerHTML = '<div style="color:var(--txt2);font-size:14px;padding:10px 0">Список участников загружается...</div>';
+  document.getElementById('groupInfoDesc').textContent = g.desc || '';
+
+  // Запрашиваем список участников с сервера
+  cmd({ cmd:'get_group_info', gid:activeChat });
+  document.getElementById('groupMembersList').innerHTML = '<div style="padding:16px;text-align:center;color:var(--txt2)">Загрузка...</div>';
+
+  const isOwner = g.my_role === 'owner';
+  const isAdmin = g.my_role === 'admin' || isOwner;
+  document.getElementById('groupAdminActions').style.display = isAdmin ? '' : 'none';
+  document.getElementById('groupEditBtn').style.display = isAdmin ? '' : 'none';
+
   document.getElementById('groupInfoModal').classList.add('show');
+}
+
+function renderGroupMembers(members, myRole, ownerId) {
+  const list = document.getElementById('groupMembersList');
+  list.innerHTML = '';
+  const isOwner = myRole === 'owner';
+  const isAdmin = myRole === 'admin' || isOwner;
+
+  // Сначала владелец, потом админы, потом остальные
+  const sorted = Object.entries(members).sort(([, a], [, b]) => {
+    const order = {owner:0, admin:1, member:2};
+    return (order[a.role]||2) - (order[b.role]||2);
+  });
+
+  sorted.forEach(([uid, m]) => {
+    const isMe = uid === me;
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--brd);cursor:' + ((isAdmin && !isMe) ? 'pointer' : 'default');
+
+    const avEl = document.createElement('div');
+    avEl.style.cssText = 'width:44px;height:44px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden';
+    if (m.avatar) avEl.innerHTML = `<img src="${m.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    else avEl.textContent = (m.username||uid)[0].toUpperCase();
+
+    const roleLabel = m.role === 'owner' ? 'Владелец' : m.role === 'admin' ? 'Администратор' : 'Участник';
+    const roleColor = m.role === 'owner' ? '#f0b90b' : m.role === 'admin' ? 'var(--ac)' : 'var(--txt2)';
+
+    const info = document.createElement('div');
+    info.style.flex = '1';
+    info.innerHTML = `<div style="font-size:15px;font-weight:600">@${m.username||uid}${isMe?' (Вы)':''}</div><div style="font-size:12px;color:${roleColor};font-weight:600;margin-top:2px">${roleLabel}</div>`;
+
+    row.appendChild(avEl);
+    row.appendChild(info);
+
+    // Длинное нажатие / клик для admin/owner на других
+    if (isAdmin && !isMe && m.role !== 'owner') {
+      let pressTimer;
+      const showAction = () => {
+        memberActionTarget = uid;
+        document.getElementById('memberActionTitle').textContent = '@' + (m.username||uid);
+        const makeBtn = document.getElementById('memberMakeAdminBtn');
+        const removeBtn = document.getElementById('memberRemoveAdminBtn');
+        if (m.role === 'admin') {
+          makeBtn.style.display = 'none';
+          removeBtn.style.display = isOwner ? '' : 'none';
+        } else {
+          makeBtn.style.display = isOwner ? '' : 'none';
+          removeBtn.style.display = 'none';
+        }
+        document.getElementById('memberActionModal').classList.add('show');
+      };
+      row.addEventListener('touchstart', () => { pressTimer = setTimeout(showAction, 500); }, {passive:true});
+      row.addEventListener('touchend', () => clearTimeout(pressTimer), {passive:true});
+      row.addEventListener('touchmove', () => clearTimeout(pressTimer), {passive:true});
+      row.addEventListener('contextmenu', e => { e.preventDefault(); showAction(); });
+    }
+
+    list.appendChild(row);
+  });
+}
+
+function memberKick() {
+  closeModal('memberActionModal');
+  if (!memberActionTarget) return;
+  if (!confirm('Удалить участника из группы?')) return;
+  cmd({ cmd:'group_kick', gid:activeChat, uid:memberActionTarget });
+  toast('Участник удалён');
+  openGroupInfo();
+}
+
+function memberRemoveAdmin() {
+  closeModal('memberActionModal');
+  if (!memberActionTarget) return;
+  cmd({ cmd:'group_set_role', gid:activeChat, uid:memberActionTarget, role:'member' });
+  toast('Права администратора сняты');
+  setTimeout(openGroupInfo, 300);
+}
+
+let pendingAdminUid = null;
+function openAdminRightsModal() {
+  pendingAdminUid = memberActionTarget;
+  closeModal('memberActionModal');
+  // Сброс чекбоксов
+  ['kick','add','name','avatar','admin'].forEach(r => {
+    const el = document.getElementById('ar_'+r);
+    if (el) el.checked = r !== 'admin';
+  });
+  document.getElementById('adminRightsModal').classList.add('show');
+}
+
+function confirmMakeAdmin() {
+  closeModal('adminRightsModal');
+  if (!pendingAdminUid) return;
+  const rights = {
+    kick:   document.getElementById('ar_kick').checked,
+    add:    document.getElementById('ar_add').checked,
+    name:   document.getElementById('ar_name').checked,
+    avatar: document.getElementById('ar_avatar').checked,
+    admin:  document.getElementById('ar_admin').checked,
+  };
+  cmd({ cmd:'group_set_role', gid:activeChat, uid:pendingAdminUid, role:'admin', rights });
+  toast('Администратор назначен ✅');
+  setTimeout(openGroupInfo, 300);
+}
+
+function onGroupAvChange(inp) {
+  const f = inp.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    cmd({ cmd:'group_update', gid:activeChat, avatar:r.result });
+    toast('Аватарка обновлена');
+    const av = document.getElementById('groupInfoAv');
+    av.innerHTML = `<img src="${r.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"><input type="file" id="groupAvEditInp" accept="image/*" style="display:none" onchange="onGroupAvChange(this)">`;
+  };
+  r.readAsDataURL(f);
+}
+
+function startEditGroup() {
+  const newName = prompt('Новое название группы:', document.getElementById('groupInfoName').textContent);
+  if (!newName || !newName.trim()) return;
+  cmd({ cmd:'group_update', gid:activeChat, name:newName.trim() });
+  document.getElementById('groupInfoName').textContent = newName.trim();
+  toast('Название обновлено');
 }
 
 function leaveGroup() {
@@ -2134,27 +2377,173 @@ function leaveGroup() {
   closeChat();
 }
 
+// Обрабатываем ответ сервера с инфо о группе
+function onGroupInfoResponse(d) {
+  if (d.gid !== activeChat) return;
+  groupInfoData[d.gid] = d;
+  renderGroupMembers(d.members || {}, d.my_role || 'member', d.owner);
+  // Обновляем данные в chatsData
+  if (chatsData[d.gid]) {
+    chatsData[d.gid].my_role = d.my_role;
+    chatsData[d.gid].member_count = Object.keys(d.members||{}).length;
+    document.getElementById('groupInfoCount').textContent = `${chatsData[d.gid].member_count} участников`;
+  }
+}
+
+// ── Create group (2 steps) ─────────────────────────────────────────────────
+let cgAvData = '';
+let cgSelectedMembers = new Set();
+
 function openCreateGroup() {
+  cgAvData = ''; cgSelectedMembers = new Set();
+  document.getElementById('cgName').value = '';
+  document.getElementById('cgDesc').value = '';
+  const prev = document.getElementById('cgAvPreview');
+  prev.innerHTML = `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><input type="file" id="cgAvInp" accept="image/*" style="display:none" onchange="onCgAvChange(this)">`;
   document.getElementById('createGroupModal').classList.add('show');
 }
 
-function createGroup() {
-  const name = document.getElementById('groupName').value.trim();
-  const membersRaw = document.getElementById('groupMembers').value;
-  if (!name) { toast('Введи название'); return; }
-  const members = membersRaw.split(',').map(s=>s.trim().replace('@','')).filter(Boolean);
-  cmd({ cmd:'create_group', name, members, avatar:'' });
-  closeModal('createGroupModal');
-  document.getElementById('groupName').value = '';
-  document.getElementById('groupMembers').value = '';
+function onCgAvChange(inp) {
+  const f = inp.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    cgAvData = r.result;
+    const prev = document.getElementById('cgAvPreview');
+    prev.innerHTML = `<img src="${r.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"><input type="file" id="cgAvInp" accept="image/*" style="display:none" onchange="onCgAvChange(this)">`;
+  };
+  r.readAsDataURL(f);
 }
 
-function openAddMember() {
-  const uid = prompt('Введи логин пользователя:');
-  if (!uid) return;
-  cmd({ cmd:'group_add_member', gid:activeChat, uid:uid.trim().replace('@','') });
-  closeModal('groupInfoModal');
+function cgStep2() {
+  const name = document.getElementById('cgName').value.trim();
+  if (!name) { toast('Введи название группы'); return; }
+  closeModal('createGroupModal');
+  cgSelectedMembers = new Set();
+
+  // Заполняем список контактов из chatsData
+  const contactsList = document.getElementById('cgContactsList');
+  contactsList.innerHTML = '';
+  const contacts = Object.values(chatsData).filter(c => c.username && !c.gid);
+
+  if (!contacts.length) {
+    document.getElementById('cgNoContacts').style.display = '';
+    contactsList.style.display = 'none';
+  } else {
+    document.getElementById('cgNoContacts').style.display = 'none';
+    contactsList.style.display = '';
+    contacts.forEach(c => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;transition:.15s;border-bottom:1px solid var(--brd)';
+      row.id = 'cgc_' + c.username;
+      const avEl = c.avatar
+        ? `<img src="${c.avatar}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+        : `<div style="width:40px;height:40px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0">${c.username[0].toUpperCase()}</div>`;
+      row.innerHTML = `${avEl}<div style="flex:1"><div style="font-size:15px;font-weight:600">@${esc(c.username)}</div><div style="font-size:12px;color:var(--txt2)">${c.online?'● онлайн':'○ не в сети'}</div></div><div id="cgcheck_${c.username}" style="width:24px;height:24px;border-radius:50%;border:2px solid var(--brd);display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0"></div>`;
+      row.onclick = () => toggleCgMember(c.username);
+      contactsList.appendChild(row);
+    });
+  }
+
+  document.getElementById('cgSelectedChips').innerHTML = '';
+  document.getElementById('createGroupModal2').classList.add('show');
 }
+
+function toggleCgMember(username) {
+  const check = document.getElementById('cgcheck_' + username);
+  const row   = document.getElementById('cgc_' + username);
+  if (cgSelectedMembers.has(username)) {
+    cgSelectedMembers.delete(username);
+    check.innerHTML = '';
+    check.style.borderColor = 'var(--brd)';
+    check.style.background = '';
+    row.style.background = '';
+  } else {
+    cgSelectedMembers.add(username);
+    check.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+    check.style.borderColor = 'var(--ac)';
+    check.style.background = 'var(--ac)';
+    row.style.background = 'var(--ac-l)';
+  }
+  renderCgChips();
+}
+
+function renderCgChips() {
+  const chips = document.getElementById('cgSelectedChips');
+  chips.innerHTML = '';
+  cgSelectedMembers.forEach(u => {
+    const chip = document.createElement('div');
+    chip.style.cssText = 'display:flex;align-items:center;gap:6px;background:var(--ac-l);border:1.5px solid var(--ac);border-radius:20px;padding:4px 10px;font-size:13px;font-weight:600;color:var(--ac);cursor:pointer';
+    chip.innerHTML = `@${u} <span style="font-size:16px;line-height:1" onclick="toggleCgMember('${u}')">×</span>`;
+    chips.appendChild(chip);
+  });
+}
+
+function cgBack() {
+  closeModal('createGroupModal2');
+  document.getElementById('createGroupModal').classList.add('show');
+}
+
+function confirmCreateGroup() {
+  const name = document.getElementById('cgName').value.trim();
+  const desc = document.getElementById('cgDesc').value.trim();
+  if (!name) { toast('Введи название'); return; }
+  const members = [...cgSelectedMembers];
+  cmd({ cmd:'create_group', name, desc, members, avatar: cgAvData });
+  closeModal('createGroupModal2');
+  toast(`Группа "${name}" создана! 👥`);
+}
+
+function openAddMemberFromContacts() {
+  // Открываем шаг 2 для добавления участников в существующую группу
+  cgSelectedMembers = new Set();
+  const contactsList = document.getElementById('cgContactsList');
+  contactsList.innerHTML = '';
+  const g = groupInfoData[activeChat];
+  const existingMembers = g ? Object.keys(g.members||{}) : [];
+  const contacts = Object.values(chatsData).filter(c => c.username && !c.gid && !existingMembers.includes(c.username));
+
+  if (!contacts.length) {
+    toast('Нет новых контактов для добавления');
+    return;
+  }
+
+  contacts.forEach(c => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--brd)';
+    row.id = 'cgc_' + c.username;
+    const avEl = c.avatar
+      ? `<img src="${c.avatar}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+      : `<div style="width:40px;height:40px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0">${c.username[0].toUpperCase()}</div>`;
+    row.innerHTML = `${avEl}<div style="flex:1"><div style="font-size:15px;font-weight:600">@${esc(c.username)}</div></div><div id="cgcheck_${c.username}" style="width:24px;height:24px;border-radius:50%;border:2px solid var(--brd);display:flex;align-items:center;justify-content:center;flex-shrink:0"></div>`;
+    row.onclick = () => toggleCgMember(c.username);
+    contactsList.appendChild(row);
+  });
+
+  document.getElementById('cgSelectedChips').innerHTML = '';
+  document.getElementById('cgNoContacts').style.display = 'none';
+  contactsList.style.display = '';
+
+  // Меняем кнопку на "Добавить"
+  const btn = document.querySelector('#createGroupModal2 .btn-save');
+  if (btn) {
+    btn.textContent = 'Добавить в группу';
+    btn.onclick = () => {
+      cgSelectedMembers.forEach(uid => {
+        cmd({ cmd:'group_add_member', gid:activeChat, uid });
+      });
+      closeModal('createGroupModal2');
+      toast(`Добавлено ${cgSelectedMembers.size} участников`);
+      setTimeout(openGroupInfo, 500);
+      btn.textContent = 'Создать группу';
+      btn.onclick = confirmCreateGroup;
+    };
+  }
+
+  closeModal('groupInfoModal');
+  document.getElementById('createGroupModal2').classList.add('show');
+}
+
+function openAddMember() { openAddMemberFromContacts(); }
 
 function doLogout() {
   if (!confirm('Выйти?')) return;
