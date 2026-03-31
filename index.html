@@ -904,28 +904,51 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 
 <!-- Call overlay -->
 <div class="call-overlay" id="callOverlay">
-  <!-- Video mode: remote full screen + local small -->
-  <video id="remoteVideo" autoplay playsinline style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0"></video>
-  <video id="localVideo"  autoplay playsinline muted style="display:none;position:absolute;bottom:120px;right:16px;width:110px;height:160px;object-fit:cover;border-radius:16px;border:2px solid rgba(255,255,255,.4);z-index:2"></video>
-  <!-- Voice mode: avatar + name -->
-  <div id="callVoiceUI" style="display:flex;flex-direction:column;align-items:center;z-index:1">
+  <!-- Удалённое видео (фон) -->
+  <video id="remoteVideo" autoplay playsinline style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;background:#000"></video>
+  <!-- Локальное видео (маленькое) -->
+  <video id="localVideo" autoplay playsinline muted style="display:none;position:absolute;top:20px;right:16px;width:100px;height:150px;object-fit:cover;border-radius:14px;border:2px solid rgba(255,255,255,.35);z-index:3;background:#111;box-shadow:0 4px 16px rgba(0,0,0,.4)"></video>
+  <!-- Голосовой режим: аватар + имя -->
+  <div id="callVoiceUI" style="display:flex;flex-direction:column;align-items:center;z-index:1;pointer-events:none">
     <div class="call-av" id="callAv">?</div>
     <div class="call-name" id="callName">–</div>
     <div class="call-status" id="callStatus">Звоним...</div>
   </div>
-  <!-- Controls -->
-  <div class="call-btns" style="z-index:3;position:absolute;bottom:40px;left:0;right:0;display:flex;justify-content:center;gap:20px">
-    <button class="call-btn call-btn-mic" id="callMicBtn" onclick="toggleMic()" title="Микрофон">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
-    </button>
-    <button id="callCamBtn" onclick="toggleCam()" title="Камера" style="display:none" class="call-btn" style="background:rgba(255,255,255,.15)">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-    </button>
-    <button class="call-btn call-btn-end" onclick="endCall()" title="Завершить">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.6 3.38 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.125.96.327 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.08 6.08l1.14-.95z"/></svg>
-    </button>
+  <!-- Кнопки управления -->
+  <div style="position:absolute;bottom:48px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:18px;z-index:4">
+    <!-- Микрофон -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+      <button id="callMicBtn" onclick="toggleMic()" style="width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;background:var(--ac);display:flex;align-items:center;justify-content:center;transition:.2s;box-shadow:0 4px 16px rgba(26,188,156,.4)">
+        <svg id="micIcon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="2" width="6" height="12" rx="3"/>
+          <path d="M5 10a7 7 0 0 0 14 0"/>
+          <line x1="12" y1="19" x2="12" y2="22"/>
+          <line x1="8" y1="22" x2="16" y2="22"/>
+        </svg>
+      </button>
+      <span style="font-size:11px;color:rgba(255,255,255,.7);font-weight:500">Микрофон</span>
+    </div>
+    <!-- Камера (только в видеозвонке) -->
+    <div id="camBtnWrap" style="display:none;flex-direction:column;align-items:center;gap:8px">
+      <button id="callCamBtn" onclick="toggleCam()" style="width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;background:var(--ac);display:flex;align-items:center;justify-content:center;transition:.2s;box-shadow:0 4px 16px rgba(26,188,156,.4)">
+        <svg id="camIcon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="23 7 16 12 23 17 23 7"/>
+          <rect x="1" y="5" width="15" height="14" rx="2"/>
+        </svg>
+      </button>
+      <span style="font-size:11px;color:rgba(255,255,255,.7);font-weight:500">Камера</span>
+    </div>
+    <!-- Завершить -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+      <button onclick="endCall()" style="width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;background:#e74c3c;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(231,76,60,.5)">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="0">
+          <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/>
+        </svg>
+      </button>
+      <span style="font-size:11px;color:rgba(255,255,255,.7);font-weight:500">Завершить</span>
+    </div>
   </div>
-  <audio id="remoteAudio" autoplay></audio>
+  <audio id="remoteAudio" autoplay playsinline></audio>
 </div>
 
 <!-- Incoming call -->
@@ -3121,36 +3144,92 @@ function showCallOverlay(user, isVideo) {
   document.getElementById('callName').textContent = '@' + user;
   document.getElementById('callStatus').textContent = isVideo ? '📹 Видеозвонок...' : '📞 Звоним...';
 
-  const voiceUI  = document.getElementById('callVoiceUI');
-  const remVideo = document.getElementById('remoteVideo');
-  const locVideo = document.getElementById('localVideo');
-  const camBtn   = document.getElementById('callCamBtn');
+  const voiceUI   = document.getElementById('callVoiceUI');
+  const remVideo  = document.getElementById('remoteVideo');
+  const locVideo  = document.getElementById('localVideo');
+  const camWrap   = document.getElementById('camBtnWrap');
 
   if (isVideo) {
     voiceUI.style.display  = 'none';
     remVideo.style.display = 'block';
     locVideo.style.display = 'block';
-    camBtn.style.display   = 'flex';
-    // Показываем локальное видео
+    camWrap.style.display  = 'flex';
+    // localStream уже получен — показываем себя
     if (localStream) locVideo.srcObject = localStream;
   } else {
     voiceUI.style.display  = 'flex';
     remVideo.style.display = 'none';
     locVideo.style.display = 'none';
-    camBtn.style.display   = 'none';
+    camWrap.style.display  = 'none';
   }
+  // Сброс состояния кнопок
+  isMicMuted = false; isCamOn = true;
+  updateMicBtn(); updateCamBtn();
   document.getElementById('callOverlay').classList.add('show');
 }
 
 function toggleCam() {
   if (!localStream) return;
-  const videoTrack = localStream.getVideoTracks()[0];
-  if (!videoTrack) return;
   isCamOn = !isCamOn;
-  videoTrack.enabled = isCamOn;
+  localStream.getVideoTracks().forEach(t => t.enabled = isCamOn);
+  updateCamBtn();
+  const locVideo = document.getElementById('localVideo');
+  if (locVideo) locVideo.style.opacity = isCamOn ? '1' : '0.3';
+}
+
+// SVG иконки звонка
+const MIC_ON_SVG  = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>`;
+const MIC_OFF_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .39-.03.77-.09 1.15"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>`;
+const CAM_ON_SVG  = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>`;
+const CAM_OFF_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M21 21H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3m3-3h6l2 3h2a2 2 0 0 1 2 2v9.34"/><polyline points="16 12 23 7 23 17"/></svg>`;
+
+function updateMicBtn() {
+  const btn = document.getElementById('callMicBtn');
+  if (!btn) return;
+  btn.innerHTML = isMicMuted ? MIC_OFF_SVG : MIC_ON_SVG;
+  btn.style.background = isMicMuted ? 'rgba(255,255,255,.2)' : 'var(--ac)';
+  btn.style.boxShadow  = isMicMuted ? 'none' : '0 4px 16px rgba(26,188,156,.4)';
+}
+
+function updateCamBtn() {
   const btn = document.getElementById('callCamBtn');
-  btn.style.opacity = isCamOn ? '1' : '0.4';
-  toast(isCamOn ? '📹 Камера включена' : '📷 Камера выключена');
+  if (!btn) return;
+  btn.innerHTML = isCamOn ? CAM_ON_SVG : CAM_OFF_SVG;
+  btn.style.background = isCamOn ? 'var(--ac)' : 'rgba(255,255,255,.2)';
+  btn.style.boxShadow  = isCamOn ? '0 4px 16px rgba(26,188,156,.4)' : 'none';
+}
+
+function toggleMic() {
+  isMicMuted = !isMicMuted;
+  if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = !isMicMuted);
+  updateMicBtn();
+}
+
+// Старая функция-дубликат — заменяем на ссылку на новую
+function showCallOverlay(username) {
+  // вызов новой версии без isVideo — голосовой
+  const isVideo = isVideoCall || false;
+  const cd = chatsData[username] || {};
+  const av = document.getElementById('callAv');
+  if (cd.avatar) av.innerHTML = `<img src="${cd.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  else { av.innerHTML=''; av.textContent = username[0].toUpperCase(); }
+  document.getElementById('callName').textContent = '@' + username;
+  document.getElementById('callStatus').textContent = isVideo ? '📹 Видеозвонок...' : '📞 Звоним...';
+  const voiceUI  = document.getElementById('callVoiceUI');
+  const remVideo = document.getElementById('remoteVideo');
+  const locVideo = document.getElementById('localVideo');
+  const camWrap  = document.getElementById('camBtnWrap');
+  if (isVideo) {
+    voiceUI.style.display = 'none'; remVideo.style.display = 'block';
+    locVideo.style.display = 'block'; camWrap.style.display = 'flex';
+    if (localStream) locVideo.srcObject = localStream;
+  } else {
+    voiceUI.style.display = 'flex'; remVideo.style.display = 'none';
+    locVideo.style.display = 'none'; camWrap.style.display = 'none';
+  }
+  isMicMuted = false; isCamOn = true;
+  updateMicBtn(); updateCamBtn();
+  document.getElementById('callOverlay').classList.add('show');
 }
 
 async function handleCallSignal(d) {
@@ -3209,22 +3288,6 @@ function handleCallStatus(d) {
     document.getElementById('incomingCall').classList.remove('show');
     if (d.status==='rejected') toast('Звонок отклонён');
   }
-}
-
-function showCallOverlay(username) {
-  const cd = chatsData[username] || {};
-  const av = document.getElementById('callAv');
-  if (cd.avatar) av.innerHTML = `<img src="${cd.avatar}">`;
-  else { av.innerHTML=''; av.textContent = username[0].toUpperCase(); }
-  document.getElementById('callName').textContent = '@' + username;
-  document.getElementById('callStatus').textContent = 'Звоним...';
-  document.getElementById('callOverlay').classList.add('show');
-}
-
-function toggleMic() {
-  isMicMuted = !isMicMuted;
-  if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = !isMicMuted);
-  document.getElementById('callMicBtn').textContent = isMicMuted ? '🔇' : '🎤';
 }
 
 // ── Wallet ─────────────────────────────────────────────────────────────────
