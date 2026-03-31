@@ -625,8 +625,6 @@ async def logo_handler(request):
     # Fallback — SVG логотип
     svg = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#1ABC9C"/><text x="96" y="130" font-size="100" text-anchor="middle" fill="white" font-family="Arial">S</text></svg>'
     return web.Response(body=svg, content_type='image/svg+xml')
-    svg = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#1ABC9C"/><text x="96" y="130" font-size="100" text-anchor="middle" fill="white" font-family="Arial">S</text></svg>'
-    return web.Response(body=svg, content_type='image/svg+xml')
 
 async def translate_handler(request):
     try:
@@ -661,9 +659,8 @@ async def main():
     app.router.add_post('/upload',       upload_handler)
     app.router.add_get('/media/{fid}',   media_handler)
     app.router.add_get('/manifest.json', manifest_handler)
-    app.router.add_get('/icon.png',      icon_handler)
-    app.router.add_post('/translate',    translate_handler)
     app.router.add_get('/logo',          logo_handler)
+    app.router.add_post('/translate',    translate_handler)
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, '0.0.0.0', port).start()
