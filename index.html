@@ -250,10 +250,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .rec-send{border:none;border-radius:10px;background:var(--ac);color:#fff;padding:8px 16px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(26,188,156,.3)}
 
 /* ── Context menus ─────────────────────────────── */
-.ctx-menu{position:fixed;z-index:500;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:6px;min-width:180px;display:none}
+.ctx-menu{position:fixed;z-index:500;background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.18);padding:8px;min-width:220px;display:none;animation:ctxFadeIn .15s ease-out}
 .ctx-menu.show{display:block}
-.ctx-item{padding:10px 14px;font-size:14px;cursor:pointer;border-radius:9px;transition:.15s;display:flex;align-items:center;gap:8px}
-.ctx-item:hover{background:var(--hov)}
+@keyframes ctxFadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.ctx-item{padding:13px 16px;font-size:15px;cursor:pointer;border-radius:10px;transition:.12s;display:flex;align-items:center;gap:10px;font-weight:500}
+.ctx-item:active{background:var(--hov)}
+.ctx-item svg{flex-shrink:0;opacity:.7}
+.ctx-item.danger{color:var(--danger)}
+.ctx-item.danger svg{stroke:var(--danger);opacity:1}
+/* Separator in ctx menu */
+.ctx-sep{height:1px;background:var(--brd);margin:4px 8px}
 .ctx-item.danger{color:var(--danger)}
 
 /* ── Emoji picker ──────────────────────────────── */
@@ -1396,12 +1402,17 @@ function renderChatList(chats) {
 
     // Long-press → context menu
     let pressTimer;
-    const startPress = () => { pressTimer = setTimeout(() => showChatItemLongPress(key, isGroup), 500); };
+    const startPress = (evt) => {
+      pressTimer = setTimeout(() => {
+        if (navigator.vibrate) navigator.vibrate(40); // haptic
+        showChatItemLongPress(key, isGroup, el);
+      }, 500);
+    };
     const cancelPress = () => clearTimeout(pressTimer);
     el.addEventListener('touchstart', startPress, {passive:true});
     el.addEventListener('touchend',   cancelPress, {passive:true});
     el.addEventListener('touchmove',  cancelPress, {passive:true});
-    el.addEventListener('contextmenu', e => { e.preventDefault(); showChatItemLongPress(key, isGroup); });
+    el.addEventListener('contextmenu', e => { e.preventDefault(); showChatItemLongPress(key, isGroup, el); });
 
     wrap.appendChild(el);
     list.appendChild(wrap);
@@ -1410,32 +1421,60 @@ function renderChatList(chats) {
 }
 
 // Long-press context menu for chat items
-function showChatItemLongPress(key, isGroup) {
+function showChatItemLongPress(key, isGroup, triggerEl) {
   ctxChatKey = key; ctxChatIsGroup = isGroup;
   const menu = document.getElementById('chatItemCtxMenu');
+
   // Pin label
-  menu.querySelector('[onclick="ctxChatPin()"]').innerHTML = pinnedChats.has(key)
-    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/></svg> Открепить`
-    : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/></svg> Закрепить`;
+  const pinItem = menu.querySelector('[onclick="ctxChatPin()"]');
+  if (pinItem) pinItem.innerHTML = pinnedChats.has(key)
+    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/></svg> Открепить чат`
+    : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/></svg> Закрепить чат`;
+
   // Mute label
-  document.getElementById('chatCtxMuteLabel').textContent = mutedChats.has(key) ? 'Вкл. звук' : 'Откл. звук';
-  // Block label (only peer)
+  const muteLabel = document.getElementById('chatCtxMuteLabel');
+  if (muteLabel) muteLabel.textContent = mutedChats.has(key) ? 'Вкл. звук' : 'Откл. звук';
+
+  // Block (only for peer)
   const blockItem = menu.querySelector('[onclick="ctxChatBlock()"]');
-  if (isGroup) {
-    blockItem.style.display = 'none';
-  } else {
-    blockItem.style.display = '';
-    document.getElementById('chatCtxBlockLabel').textContent = blacklist.has(key) ? 'Убрать из ЧС' : 'Добавить в ЧС';
+  if (blockItem) {
+    blockItem.style.display = isGroup ? 'none' : '';
+    const blockLabel = document.getElementById('chatCtxBlockLabel');
+    if (blockLabel) blockLabel.textContent = blacklist.has(key) ? 'Убрать из ЧС' : 'Добавить в ЧС';
   }
-  // Position in center-bottom
-  menu.style.left = '50%';
-  menu.style.transform = 'translateX(-50%)';
-  menu.style.top = 'auto';
-  menu.style.bottom = '80px';
-  menu.style.right = 'auto';
-  hideAllMenus();
+
+  // Позиционируем рядом с нажатым элементом
+  menu.style.cssText = '';
+  menu.classList.remove('show');
+
+  if (triggerEl) {
+    const rect = triggerEl.getBoundingClientRect();
+    const menuW = 230, menuH = isGroup ? 110 : 160;
+    let top  = rect.top + rect.height / 2 - menuH / 2;
+    let left = (window.innerWidth - menuW) / 2; // по центру по горизонтали
+
+    // Не выходить за экран
+    top  = Math.max(60, Math.min(top, window.innerHeight - menuH - 20));
+    menu.style.top  = top  + 'px';
+    menu.style.left = left + 'px';
+  } else {
+    menu.style.top  = '50%';
+    menu.style.left = '50%';
+    menu.style.transform = 'translate(-50%,-50%)';
+  }
+
+  // Показываем оверлей (он не перехватывает клики, только фон)
+  let overlay = document.getElementById('ctxOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'ctxOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:499;background:rgba(0,0,0,.3)';
+    overlay.onclick = hideAllMenus;
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display = 'block';
+
   menu.classList.add('show');
-  setTimeout(() => document.addEventListener('touchstart', hideAllMenus, {once:true, passive:true}), 100);
 }
 
 function ctxChatPin() {
@@ -1961,10 +2000,17 @@ function mkBubble(m) {
   if (!isOut) { avRow.appendChild(contentWrap); wrap.appendChild(avRow); }
   else wrap.appendChild(contentWrap);
 
-  bubble.oncontextmenu = e => { e.preventDefault(); showMsgCtx(e, m.id, isOut, m.text||'', m); };
+  bubble.oncontextmenu = e => { e.preventDefault(); showMsgCtxAt(e.clientX, e.clientY, m.id, isOut, m.text||'', m); };
   // Long-press for mobile
   let pressT;
-  bubble.addEventListener('touchstart', e => { pressT = setTimeout(() => showMsgCtx(e.touches[0], m.id, isOut, m.text||'', m), 500); }, {passive:true});
+  bubble.addEventListener('touchstart', e => {
+    const touch = e.touches[0];
+    pressT = setTimeout(() => {
+      if (navigator.vibrate) navigator.vibrate(40);
+      const rect = bubble.getBoundingClientRect();
+      showMsgCtxAt(rect.left + rect.width/2, rect.top, m.id, isOut, m.text||'', m);
+    }, 500);
+  }, {passive:true});
   bubble.addEventListener('touchend',  () => clearTimeout(pressT), {passive:true});
   bubble.addEventListener('touchmove', () => clearTimeout(pressT), {passive:true});
   // Select mode tap
@@ -2306,8 +2352,41 @@ function cancelReply() {
   document.getElementById('replyBar').classList.remove('show');
 }
 
-// ── Message context menu ───────────────────────────────────────────────────
-let selectMode = false;
+function showMsgCtxAt(x, y, id, isOut, text, msg) {
+  ctxMsgId = id; ctxMsgOut = isOut; ctxMsgText = text;
+  const menu = document.getElementById('msgCtxMenu');
+  const editBtn = document.getElementById('ctxEditBtn');
+  if (editBtn) editBtn.style.display = isOut ? '' : 'none';
+
+  // Позиция
+  const menuW = 230, menuH = 300;
+  let left = Math.max(8, Math.min(x - menuW/2, window.innerWidth - menuW - 8));
+  let top  = y - menuH - 10;
+  if (top < 60) top = y + 20;
+  top = Math.max(60, Math.min(top, window.innerHeight - menuH - 20));
+
+  menu.style.cssText = `left:${left}px;top:${top}px`;
+
+  // Оверлей
+  let overlay = document.getElementById('ctxOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'ctxOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:499;background:rgba(0,0,0,.3)';
+    overlay.onclick = hideAllMenus;
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display = 'block';
+
+  hideAllMenus(); // скрываем другие меню
+  overlay.style.display = 'block'; // показываем оверлей снова
+  menu.classList.add('show');
+}
+
+function showMsgCtx(e, id, isOut, text, msg) {
+  e.preventDefault(); e.stopPropagation();
+  showMsgCtxAt(e.clientX, e.clientY, id, isOut, text, msg);
+}
 let selectedMsgs = new Set();
 let translateTargetLang = 'ru';
 
@@ -3773,6 +3852,8 @@ function playSendSound() {
 
 function hideAllMenus() {
   document.querySelectorAll('.ctx-menu').forEach(m => m.classList.remove('show'));
+  const ov = document.getElementById('ctxOverlay');
+  if (ov) ov.style.display = 'none';
 }
 
 function positionMenu(menu, e) {
