@@ -129,7 +129,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .msg-av-row{display:flex;align-items:flex-end;gap:8px}
 .msg-av-sm{width:28px;height:28px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;cursor:pointer}
 .msg-av-sm img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.bubble{max-width:75%;padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.5;position:relative;word-break:break-word}
+.bubble{max-width:75%;min-width:60px;padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.5;position:relative;word-break:break-word;word-wrap:break-word;overflow-wrap:break-word;white-space:pre-wrap}
 .out .bubble{background:var(--out);color:var(--out-t);border-bottom-right-radius:4px}
 .in .bubble{background:var(--in);color:var(--in-t);border-bottom-left-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .msg-time{font-size:11px;margin-top:3px;padding:0 4px}
@@ -139,18 +139,29 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .msg-sender{font-size:11px;font-weight:700;color:var(--ac);margin-bottom:3px;padding:0 2px}
 .msg-img{max-width:240px;border-radius:12px;cursor:pointer;display:block}
 .msg-file{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.15);border-radius:10px;padding:8px 10px;cursor:pointer}
-.voice-bubble{display:flex;align-items:center;gap:10px;min-width:200px;max-width:260px}
-.voice-play{width:42px;height:42px;border-radius:50%;border:none;background:#fff;color:var(--ac);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.out .voice-play{background:rgba(255,255,255,.9)}
-.voice-right{flex:1;display:flex;flex-direction:column;gap:4px}
-.voice-progress-wrap{position:relative;height:4px;border-radius:2px;cursor:pointer;background:rgba(255,255,255,.3)}
+.voice-bubble{display:flex;align-items:center;gap:12px;min-width:220px;max-width:280px;padding:2px 0}
+/* Кнопка play/pause */
+.voice-play{width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden}
+.out .voice-play{background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.in .voice-play{background:var(--ac);box-shadow:0 2px 10px rgba(26,188,156,.4)}
+.voice-play:active{transform:scale(.92)}
+/* SVG иконка внутри */
+.voice-play svg{transition:opacity .15s}
+.voice-right{flex:1;display:flex;flex-direction:column;gap:6px}
+.voice-progress-wrap{position:relative;height:3px;border-radius:2px;cursor:pointer;overflow:hidden}
+.out .voice-progress-wrap{background:rgba(255,255,255,.35)}
 .in .voice-progress-wrap{background:rgba(26,188,156,.2)}
-.voice-progress{height:100%;border-radius:2px;background:#fff;width:0%;transition:width .1s}
+.voice-progress{height:100%;border-radius:2px;width:0%;transition:width .1s}
+.out .voice-progress{background:rgba(255,255,255,.9)}
 .in .voice-progress{background:var(--ac)}
-.voice-dur{font-size:11px;opacity:.75}
-.voice-bars{flex:1;height:20px;display:flex;align-items:center;gap:2px}
-.voice-bar{width:3px;border-radius:2px;background:rgba(255,255,255,.5)}
-.in .voice-bar{background:var(--ac);opacity:.5}
+/* Волны (waveform bars) */
+.voice-bars{display:flex;align-items:center;gap:2px;height:24px}
+.voice-bar{width:3px;border-radius:3px;flex-shrink:0;transition:background .2s}
+.out .voice-bar{background:rgba(255,255,255,.45)}
+.in .voice-bar{background:var(--ac);opacity:.4}
+.voice-bar.played.out{background:rgba(255,255,255,.95)}
+.voice-bar.played.in{background:var(--ac);opacity:1}
+.voice-dur{font-size:11px;font-weight:600;opacity:.75;letter-spacing:.02em}
 .date-sep{text-align:center;font-size:12px;color:var(--txt2);padding:8px 0;font-weight:600}
 .reply-preview{border-left:3px solid rgba(255,255,255,.5);padding:4px 8px;margin-bottom:6px;border-radius:4px;font-size:12px;opacity:.85;cursor:pointer}
 .in .reply-preview{border-color:var(--ac)}
@@ -179,13 +190,38 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .msg-textarea:focus{border-color:var(--ac);background:#fff}
 .send-btn{width:42px;height:42px;border:none;border-radius:50%;background:var(--ac);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:.15s;box-shadow:0 2px 8px rgba(26,188,156,.3)}
 .send-btn:active{transform:scale(.93)}
-.rec-indicator{display:none;align-items:center;gap:10px;background:#fff3f3;border-radius:12px;padding:10px 14px}
+.rec-indicator{display:none;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(26,188,156,.08),rgba(26,188,156,.04));border:1.5px solid rgba(26,188,156,.25);border-radius:16px;padding:12px 14px}
 .rec-indicator.show{display:flex}
-.rec-dot{width:10px;height:10px;border-radius:50%;background:var(--danger);animation:blink 1s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-.rec-time{font-size:14px;font-weight:600;color:var(--danger);flex:1}
-.rec-cancel{border:none;background:none;cursor:pointer;color:var(--txt2);font-size:14px;font-weight:600}
-.rec-send{border:none;border-radius:10px;background:var(--ac);color:#fff;padding:8px 16px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer}
+/* Анимированный микрофон */
+.rec-mic-wrap{position:relative;flex-shrink:0}
+.rec-mic-btn{width:44px;height:44px;border-radius:50%;background:var(--ac);border:none;display:flex;align-items:center;justify-content:center;cursor:default;box-shadow:0 0 0 0 rgba(26,188,156,.4);animation:micPulse 1.5s ease-out infinite}
+@keyframes micPulse{
+  0%{box-shadow:0 0 0 0 rgba(26,188,156,.5)}
+  70%{box-shadow:0 0 0 14px rgba(26,188,156,0)}
+  100%{box-shadow:0 0 0 0 rgba(26,188,156,0)}
+}
+/* Волны вокруг микрофона */
+.rec-wave{position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(26,188,156,.3);animation:recWave 1.5s ease-out infinite;pointer-events:none}
+.rec-wave:nth-child(2){inset:-14px;border-color:rgba(26,188,156,.15);animation-delay:.4s}
+.rec-wave:nth-child(3){inset:-22px;border-color:rgba(26,188,156,.07);animation-delay:.8s}
+@keyframes recWave{
+  0%{transform:scale(1);opacity:1}
+  100%{transform:scale(1.5);opacity:0}
+}
+/* Бары уровня звука */
+.rec-bars{display:flex;align-items:center;gap:3px;height:28px;flex:1}
+.rec-bar{width:3px;border-radius:3px;background:var(--ac);animation:recBar 0.6s ease-in-out infinite alternate}
+.rec-bar:nth-child(1){animation-delay:0s}.rec-bar:nth-child(2){animation-delay:.08s}.rec-bar:nth-child(3){animation-delay:.16s}
+.rec-bar:nth-child(4){animation-delay:.24s}.rec-bar:nth-child(5){animation-delay:.32s}.rec-bar:nth-child(6){animation-delay:.4s}
+.rec-bar:nth-child(7){animation-delay:.48s}.rec-bar:nth-child(8){animation-delay:.56s}.rec-bar:nth-child(9){animation-delay:.64s}
+.rec-bar:nth-child(10){animation-delay:.72s}.rec-bar:nth-child(11){animation-delay:.8s}.rec-bar:nth-child(12){animation-delay:.88s}
+@keyframes recBar{
+  0%{height:4px;opacity:.5}
+  100%{height:22px;opacity:1}
+}
+.rec-time{font-size:14px;font-weight:700;color:var(--ac);min-width:36px}
+.rec-cancel{border:none;background:rgba(229,57,53,.1);color:var(--danger);cursor:pointer;font-size:13px;font-weight:600;padding:6px 12px;border-radius:10px;font-family:var(--font)}
+.rec-send{border:none;border-radius:10px;background:var(--ac);color:#fff;padding:8px 16px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(26,188,156,.3)}
 
 /* ── Context menus ─────────────────────────────── */
 .ctx-menu{position:fixed;z-index:500;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:6px;min-width:180px;display:none}
@@ -426,10 +462,36 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
           <button class="reply-bar-cancel" onclick="cancelReply()">×</button>
         </div>
         <div class="rec-indicator" id="recIndicator">
-          <div class="rec-dot"></div>
-          <span class="rec-time" id="recTime">0:00</span>
-          <button class="rec-cancel" onclick="cancelRec()">Отмена</button>
-          <button class="rec-send" onclick="sendVoice()">Отправить</button>
+          <div class="rec-mic-wrap">
+            <div class="rec-wave"></div>
+            <div class="rec-wave"></div>
+            <div class="rec-wave"></div>
+            <div class="rec-mic-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="2" width="6" height="12" rx="3"/>
+                <path d="M5 10a7 7 0 0 0 14 0"/>
+                <line x1="12" y1="19" x2="12" y2="22"/>
+                <line x1="8" y1="22" x2="16" y2="22"/>
+              </svg>
+            </div>
+          </div>
+          <div class="rec-bars">
+            <div class="rec-bar" style="height:8px"></div>
+            <div class="rec-bar" style="height:14px"></div>
+            <div class="rec-bar" style="height:20px"></div>
+            <div class="rec-bar" style="height:12px"></div>
+            <div class="rec-bar" style="height:22px"></div>
+            <div class="rec-bar" style="height:10px"></div>
+            <div class="rec-bar" style="height:18px"></div>
+            <div class="rec-bar" style="height:14px"></div>
+            <div class="rec-bar" style="height:22px"></div>
+            <div class="rec-bar" style="height:8px"></div>
+            <div class="rec-bar" style="height:16px"></div>
+            <div class="rec-bar" style="height:20px"></div>
+          </div>
+          <div class="rec-time" id="recTime">0:00</div>
+          <button class="rec-cancel" onclick="cancelRec()">✕</button>
+          <button class="rec-send" onclick="sendVoice()">↑</button>
         </div>
         <div class="inp-row" id="inpRow">
           <div class="inp-extra-btns">
@@ -1191,10 +1253,29 @@ function mkBubble(m) {
     vid.controls = true; vid.src = m.url; vid.style.cssText='max-width:240px;border-radius:12px;display:block';
     bubble.appendChild(vid);
   } else if (mtype === 'voice' && m.url) {
-    const bars = Array.from({length:30}, () => `<div class="voice-bar" style="height:${4+Math.random()*18}px"></div>`).join('');
+    const numBars = 32;
+    const heights = Array.from({length:numBars}, () => 3 + Math.random() * 20);
+    const bars = heights.map(h => `<div class="voice-bar" style="height:${h}px"></div>`).join('');
     const dur = m.duration || '0:00';
-    const vid2 = 'v_' + (m.id||Date.now()).replace(/[^a-z0-9]/gi,'');
-    bubble.innerHTML = `<div class="voice-bubble"><button class="voice-play" id="btn_${vid2}" onclick="playVoice('${m.url}','${vid2}')">▶</button><div class="voice-right"><div class="voice-bars">${bars}</div><div class="voice-dur" id="dur_${vid2}">${dur}</div></div></div>`;
+    const vid2 = 'v_' + (m.id||Date.now()).toString().replace(/[^a-z0-9]/gi,'');
+    const isOutMsg = m.from === me;
+    // SVG иконки play и pause в цвете
+    const svgPlay = isOutMsg
+      ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><polygon points="5,3 19,12 5,21" fill="#1ABC9C"/></svg>`
+      : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><polygon points="5,3 19,12 5,21" fill="white"/></svg>`;
+    const svgPause = isOutMsg
+      ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="4" height="18" rx="1.5" fill="#1ABC9C"/><rect x="15" y="3" width="4" height="18" rx="1.5" fill="#1ABC9C"/></svg>`
+      : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="4" height="18" rx="1.5" fill="white"/><rect x="15" y="3" width="4" height="18" rx="1.5" fill="white"/></svg>`;
+    bubble.innerHTML = `<div class="voice-bubble">
+      <button class="voice-play" id="btn_${vid2}" onclick="playVoice('${m.url}','${vid2}')" data-play="${svgPlay}" data-pause="${svgPause}">${svgPlay}</button>
+      <div class="voice-right">
+        <div class="voice-bars" id="bars_${vid2}">${bars}</div>
+        <div class="voice-progress-wrap" id="prog_wrap_${vid2}" onclick="seekVoice(event,'${vid2}')">
+          <div class="voice-progress" id="prog_${vid2}"></div>
+        </div>
+        <div class="voice-dur" id="dur_${vid2}">${dur}</div>
+      </div>
+    </div>`;
   } else if (mtype === 'file' && m.url) {
     const fd = document.createElement('div');
     fd.className = 'msg-file';
@@ -1383,18 +1464,76 @@ function stopRecUI() {
 
 const audioPlayers = {};
 function playVoice(url, vid) {
+  // Остановить все другие
   Object.keys(audioPlayers).forEach(id => {
-    if (id !== vid && audioPlayers[id]) { audioPlayers[id].pause(); const b=document.getElementById('btn_'+id);if(b)b.textContent='▶'; }
+    if (id !== vid && audioPlayers[id]) {
+      audioPlayers[id].pause();
+      const b = document.getElementById('btn_'+id);
+      if (b) b.innerHTML = b.dataset.play || '▶';
+      stopVoiceProgress(id);
+    }
   });
   if (!audioPlayers[vid]) {
     audioPlayers[vid] = new Audio(url);
-    const durEl = document.getElementById('dur_'+vid);
-    audioPlayers[vid].ontimeupdate = () => { if(durEl)durEl.textContent=formatDur(Math.floor(audioPlayers[vid].currentTime)); };
-    audioPlayers[vid].onended = () => { const b=document.getElementById('btn_'+vid);if(b)b.textContent='▶'; };
+    const durEl   = document.getElementById('dur_'+vid);
+    const progEl  = document.getElementById('prog_'+vid);
+    const barsEl  = document.getElementById('bars_'+vid);
+    audioPlayers[vid].ontimeupdate = () => {
+      const a = audioPlayers[vid];
+      if (!a || !a.duration) return;
+      const pct = (a.currentTime / a.duration) * 100;
+      if (progEl) progEl.style.width = pct + '%';
+      if (durEl) durEl.textContent = formatDur(Math.floor(a.currentTime));
+      // Подсветить пройденные бары
+      if (barsEl) {
+        const bars = barsEl.querySelectorAll('.voice-bar');
+        const playedCount = Math.floor(pct / 100 * bars.length);
+        bars.forEach((bar, i) => {
+          bar.classList.toggle('played', i < playedCount);
+          // определить out или in
+          const wrap = barsEl.closest('.msg-wrap');
+          if (wrap) {
+            bar.classList.toggle('out', wrap.classList.contains('out'));
+            bar.classList.toggle('in', wrap.classList.contains('in'));
+          }
+        });
+      }
+    };
+    audioPlayers[vid].onended = () => {
+      const b = document.getElementById('btn_'+vid);
+      if (b) b.innerHTML = b.dataset.play || '▶';
+      if (progEl) progEl.style.width = '0%';
+      const durEl2 = document.getElementById('dur_'+vid);
+      // Восстановить длительность
+      const a = audioPlayers[vid];
+      if (durEl2 && a) durEl2.textContent = formatDur(Math.floor(a.duration||0));
+      stopVoiceProgress(vid);
+    };
   }
   const btn = document.getElementById('btn_'+vid);
-  if (audioPlayers[vid].paused) { audioPlayers[vid].play(); if(btn)btn.textContent='⏸'; }
-  else { audioPlayers[vid].pause(); if(btn)btn.textContent='▶'; }
+  if (audioPlayers[vid].paused) {
+    audioPlayers[vid].play().catch(() => toast('Ошибка воспроизведения'));
+    if (btn) btn.innerHTML = btn.dataset.pause || '⏸';
+  } else {
+    audioPlayers[vid].pause();
+    if (btn) btn.innerHTML = btn.dataset.play || '▶';
+  }
+}
+
+function seekVoice(e, vid) {
+  const a = audioPlayers[vid];
+  if (!a || !a.duration) return;
+  const wrap = e.currentTarget;
+  const rect = wrap.getBoundingClientRect();
+  const pct  = (e.clientX - rect.left) / rect.width;
+  a.currentTime = pct * a.duration;
+}
+
+function stopVoiceProgress(vid) {
+  const progEl = document.getElementById('prog_'+vid);
+  const barsEl = document.getElementById('bars_'+vid);
+  if (progEl) progEl.style.width = '0%';
+  if (barsEl) barsEl.querySelectorAll('.voice-bar').forEach(b => b.classList.remove('played'));
 }
 
 // ── Reply ──────────────────────────────────────────────────────────────────
