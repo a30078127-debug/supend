@@ -56,26 +56,30 @@ async def ws_handler(request):
                 if u in users:
                     await send({'type':'register_error','msg':'Логин занят'}); continue
                 ref_code = u[:8].upper()
-                bonus = 0
-                inv = d.get('inv_code','').upper()
+                inv_bonus = 0   # бонус новому пользователю за ввод чужого кода
                 inviter = None
+                inv = d.get('inv_code','').strip().upper()
                 if inv:
+                    # Ищем владельца этого реф-кода среди существующих пользователей
                     for un, ud in users.items():
-                        if ud.get('ref_code','') == inv:
+                        if ud.get('ref_code','').upper() == inv:
                             inviter = un; break
                     if inviter:
-                        bonus = 100
-                        users[inviter]['sup_balance'] = users[inviter].get('sup_balance',0) + 200
+                        inv_bonus = 100  # новый пользователь получает 100
+                        # Пригласившему — 200
+                        users[inviter]['sup_balance'] = users[inviter].get('sup_balance', 0) + 200
                         await push(inviter, {'type':'ref_reward','amount':200,'from':u})
                 users[u] = {
                     'password': h(p), 'bio': d.get('bio',''), 'avatar': d.get('avatar',''),
                     'created_at': time.strftime('%d.%m.%Y'),
-                    'sup_balance': 500 + bonus, 'ref_code': ref_code
+                    'sup_balance': inv_bonus,  # стартовый баланс = только реф-бонус (или 0)
+                    'ref_code': ref_code,
+                    'username': u
                 }
                 me = u; online[u] = ws
                 await send({'type':'auth_ok','username':u,'bio':users[u]['bio'],
                     'avatar':users[u]['avatar'],'sup':users[u]['sup_balance'],
-                    'ref_code':ref_code,'inv_bonus':bonus,'created_at':users[u]['created_at']})
+                    'ref_code':ref_code,'inv_bonus':inv_bonus,'created_at':users[u]['created_at']})
                 continue
 
             # ── Login ─────────────────────────────────────────────────────────

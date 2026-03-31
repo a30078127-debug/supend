@@ -407,7 +407,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
           <div class="my-name" id="myName">@username</div>
           <div class="my-status">● онлайн</div>
         </div>
-        <div id="supBadge" style="background:linear-gradient(135deg,#1ABC9C,#16a085);color:#fff;font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer" onclick="event.stopPropagation();openWallet()">0 SUP</div>
       </div>
       <div class="search-wrap">
         <div class="search-inp-wrap">
@@ -429,15 +428,42 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
     </div>
     <div class="chats-label">Чаты</div>
     <div class="chats-list" id="chatsList"></div>
-    <!-- Fab new group -->
-    <div style="position:absolute;right:16px;bottom:16px;z-index:11">
-      <button onclick="openCreateGroup()" title="Создать группу" style="width:52px;height:52px;border-radius:50%;background:var(--ac);border:none;cursor:pointer;box-shadow:0 4px 16px rgba(26,188,156,.4);display:flex;align-items:center;justify-content:center;transition:transform .15s" onmousedown="this.style.transform='scale(.92)'" onmouseup="this.style.transform='scale(1)'" ontouchstart="this.style.transform='scale(.92)'" ontouchend="this.style.transform='scale(1)'">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- FAB menu -->
+    <div id="fabWrap" style="position:absolute;right:16px;bottom:16px;z-index:11;display:flex;flex-direction:column;align-items:flex-end;gap:12px">
+      <!-- Sub buttons (hidden by default) -->
+      <div id="fabSub" style="display:none;flex-direction:column;align-items:flex-end;gap:10px">
+        <!-- Обменник -->
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="background:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;color:#111;box-shadow:0 2px 10px rgba(0,0,0,.12);white-space:nowrap">P2P Обменник</div>
+          <button onclick="closeFab();openExchange()" style="width:44px;height:44px;border-radius:50%;background:#f0b90b;border:none;cursor:pointer;box-shadow:0 3px 12px rgba(240,185,11,.4);display:flex;align-items:center;justify-content:center">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          </button>
+        </div>
+        <!-- Кошелёк -->
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="background:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;color:#111;box-shadow:0 2px 10px rgba(0,0,0,.12);white-space:nowrap">Кошелёк <span id="fabSupBadge" style="color:var(--ac)">0 SUP</span></div>
+          <button onclick="closeFab();openWallet()" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#1ABC9C,#16a085);border:none;cursor:pointer;box-shadow:0 3px 12px rgba(26,188,156,.4);display:flex;align-items:center;justify-content:center">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M16 12a1 1 0 1 0 2 0 1 1 0 0 0-2 0z" fill="white" stroke="none"/><path d="M2 10h20"/></svg>
+          </button>
+        </div>
+        <!-- Создать группу -->
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="background:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;color:#111;box-shadow:0 2px 10px rgba(0,0,0,.12);white-space:nowrap">Создать группу</div>
+          <button onclick="closeFab();openCreateGroup()" style="width:44px;height:44px;border-radius:50%;background:var(--ac);border:none;cursor:pointer;box-shadow:0 3px 12px rgba(26,188,156,.4);display:flex;align-items:center;justify-content:center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </button>
+        </div>
+      </div>
+      <!-- Main FAB button -->
+      <button id="fabMain" onclick="toggleFab()" style="width:52px;height:52px;border-radius:50%;background:var(--ac);border:none;cursor:pointer;box-shadow:0 4px 16px rgba(26,188,156,.4);display:flex;align-items:center;justify-content:center;transition:transform .25s,background .2s">
+        <svg id="fabIcon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .3s">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
         </svg>
       </button>
     </div>
+    <!-- FAB overlay to close -->
+    <div id="fabOverlay" onclick="closeFab()" style="display:none;position:fixed;inset:0;z-index:10"></div>
   </div>
 
   <!-- Chat view -->
@@ -819,17 +845,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
   <div class="wallet-head">
     <button class="wallet-back" onclick="closeWallet()">←</button>
     <div class="wallet-title">💰 Кошелёк SUP</div>
-    <div style="flex:1"></div>
-    <button onclick="openExchange()" style="padding:8px 16px;border:none;border-radius:10px;background:#f0b90b;color:#000;font-weight:700;cursor:pointer;font-family:var(--font);font-size:13px">P2P</button>
   </div>
   <div class="wallet-card">
+    <div style="font-size:13px;opacity:.8;margin-bottom:4px">Баланс</div>
     <div class="wallet-balance" id="walletBalance">0</div>
     <div class="wallet-label">SUP — Supend Points</div>
+    <div style="margin-top:16px;display:flex;gap:10px">
+      <button onclick="openTransfer()" style="flex:1;padding:10px;border:1.5px solid rgba(255,255,255,.5);border-radius:12px;background:rgba(255,255,255,.15);color:#fff;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;backdrop-filter:blur(4px)">
+        ↗ Перевести
+      </button>
+      <button onclick="closeWallet();openExchange()" style="flex:1;padding:10px;border:1.5px solid rgba(255,255,255,.5);border-radius:12px;background:rgba(255,255,255,.15);color:#fff;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;backdrop-filter:blur(4px)">
+        ⇄ P2P
+      </button>
+    </div>
   </div>
-  <div class="wallet-actions">
-    <button class="wallet-btn primary" onclick="openTransfer()">Перевести</button>
-    <button class="wallet-btn sec" onclick="pinWallet()">Свернуть</button>
-  </div>
+  <!-- Transaction history -->
+  <div style="padding:16px 20px 8px;font-size:12px;font-weight:700;color:#848e9c;text-transform:uppercase;letter-spacing:.06em">История</div>
   <div class="wallet-tx" id="walletTx">
     <div style="text-align:center;padding:40px;color:#848e9c">История транзакций пуста</div>
   </div>
@@ -1059,13 +1090,17 @@ function onAuthOk(d) {
   mySup = d.sup||0; myRefCode = d.ref_code||'';
   document.getElementById('authBtn').disabled = false;
   document.getElementById('authScreen').classList.add('hidden');
-  const app = document.getElementById('app');
-  app.classList.add('visible');
+  document.getElementById('app').classList.add('visible');
   updateMyUI();
   updateSup(mySup);
   cmd({ cmd:'get_chats' });
   applyStoredCustom();
-  if (d.inv_bonus) toast(`+${d.inv_bonus} SUP за код приглашения! 🎁`);
+  // Реф-бонус только при регистрации (inv_bonus > 0)
+  if (d.inv_bonus && d.inv_bonus > 0) {
+    addTx(`Бонус за код приглашения`, +d.inv_bonus, '🎁');
+    updateSup(mySup); // уже установлен выше
+    toast(`+${d.inv_bonus} SUP за код приглашения! 🎁`);
+  }
 }
 
 function onAuthErr(msg) {
@@ -2659,28 +2694,72 @@ function toggleMic() {
 }
 
 // ── Wallet ─────────────────────────────────────────────────────────────────
-function updateSup(val) {
-  mySup = val;
-  document.getElementById('supBadge').textContent = val + ' SUP';
-  document.getElementById('walletBalance').textContent = val;
-  document.getElementById('miniSup').textContent = val;
+// ── FAB menu ───────────────────────────────────────────────────────────────
+let fabOpen = false;
+function toggleFab() {
+  fabOpen ? closeFab() : openFab();
+}
+function openFab() {
+  fabOpen = true;
+  document.getElementById('fabSub').style.display = 'flex';
+  document.getElementById('fabOverlay').style.display = 'block';
+  document.getElementById('fabMain').style.background = '#e74c3c';
+  document.getElementById('fabIcon').style.transform = 'rotate(45deg)';
+  document.getElementById('fabIcon').innerHTML = '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>';
+}
+function closeFab() {
+  fabOpen = false;
+  document.getElementById('fabSub').style.display = 'none';
+  document.getElementById('fabOverlay').style.display = 'none';
+  document.getElementById('fabMain').style.background = 'var(--ac)';
+  document.getElementById('fabIcon').style.transform = 'rotate(0)';
+  document.getElementById('fabIcon').innerHTML = '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>';
 }
 
-function addTx(desc, amount) {
-  walletTx.unshift({ desc, amount, time: tstr(), date: new Date().toLocaleDateString('ru') });
-  if (walletTx.length > 100) walletTx.pop();
+// ── Wallet ─────────────────────────────────────────────────────────────────
+function updateSup(val) {
+  mySup = val;
+  // Обновляем все места где показывается баланс
+  const balEl = document.getElementById('walletBalance');
+  const miniEl = document.getElementById('miniSup');
+  const fabEl  = document.getElementById('fabSupBadge');
+  if (balEl)  balEl.textContent  = val;
+  if (miniEl) miniEl.textContent = val;
+  if (fabEl)  fabEl.textContent  = val + ' SUP';
+}
+
+function addTx(desc, amount, emoji) {
+  const icon = emoji || (amount > 0 ? '💰' : '💸');
+  walletTx.unshift({
+    desc, amount, icon,
+    time: tstr(),
+    date: new Date().toLocaleDateString('ru', {day:'numeric', month:'short'})
+  });
+  if (walletTx.length > 200) walletTx.pop();
   localStorage.setItem('sup_tx', JSON.stringify(walletTx));
   renderTx();
 }
 
 function renderTx() {
   const el = document.getElementById('walletTx');
-  if (!walletTx.length) { el.innerHTML='<div style="text-align:center;padding:40px;color:#848e9c">История транзакций пуста</div>'; return; }
-  el.innerHTML = walletTx.slice(0,50).map(t => `
+  if (!walletTx.length) {
+    el.innerHTML = `<div style="text-align:center;padding:40px 20px;color:#848e9c">
+      <div style="font-size:40px;margin-bottom:10px">📭</div>
+      <div style="font-size:14px">История пуста</div>
+      <div style="font-size:12px;margin-top:4px;opacity:.6">Отправляй сообщения и зарабатывай SUP</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = walletTx.slice(0, 100).map(t => `
     <div class="tx-item">
-      <div class="tx-icon ${t.amount>0?'tx-plus':'tx-minus'}">${t.amount>0?'↑':'↓'}</div>
-      <div class="tx-info"><div class="tx-desc">${esc(t.desc)}</div><div class="tx-date">${t.date} · ${t.time}</div></div>
-      <div class="tx-amount ${t.amount>0?'plus':'minus'}">${t.amount>0?'+':''}${t.amount} SUP</div>
+      <div class="tx-icon ${t.amount > 0 ? 'tx-plus' : 'tx-minus'}" style="font-size:18px">${t.icon||''}</div>
+      <div class="tx-info">
+        <div class="tx-desc">${esc(t.desc)}</div>
+        <div class="tx-date">${t.date} · ${t.time}</div>
+      </div>
+      <div class="tx-amount ${t.amount > 0 ? 'plus' : 'minus'}" style="font-weight:800">
+        ${t.amount > 0 ? '+' : ''}${t.amount} SUP
+      </div>
     </div>`).join('');
 }
 
@@ -2689,42 +2768,62 @@ function openWallet() {
   document.getElementById('miniWallet').classList.remove('show');
   renderTx();
 }
-
 function closeWallet() { document.getElementById('walletPage').classList.remove('show'); }
 function pinWallet()   { document.getElementById('walletPage').classList.remove('show'); document.getElementById('miniWallet').classList.add('show'); }
-
 function openTransfer() { document.getElementById('transferModal').classList.add('show'); }
 
 function doTransfer() {
   const to  = document.getElementById('transferTo').value.trim().replace('@','');
   const amt = parseInt(document.getElementById('transferAmt').value);
   document.getElementById('transferErr').textContent = '';
-  if (!to || !amt || amt < 1) { document.getElementById('transferErr').textContent='Заполни все поля'; return; }
+  if (!to || !amt || amt < 1) { document.getElementById('transferErr').textContent = 'Заполни все поля'; return; }
+  if (amt > mySup) { document.getElementById('transferErr').textContent = 'Недостаточно SUP'; return; }
   cmd({ cmd:'transfer_sup', to, amount:amt });
 }
 
 function onTransferOk(d) {
   updateSup(d.sup);
-  addTx(`Перевод @${d.to}`, -d.amount);
+  addTx(`Перевод → @${d.to}`, -d.amount, '↗️');
   closeModal('transferModal');
   toast(`Переведено ${d.amount} SUP → @${d.to}`);
 }
 
 function onTransferReceived(d) {
   updateSup(d.sup);
-  addTx(`Получено от @${d.from}`, d.amount);
+  addTx(`Получено от @${d.from}`, +d.amount, '↙️');
   toast(`+${d.amount} SUP от @${d.from} 💰`);
 }
 
 function onRefReward(d) {
   updateSup(mySup + d.amount);
-  addTx(`Реферальный бонус (${d.from} зарегистрировался)`, d.amount);
+  addTx(`Реферал: @${d.from} зарегистрировался`, +d.amount, '🎁');
   toast(`+${d.amount} SUP — реферальный бонус! 🎁`);
 }
 
 function earnSup(textLen) {
-  const earned = Math.max(1, Math.floor(textLen / 50));
-  if (earned > 0) updateSup(mySup + earned);
+  if (!textLen || textLen < 1) return;
+  // 1 SUP за каждый символ, но не больше 50 за одно сообщение
+  const earned = Math.min(50, Math.max(1, textLen));
+  updateSup(mySup + earned);
+  // Добавляем в историю (группируем: не добавляем если последняя запись тоже за сообщение и была < 10 сек назад)
+  const last = walletTx[0];
+  const now = Date.now();
+  if (last && last._msgTs && (now - last._msgTs) < 30000) {
+    // Объединяем с предыдущей записью
+    last.amount += earned;
+    last.desc = `За сообщения (${last._msgCount + textLen} симв.)`;
+    last._msgCount = (last._msgCount || 0) + textLen;
+    localStorage.setItem('sup_tx', JSON.stringify(walletTx));
+    renderTx();
+  } else {
+    const tx = { desc:`За сообщение (${textLen} симв.)`, amount:earned, icon:'✍️',
+      time:tstr(), date:new Date().toLocaleDateString('ru',{day:'numeric',month:'short'}),
+      _msgTs: now, _msgCount: textLen };
+    walletTx.unshift(tx);
+    if (walletTx.length > 200) walletTx.pop();
+    localStorage.setItem('sup_tx', JSON.stringify(walletTx));
+    renderTx();
+  }
 }
 
 // ── Exchange ───────────────────────────────────────────────────────────────
