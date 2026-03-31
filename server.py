@@ -136,13 +136,21 @@ async def ws_handler(request):
                             'unread':unread,'online':other in online,
                             'avatar':ud.get('avatar',''),'bio':ud.get('bio','')})
                 for gid, g in groups.items():
-                    if me in g['members'] and g.get('messages'):
+                    if me not in g['members']: continue
+                    # Группа показывается даже без сообщений
+                    my_role_data = g['members'].get(me, 'member')
+                    my_role = my_role_data if isinstance(my_role_data, str) else my_role_data.get('role', 'member')
+                    if g.get('messages'):
                         last = g['messages'][-1]
-                        lt = last.get('text') or '📎'
+                        lt = last.get('text') or ('🎤' if last.get('mtype')=='voice' else '📷' if last.get('mtype')=='image' else '📎')
                         unread = sum(1 for m in g['messages'] if m.get('from') != me and not m.get('read'))
-                        chats.append({'gid':gid,'name':g['name'],'avatar':g.get('avatar',''),
-                            'last_msg':lt,'last_time':last['time'],'unread':unread,'is_group':True,
-                            'member_count':len(g['members'])})
+                        last_time = last['time']
+                    else:
+                        lt = 'Группа создана'; unread = 0; last_time = ts()
+                    chats.append({'gid':gid,'name':g['name'],'avatar':g.get('avatar',''),
+                        'desc':g.get('desc',''),'last_msg':lt,'last_time':last_time,
+                        'unread':unread,'is_group':True,'member_count':len(g['members']),
+                        'my_role':my_role,'owner':g.get('owner','')})
                 chats.sort(key=lambda x: x.get('last_time',0), reverse=True)
                 await send({'type':'chats','chats':chats})
 
@@ -307,16 +315,36 @@ async def ws_handler(request):
                 member_map = {me: {'role':'owner'}}
                 for uid in members:
                     if uid in users: member_map[uid] = {'role':'member'}
+                # Системное сообщение о создании
+                me_uname = users.get(me,{}).get('username', me)
+                sys_msg = {
+                    'id': str(uuid.uuid4()), 'from': me, 'gid': gid,
+                    'text': f'создал группу «{name}»', 'time': ts(), 'tstr': tstr(),
+                    'mtype': 'system', 'url': '', 'filename': '', 'duration': '',
+                    'reply_to': None, 'reply_to_text': '', 'reply_to_name': '', 'reactions': {},
+                    'system': True, 'system_actor': me_uname
+                }
                 groups[gid] = {
                     'id': gid, 'name': name, 'avatar': avatar, 'desc': desc,
                     'owner': me, 'members': member_map,
-                    'messages': [], 'pinned_id': None, 'pinned_text': ''
+                    'messages': [sys_msg], 'pinned_id': None, 'pinned_text': ''
                 }
-                # my_role для создателя
+                # Добавляем системные сообщения о приглашении участников
+                for uid in members:
+                    if uid in users:
+                        uid_uname = users.get(uid,{}).get('username', uid)
+                        inv_msg = {
+                            'id': str(uuid.uuid4()), 'from': me, 'gid': gid,
+                            'text': f'пригласил {uid_uname}', 'time': ts()+1, 'tstr': tstr(),
+                            'mtype': 'system', 'url': '', 'filename': '', 'duration': '',
+                            'reply_to': None, 'reply_to_text': '', 'reply_to_name': '', 'reactions': {},
+                            'system': True, 'system_actor': me_uname, 'system_target': uid_uname
+                        }
+                        groups[gid]['messages'].append(inv_msg)
+                roles_simple = {uid: (v if isinstance(v,str) else v.get('role','member')) for uid,v in member_map.items()}
                 payload = {'type':'group_created','gid':gid,'name':name,
                     'avatar':avatar,'desc':desc,'owner':me,
-                    'members':{uid: (v if isinstance(v,str) else v.get('role','member')) for uid,v in member_map.items()},
-                    'my_role':'owner'}
+                    'members':roles_simple, 'my_role':'owner'}
                 await send(payload)
                 for uid in member_map:
                     if uid != me and uid in online:
@@ -326,12 +354,31 @@ async def ws_handler(request):
             elif c == 'group_add_member':
                 gid = d.get('gid',''); uid = d.get('uid','')
                 g = groups.get(gid)
-                if not g or g['members'].get(me) not in ('admin','owner'): continue
+                if not g or g['members'].get(me) not in ({'owner','admin'} | set()): 
+                    # check role properly
+                    my_role_d = g['members'].get(me, 'member') if g else 'member'
+                    my_role_v = my_role_d if isinstance(my_role_d, str) else my_role_d.get('role','member')
+                    if my_role_v not in ('admin','owner'): continue
                 if uid in users:
-                    g['members'][uid] = 'member'
+                    g['members'][uid] = {'role':'member'}
+                    # Системное сообщение о добавлении
+                    me_uname = users.get(me,{}).get('username', me)
+                    uid_uname = users.get(uid,{}).get('username', uid)
+                    sys_msg = {
+                        'id': str(uuid.uuid4()), 'from': me, 'gid': gid,
+                        'text': f'пригласил {uid_uname}', 'time': ts(), 'tstr': tstr(),
+                        'mtype': 'system', 'url': '', 'filename': '', 'duration': '',
+                        'reply_to': None, 'reply_to_text': '', 'reply_to_name': '', 'reactions': {},
+                        'system': True, 'system_actor': me_uname, 'system_target': uid_uname
+                    }
+                    g['messages'].append(sys_msg)
+                    payload_sys = {'type':'group_msg', 'gid': gid, **sys_msg}
+                    await push_group(gid, payload_sys)
                     await push_group(gid, {'type':'group_member_added','gid':gid,'uid':uid})
                     await push(uid, {'type':'group_invited','gid':gid,'name':g['name'],
-                        'avatar':g.get('avatar',''),'owner':g['owner'],'members':g['members']})
+                        'avatar':g.get('avatar',''),'owner':g['owner'],'members':{
+                            k: (v if isinstance(v,str) else v.get('role','member')) for k,v in g['members'].items()
+                        }})
 
             elif c == 'group_kick':
                 gid = d.get('gid',''); uid = d.get('uid','')
