@@ -129,7 +129,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .msg-av-row{display:flex;align-items:flex-end;gap:8px}
 .msg-av-sm{width:28px;height:28px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;cursor:pointer}
 .msg-av-sm img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.bubble{max-width:75%;min-width:60px;padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.5;position:relative;word-break:break-word;word-wrap:break-word;overflow-wrap:break-word;white-space:pre-wrap}
+.bubble{max-width:75%;padding:10px 14px;border-radius:18px;font-size:15px;line-height:1.55;position:relative;word-break:break-word;overflow-wrap:break-word}
 .out .bubble{background:var(--out);color:var(--out-t);border-bottom-right-radius:4px}
 .in .bubble{background:var(--in);color:var(--in-t);border-bottom-left-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .msg-time{font-size:11px;margin-top:3px;padding:0 4px}
@@ -140,28 +140,30 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .msg-img{max-width:240px;border-radius:12px;cursor:pointer;display:block}
 .msg-file{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.15);border-radius:10px;padding:8px 10px;cursor:pointer}
 .voice-bubble{display:flex;align-items:center;gap:12px;min-width:220px;max-width:280px;padding:2px 0}
-/* Кнопка play/pause */
-.voice-play{width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden}
-.out .voice-play{background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.15)}
-.in .voice-play{background:var(--ac);box-shadow:0 2px 10px rgba(26,188,156,.4)}
-.voice-play:active{transform:scale(.92)}
-/* SVG иконка внутри */
-.voice-play svg{transition:opacity .15s}
-.voice-right{flex:1;display:flex;flex-direction:column;gap:6px}
-.voice-progress-wrap{position:relative;height:3px;border-radius:2px;cursor:pointer;overflow:hidden}
-.out .voice-progress-wrap{background:rgba(255,255,255,.35)}
+/* Кнопка play/pause — Telegram стиль */
+.voice-play{width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s,filter .15s;position:relative}
+.out .voice-play{background:rgba(255,255,255,.25);backdrop-filter:blur(4px)}
+.in .voice-play{background:linear-gradient(135deg,#1ABC9C,#16a085);box-shadow:0 3px 12px rgba(26,188,156,.45)}
+.voice-play:hover{filter:brightness(1.1)}
+.voice-play:active{transform:scale(.9)}
+.voice-right{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0}
+/* Waveform бары */
+.voice-bars{display:flex;align-items:center;gap:2px;height:26px;overflow:hidden}
+.voice-bar{width:3px;border-radius:3px;flex-shrink:0;transition:background .15s,opacity .15s}
+.out .voice-bar{background:rgba(255,255,255,.5);min-height:3px}
+.in .voice-bar{background:var(--ac);opacity:.45;min-height:3px}
+.out .voice-bar.played{background:#fff;opacity:1}
+.in .voice-bar.played{background:var(--ac);opacity:1}
+/* Прогресс линия */
+.voice-progress-wrap{height:2px;border-radius:2px;cursor:pointer;overflow:hidden}
+.out .voice-progress-wrap{background:rgba(255,255,255,.3)}
 .in .voice-progress-wrap{background:rgba(26,188,156,.2)}
-.voice-progress{height:100%;border-radius:2px;width:0%;transition:width .1s}
+.voice-progress{height:100%;border-radius:2px;width:0%;transition:width .08s linear}
 .out .voice-progress{background:rgba(255,255,255,.9)}
 .in .voice-progress{background:var(--ac)}
-/* Волны (waveform bars) */
-.voice-bars{display:flex;align-items:center;gap:2px;height:24px}
-.voice-bar{width:3px;border-radius:3px;flex-shrink:0;transition:background .2s}
-.out .voice-bar{background:rgba(255,255,255,.45)}
-.in .voice-bar{background:var(--ac);opacity:.4}
-.voice-bar.played.out{background:rgba(255,255,255,.95)}
-.voice-bar.played.in{background:var(--ac);opacity:1}
-.voice-dur{font-size:11px;font-weight:600;opacity:.75;letter-spacing:.02em}
+.voice-dur{font-size:11px;font-weight:600;letter-spacing:.02em}
+.out .voice-dur{color:rgba(255,255,255,.8)}
+.in .voice-dur{color:var(--txt2)}
 .date-sep{text-align:center;font-size:12px;color:var(--txt2);padding:8px 0;font-weight:600}
 .reply-preview{border-left:3px solid rgba(255,255,255,.5);padding:4px 8px;margin-bottom:6px;border-radius:4px;font-size:12px;opacity:.85;cursor:pointer}
 .in .reply-preview{border-color:var(--ac)}
@@ -1076,6 +1078,13 @@ function onHistory(d) {
 function onMessage(d) {
   const other = (d.from === me ? d.to : d.from);
   const isActive = activeChat === other && activeType === 'peer';
+
+  // Убираем local_ пузырь если он был (для медиа)
+  if (d.from === me && isActive && d.mtype && d.mtype !== 'text') {
+    const locals = document.querySelectorAll('[id^="msg_local_"]');
+    if (locals.length > 0) locals[locals.length-1].remove();
+  }
+
   if (isActive) {
     appendBubble(d);
     document.getElementById('messages').scrollTop = 9999999;
@@ -1253,29 +1262,43 @@ function mkBubble(m) {
     vid.controls = true; vid.src = m.url; vid.style.cssText='max-width:240px;border-radius:12px;display:block';
     bubble.appendChild(vid);
   } else if (mtype === 'voice' && m.url) {
-    const numBars = 32;
-    const heights = Array.from({length:numBars}, () => 3 + Math.random() * 20);
+    const numBars = 30;
+    const heights = Array.from({length:numBars}, (_,i) => {
+      // Имитация реального waveform — неравномерные высоты
+      const base = 4 + Math.random() * 18;
+      return Math.round(base);
+    });
     const bars = heights.map(h => `<div class="voice-bar" style="height:${h}px"></div>`).join('');
     const dur = m.duration || '0:00';
-    const vid2 = 'v_' + (m.id||Date.now()).toString().replace(/[^a-z0-9]/gi,'');
-    const isOutMsg = m.from === me;
-    // SVG иконки play и pause в цвете
-    const svgPlay = isOutMsg
-      ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><polygon points="5,3 19,12 5,21" fill="#1ABC9C"/></svg>`
-      : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><polygon points="5,3 19,12 5,21" fill="white"/></svg>`;
-    const svgPause = isOutMsg
-      ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="4" height="18" rx="1.5" fill="#1ABC9C"/><rect x="15" y="3" width="4" height="18" rx="1.5" fill="#1ABC9C"/></svg>`
-      : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="4" height="18" rx="1.5" fill="white"/><rect x="15" y="3" width="4" height="18" rx="1.5" fill="white"/></svg>`;
-    bubble.innerHTML = `<div class="voice-bubble">
-      <button class="voice-play" id="btn_${vid2}" onclick="playVoice('${m.url}','${vid2}')" data-play="${svgPlay}" data-pause="${svgPause}">${svgPlay}</button>
-      <div class="voice-right">
-        <div class="voice-bars" id="bars_${vid2}">${bars}</div>
-        <div class="voice-progress-wrap" id="prog_wrap_${vid2}" onclick="seekVoice(event,'${vid2}')">
-          <div class="voice-progress" id="prog_${vid2}"></div>
+    const safeId = (m.id||Date.now()).toString().replace(/[^a-z0-9]/gi,'_');
+    const vid2 = 'v_' + safeId;
+    const isOutBubble = m.from === me;
+
+    // SVG иконки Telegram-стиль
+    const iconColor = isOutBubble ? '#fff' : '#fff';
+    const svgPlay  = `<svg width="18" height="18" viewBox="0 0 24 24"><path d="M8 5.14v14l11-7-11-7z" fill="${iconColor}"/></svg>`;
+    const svgPause = `<svg width="18" height="18" viewBox="0 0 24 24"><rect x="5" y="4" width="4" height="16" rx="1.5" fill="${iconColor}"/><rect x="15" y="4" width="4" height="16" rx="1.5" fill="${iconColor}"/></svg>`;
+
+    bubble.className = 'bubble voice-outer';
+    bubble.innerHTML = `
+      <div class="voice-bubble">
+        <button class="voice-play"
+          id="btn_${vid2}"
+          data-url="${m.url}"
+          data-vid="${vid2}"
+          data-play='${svgPlay}'
+          data-pause='${svgPause}'
+          onclick="playVoice(this)">
+          ${svgPlay}
+        </button>
+        <div class="voice-right">
+          <div class="voice-bars" id="bars_${vid2}">${bars}</div>
+          <div class="voice-progress-wrap" onclick="seekVoice(event,'${vid2}')">
+            <div class="voice-progress" id="prog_${vid2}"></div>
+          </div>
+          <div class="voice-dur" id="dur_${vid2}">${dur}</div>
         </div>
-        <div class="voice-dur" id="dur_${vid2}">${dur}</div>
-      </div>
-    </div>`;
+      </div>`;
   } else if (mtype === 'file' && m.url) {
     const fd = document.createElement('div');
     fd.className = 'msg-file';
@@ -1413,30 +1436,42 @@ async function uploadMedia(file) {
 // ── Voice recording ────────────────────────────────────────────────────────
 async function startRec() {
   if (mediaRec) return;
+  if (!activeChat) { toast('Открой чат перед записью'); return; }
   try {
+    // Пробуем разные форматы — Safari поддерживает mp4, Chrome — webm
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : MediaRecorder.isTypeSupported('audio/webm')
+      ? 'audio/webm'
+      : MediaRecorder.isTypeSupported('audio/mp4')
+      ? 'audio/mp4'
+      : '';
     const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-    mediaRec = new MediaRecorder(stream);
+    const opts = mimeType ? {mimeType} : {};
+    mediaRec = new MediaRecorder(stream, opts);
     mediaChunks = [];
-    mediaRec.ondataavailable = e => mediaChunks.push(e.data);
+    mediaRec.ondataavailable = e => { if (e.data && e.data.size > 0) mediaChunks.push(e.data); };
     mediaRec.onstop = async () => {
-      const blob = new Blob(mediaChunks, {type:'audio/webm'});
+      const actualMime = mediaRec.mimeType || mimeType || 'audio/webm';
+      const ext = actualMime.includes('mp4') ? 'mp4' : 'webm';
+      const blob = new Blob(mediaChunks, {type: actualMime});
+      if (blob.size < 100) { toast('Голосовое слишком короткое'); mediaRec=null; return; }
       const dur = formatDur(recSecs);
-      const file = new File([blob], 'voice.webm', {type:'audio/webm'});
-      // Show local preview
-      const blobUrl = URL.createObjectURL(blob);
-      const localMsg = { id:'local_'+Date.now(), from:me, text:'Голосовое', time:Date.now(), tstr:tstr(), mtype:'voice', url:blobUrl, duration:dur };
-      appendBubble(localMsg);
-      document.getElementById('messages').scrollTop = 9999999;
+      const file = new File([blob], `voice.${ext}`, {type: actualMime});
+      // НЕ показываем локальный preview — ждём echo от сервера с реальным URL
+      toast('Отправляем голосовое...');
       const url = await uploadMedia(file);
       if (url) {
-        const base = { cmd:'send_msg', mtype:'voice', url, duration:dur, text:'Голосовое' };
+        const base = { cmd:'send_msg', mtype:'voice', url, duration:dur, text:'🎤 Голосовое' };
         if (activeType === 'group') cmd({...base, gid:activeChat});
         else cmd({...base, to:activeChat});
+      } else {
+        toast('Ошибка загрузки голосового');
       }
       stream.getTracks().forEach(t => t.stop());
       mediaRec = null;
     };
-    mediaRec.start();
+    mediaRec.start(250); // timeslice 250ms — чаще получаем данные
     recSecs = 0;
     document.getElementById('recIndicator').classList.add('show');
     document.getElementById('inpRow').style.display = 'none';
@@ -1444,7 +1479,10 @@ async function startRec() {
       recSecs++;
       document.getElementById('recTime').textContent = formatDur(recSecs);
     }, 1000);
-  } catch(e) { toast('Нет доступа к микрофону'); }
+  } catch(e) {
+    console.error('Rec error:', e);
+    toast('Нет доступа к микрофону: ' + e.message);
+  }
 }
 
 function sendVoice() {
@@ -1463,77 +1501,75 @@ function stopRecUI() {
 }
 
 const audioPlayers = {};
-function playVoice(url, vid) {
-  // Остановить все другие
+
+function playVoice(btn) {
+  const url = btn.dataset.url;
+  const vid = btn.dataset.vid;
+  if (!url || !vid) { toast('Ошибка: нет URL аудио'); return; }
+
+  // Остановить все другие плееры
   Object.keys(audioPlayers).forEach(id => {
-    if (id !== vid && audioPlayers[id]) {
+    if (id !== vid && audioPlayers[id] && !audioPlayers[id].paused) {
       audioPlayers[id].pause();
       const b = document.getElementById('btn_'+id);
-      if (b) b.innerHTML = b.dataset.play || '▶';
-      stopVoiceProgress(id);
+      if (b) b.innerHTML = b.dataset.play;
     }
   });
+
+  // Создать Audio объект если нет
   if (!audioPlayers[vid]) {
-    audioPlayers[vid] = new Audio(url);
-    const durEl   = document.getElementById('dur_'+vid);
-    const progEl  = document.getElementById('prog_'+vid);
-    const barsEl  = document.getElementById('bars_'+vid);
-    audioPlayers[vid].ontimeupdate = () => {
-      const a = audioPlayers[vid];
-      if (!a || !a.duration) return;
-      const pct = (a.currentTime / a.duration) * 100;
+    const audio = new Audio(url);
+    audio.preload = 'metadata';
+
+    const durEl  = document.getElementById('dur_'+vid);
+    const progEl = document.getElementById('prog_'+vid);
+    const barsEl = document.getElementById('bars_'+vid);
+
+    audio.ontimeupdate = () => {
+      if (!audio.duration) return;
+      const pct = (audio.currentTime / audio.duration) * 100;
       if (progEl) progEl.style.width = pct + '%';
-      if (durEl) durEl.textContent = formatDur(Math.floor(a.currentTime));
-      // Подсветить пройденные бары
+      if (durEl)  durEl.textContent  = formatDur(Math.floor(audio.currentTime));
+      // Подсветить бары
       if (barsEl) {
-        const bars = barsEl.querySelectorAll('.voice-bar');
-        const playedCount = Math.floor(pct / 100 * bars.length);
-        bars.forEach((bar, i) => {
-          bar.classList.toggle('played', i < playedCount);
-          // определить out или in
-          const wrap = barsEl.closest('.msg-wrap');
-          if (wrap) {
-            bar.classList.toggle('out', wrap.classList.contains('out'));
-            bar.classList.toggle('in', wrap.classList.contains('in'));
-          }
-        });
+        const barEls = barsEl.querySelectorAll('.voice-bar');
+        const played = Math.floor(pct / 100 * barEls.length);
+        barEls.forEach((b, i) => b.classList.toggle('played', i < played));
       }
     };
-    audioPlayers[vid].onended = () => {
+
+    audio.onended = () => {
       const b = document.getElementById('btn_'+vid);
-      if (b) b.innerHTML = b.dataset.play || '▶';
+      if (b) b.innerHTML = b.dataset.play;
       if (progEl) progEl.style.width = '0%';
-      const durEl2 = document.getElementById('dur_'+vid);
-      // Восстановить длительность
-      const a = audioPlayers[vid];
-      if (durEl2 && a) durEl2.textContent = formatDur(Math.floor(a.duration||0));
-      stopVoiceProgress(vid);
+      if (durEl && audio.duration) durEl.textContent = formatDur(Math.floor(audio.duration));
+      if (barsEl) barsEl.querySelectorAll('.voice-bar').forEach(b => b.classList.remove('played'));
     };
+
+    audio.onerror = () => toast('Ошибка воспроизведения аудио');
+    audioPlayers[vid] = audio;
   }
-  const btn = document.getElementById('btn_'+vid);
-  if (audioPlayers[vid].paused) {
-    audioPlayers[vid].play().catch(() => toast('Ошибка воспроизведения'));
-    if (btn) btn.innerHTML = btn.dataset.pause || '⏸';
+
+  const audio = audioPlayers[vid];
+  if (audio.paused) {
+    audio.play().then(() => {
+      btn.innerHTML = btn.dataset.pause;
+    }).catch(e => {
+      console.error('Play error:', e);
+      toast('Не удалось воспроизвести аудио');
+    });
   } else {
-    audioPlayers[vid].pause();
-    if (btn) btn.innerHTML = btn.dataset.play || '▶';
+    audio.pause();
+    btn.innerHTML = btn.dataset.play;
   }
 }
 
 function seekVoice(e, vid) {
-  const a = audioPlayers[vid];
-  if (!a || !a.duration) return;
-  const wrap = e.currentTarget;
-  const rect = wrap.getBoundingClientRect();
-  const pct  = (e.clientX - rect.left) / rect.width;
-  a.currentTime = pct * a.duration;
-}
-
-function stopVoiceProgress(vid) {
-  const progEl = document.getElementById('prog_'+vid);
-  const barsEl = document.getElementById('bars_'+vid);
-  if (progEl) progEl.style.width = '0%';
-  if (barsEl) barsEl.querySelectorAll('.voice-bar').forEach(b => b.classList.remove('played'));
+  const audio = audioPlayers[vid];
+  if (!audio || !audio.duration) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  audio.currentTime = pct * audio.duration;
 }
 
 // ── Reply ──────────────────────────────────────────────────────────────────
