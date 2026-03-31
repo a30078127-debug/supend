@@ -9,6 +9,8 @@
 <meta name="apple-mobile-web-app-title" content="Supend">
 <meta name="theme-color" content="#1ABC9C">
 <link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/logo">
+<meta name="apple-mobile-web-app-title" content="Supend">
 <title>Supend</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -193,7 +195,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .out .reply-preview-name{color:rgba(255,255,255,.8)}
 .reply-preview-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
 
-/* ── Reactions ─────────────────────────────────── */
+/* ── Status buttons ────────────────────────────── */
+.status-btn{padding:7px 13px;border:1.5px solid var(--brd);border-radius:20px;background:none;font-family:var(--font);font-size:13px;cursor:pointer;transition:.15s;color:var(--txt)}
+.status-btn.active{border-color:var(--ac);background:var(--ac-l);color:var(--ac);font-weight:700}
+/* ── Emoji reaction bar ────────────────────────── */
+.react-bar{display:flex;gap:6px;padding:10px 14px;background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.12);margin-bottom:6px}
+.react-bar-btn{font-size:24px;cursor:pointer;border:none;background:none;padding:4px;border-radius:10px;transition:.12s;line-height:1}
+.react-bar-btn:active{transform:scale(1.25)}
 .reactions-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;padding:0 4px}
 .react-chip{display:inline-flex;align-items:center;gap:4px;background:#f0f0f0;border:1.5px solid transparent;border-radius:12px;padding:3px 8px;cursor:pointer;font-size:13px;transition:.15s;user-select:none}
 .react-chip:hover,.react-chip.mine{background:rgba(26,188,156,.15);border-color:var(--ac)}
@@ -386,22 +394,45 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 
 <!-- Auth -->
 <div id="authScreen">
-  <div class="auth-logo">💬</div>
+  <div class="auth-logo" style="background:none;box-shadow:none;overflow:hidden;border-radius:24px">
+    <img src="/logo" style="width:80px;height:80px;object-fit:cover;border-radius:24px" onerror="this.parentElement.innerHTML='💬'">
+  </div>
   <div class="auth-title">Supend</div>
   <div class="auth-sub">Анонимный защищённый мессенджер</div>
   <div class="auth-tabs">
     <button class="auth-tab active" onclick="switchTab('login')">Войти</button>
     <button class="auth-tab" onclick="switchTab('register')">Регистрация</button>
   </div>
-  <div class="auth-form">
+
+  <!-- Шаг 1: Логин + Пароль -->
+  <div class="auth-form" id="authStep1">
     <input class="inp" id="authLogin" placeholder="Логин" autocomplete="username" autocapitalize="none">
     <input class="inp" id="authPass" type="password" placeholder="Пароль" autocomplete="current-password">
     <input class="inp" id="authPass2" type="password" placeholder="Повтори пароль" style="display:none" autocomplete="new-password">
-    <input class="inp" id="authBio" placeholder="О себе (необязательно)" style="display:none">
-    <input class="inp" id="authInvCode" placeholder="Код приглашения (необязательно)" style="display:none" autocapitalize="characters">
     <div class="auth-err" id="authErr"></div>
-    <button class="btn-primary" id="authBtn" onclick="doAuth()" disabled>Войти</button>
+    <button class="btn-primary" id="authBtn" onclick="doAuthStep1()" disabled>Далее →</button>
   </div>
+
+  <!-- Шаг 2: Аватар + Bio + Инв. код (только регистрация) -->
+  <div class="auth-form" id="authStep2" style="display:none">
+    <!-- Выбор аватарки -->
+    <div style="display:flex;justify-content:center;margin-bottom:16px">
+      <div id="regAvPreview" onclick="document.getElementById('regAvInp').click()"
+        style="width:80px;height:80px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(26,188,156,.3);overflow:hidden;position:relative">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <input type="file" id="regAvInp" accept="image/*" style="display:none" onchange="onRegAvChange(this)">
+      </div>
+    </div>
+    <div style="text-align:center;font-size:12px;color:var(--txt2);margin-bottom:14px">Нажми чтобы добавить фото (необязательно)</div>
+    <input class="inp" id="authBio" placeholder="О себе (необязательно)">
+    <input class="inp" id="authInvCode" placeholder="Код приглашения (необязательно)" autocapitalize="characters">
+    <div class="auth-err" id="authErr2"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="backToStep1()" style="flex:0 0 44px;padding:14px;border:1.5px solid var(--brd);border-radius:14px;background:none;font-family:var(--font);font-size:16px;cursor:pointer">‹</button>
+      <button class="btn-primary" style="flex:1" onclick="doRegister()">Зарегистрироваться</button>
+    </div>
+  </div>
+
   <div class="auth-hint">Supend — P2P мессенджер нового поколения 🔒</div>
   <div id="wsStatus" style="font-size:12px;margin-top:8px;color:#bbb">⏳ Подключение...</div>
 </div>
@@ -592,6 +623,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 <!-- Toast -->
 <div id="toast"></div>
 
+<!-- Emoji reaction bar (появляется над меню сообщения) -->
+<div id="reactBar" style="display:none;position:fixed;z-index:501">
+  <div class="react-bar">
+    <button class="react-bar-btn" onclick="quickReact('👍')">👍</button>
+    <button class="react-bar-btn" onclick="quickReact('❤️')">❤️</button>
+    <button class="react-bar-btn" onclick="quickReact('😂')">😂</button>
+    <button class="react-bar-btn" onclick="quickReact('😮')">😮</button>
+    <button class="react-bar-btn" onclick="quickReact('😢')">😢</button>
+    <button class="react-bar-btn" onclick="quickReact('🔥')">🔥</button>
+    <button class="react-bar-btn" onclick="quickReact('🎉')">🎉</button>
+    <button class="react-bar-btn" onclick="quickReact('💯')">💯</button>
+  </div>
+</div>
+
 <!-- Chat item long-press menu (3 actions) -->
 <div class="ctx-menu" id="chatItemCtxMenu">
   <div class="ctx-item" onclick="ctxChatPin()">
@@ -716,6 +761,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
       <div class="modal-label">Логин</div>
       <input class="modal-inp" id="profLogin" readonly>
     </div>
+    <!-- Статус -->
+    <div class="modal-field">
+      <div class="modal-label">Статус</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="status-btn active" data-status="online" onclick="selectMyStatus(this,'online')">🟢 В сети</button>
+        <button class="status-btn" data-status="away" onclick="selectMyStatus(this,'away')">🟡 Отошёл</button>
+        <button class="status-btn" data-status="dnd" onclick="selectMyStatus(this,'dnd')">🔴 Не беспокоить</button>
+      </div>
+    </div>
     <div class="modal-field">
       <div class="modal-label">О себе</div>
       <textarea class="modal-textarea" id="profBio" placeholder="Расскажи о себе..."></textarea>
@@ -741,17 +795,37 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 <div class="modal-overlay" id="peerProfModal">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
-    <div class="modal-title">Профиль</div>
     <div class="prof-av-wrap"><div class="prof-av" id="peerProfAv">?</div></div>
     <div style="text-align:center;margin-bottom:16px">
       <div style="font-size:20px;font-weight:800" id="peerProfName">@user</div>
+      <div style="font-size:13px;color:var(--txt2);margin-top:4px" id="peerProfStatus"></div>
       <div style="font-size:13px;color:var(--txt2);margin-top:4px" id="peerProfBio"></div>
       <div style="font-size:12px;color:var(--txt2);margin-top:4px" id="peerProfDate"></div>
     </div>
-    <div style="display:flex;gap:10px">
-      <button class="btn-save" style="flex:1" onclick="writeToPeer()">Написать</button>
-      <button onclick="closeModal('peerProfModal')" style="flex:1;padding:14px;border:1.5px solid var(--brd);border-radius:14px;background:none;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;color:var(--txt2)">Закрыть</button>
+    <button class="btn-save" onclick="writeToPeer()" style="margin-bottom:10px">Написать</button>
+    <button id="addFriendBtn" onclick="openAddFriendModal()" style="width:100%;padding:13px;border:1.5px solid var(--ac);border-radius:14px;background:var(--ac-l);color:var(--ac);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">+ Добавить в друзья</button>
+    <button id="blockUserBtn" onclick="toggleBlockUser()" style="width:100%;padding:13px;border:none;border-radius:14px;background:none;color:var(--danger);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;margin-bottom:6px">Заблокировать</button>
+    <button onclick="closeModal('peerProfModal')" style="width:100%;padding:13px;border:1.5px solid var(--brd);border-radius:14px;background:none;font-family:var(--font);font-size:15px;cursor:pointer;color:var(--txt2)">Закрыть</button>
+  </div>
+</div>
+
+<!-- Add friend modal -->
+<div class="modal-overlay" id="addFriendModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Добавить в друзья</div>
+    <div style="font-size:13px;color:var(--txt2);margin-bottom:16px">Введи имя — оно будет отображаться вместо логина</div>
+    <div class="modal-field">
+      <div class="modal-label">Имя *</div>
+      <input class="modal-inp" id="friendFirstName" placeholder="Например: Саша">
     </div>
+    <div class="modal-field">
+      <div class="modal-label">Фамилия (необязательно)</div>
+      <input class="modal-inp" id="friendLastName" placeholder="Фамилия">
+    </div>
+    <div class="auth-err" id="addFriendErr"></div>
+    <button class="btn-save" onclick="confirmAddFriend()">Добавить в друзья</button>
+    <button onclick="closeModal('addFriendModal')" style="width:100%;padding:13px;border:1.5px solid var(--brd);border-radius:14px;background:none;font-family:var(--font);font-size:15px;cursor:pointer;margin-top:10px;color:var(--txt2)">Отмена</button>
   </div>
 </div>
 
@@ -1247,16 +1321,314 @@ function handle(d) {
 }
 
 // ── Auth ───────────────────────────────────────────────────────────────────
+// ── Auth state ─────────────────────────────────────────────────────────────
 let authTabMode = 'login';
+let regAvData   = '';   // base64 аватарки при регистрации
+let myStatus    = localStorage.getItem('sup_status') || 'online'; // online/away/dnd
+let friends     = JSON.parse(localStorage.getItem('sup_friends') || '{}'); // {username: {first, last}}
+let saveFriends = () => localStorage.setItem('sup_friends', JSON.stringify(friends));
+
 function switchTab(mode) {
   authTabMode = mode;
   document.querySelectorAll('.auth-tab').forEach((t,i) =>
     t.classList.toggle('active', (i===0&&mode==='login')||(i===1&&mode==='register')));
-  document.getElementById('authBtn').textContent = mode === 'login' ? 'Войти' : 'Зарегистрироваться';
+  // Шаг 1: кнопка меняется
+  const btn = document.getElementById('authBtn');
+  btn.textContent = mode === 'login' ? 'Войти' : 'Далее →';
+  btn.onclick = doAuthStep1;
   document.getElementById('authPass2').style.display = mode === 'register' ? '' : 'none';
-  document.getElementById('authBio').style.display    = mode === 'register' ? '' : 'none';
-  document.getElementById('authInvCode').style.display = mode === 'register' ? '' : 'none';
   document.getElementById('authErr').textContent = '';
+  // Скрываем шаг 2
+  document.getElementById('authStep2').style.display = 'none';
+  document.getElementById('authStep1').style.display = '';
+}
+
+function onRegAvChange(inp) {
+  const f = inp.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    regAvData = r.result;
+    const prev = document.getElementById('regAvPreview');
+    prev.innerHTML = `<img src="${r.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"><input type="file" id="regAvInp" accept="image/*" style="display:none" onchange="onRegAvChange(this)">`;
+  };
+  r.readAsDataURL(f);
+}
+
+function backToStep1() {
+  document.getElementById('authStep2').style.display = 'none';
+  document.getElementById('authStep1').style.display = '';
+}
+
+function doAuthStep1() {
+  const login = document.getElementById('authLogin').value.trim().toLowerCase();
+  const pass  = document.getElementById('authPass').value;
+  const pass2 = document.getElementById('authPass2').value;
+  const err   = document.getElementById('authErr');
+  const btn   = document.getElementById('authBtn');
+  err.textContent = '';
+
+  if (!login || !pass) { err.textContent = 'Введи логин и пароль'; return; }
+
+  if (authTabMode === 'register') {
+    if (pass !== pass2)    { err.textContent = 'Пароли не совпадают'; return; }
+    if (pass.length < 4)   { err.textContent = 'Пароль минимум 4 символа'; return; }
+    if (login.length < 3)  { err.textContent = 'Логин минимум 3 символа'; return; }
+    // Показываем шаг 2
+    document.getElementById('authStep1').style.display = 'none';
+    document.getElementById('authStep2').style.display = '';
+    document.getElementById('authBio').value = '';
+    document.getElementById('authInvCode').value = '';
+    document.getElementById('authErr2').textContent = '';
+    return;
+  }
+
+  // Вход
+  if (!ws || ws.readyState !== 1) {
+    err.textContent = 'Нет соединения...';
+    btn.disabled = true;
+    const t = setInterval(() => {
+      if (ws && ws.readyState === 1) {
+        clearInterval(t); err.textContent = ''; btn.disabled = false; doAuthStep1();
+      }
+    }, 300);
+    if (!ws || ws.readyState === 3) connect();
+    setTimeout(() => { clearInterval(t); btn.disabled = false; }, 8000);
+    return;
+  }
+  btn.disabled = true;
+  myPassword = pass;
+  cmd({ cmd:'login', username:login, password:pass });
+  setTimeout(() => { btn.disabled = false; }, 10000);
+}
+
+function doRegister() {
+  const login  = document.getElementById('authLogin').value.trim().toLowerCase();
+  const pass   = document.getElementById('authPass').value;
+  const bio    = document.getElementById('authBio').value.trim();
+  const inv    = document.getElementById('authInvCode').value.trim().toUpperCase();
+  const err    = document.getElementById('authErr2');
+  err.textContent = '';
+
+  if (!ws || ws.readyState !== 1) {
+    err.textContent = 'Нет соединения...';
+    const t = setInterval(() => {
+      if (ws && ws.readyState === 1) { clearInterval(t); err.textContent = ''; doRegister(); }
+    }, 300);
+    if (!ws || ws.readyState === 3) connect();
+    setTimeout(() => clearInterval(t), 8000);
+    return;
+  }
+  myPassword = pass;
+  cmd({ cmd:'register', username:login, password:pass, bio, inv_code:inv, avatar:regAvData });
+}
+
+// Совместимость: старые вызовы
+function doAuth() { doAuthStep1(); }
+
+function onAuthOk(d) {
+  me = d.username; myBio = d.bio||''; myAvatar = d.avatar||'';
+  mySup = d.sup||0; myRefCode = d.ref_code||'';
+  document.getElementById('authBtn').disabled = false;
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('app').classList.add('visible');
+  updateMyUI();
+  updateSup(mySup);
+  cmd({ cmd:'get_chats' });
+  applyStoredCustom();
+  if (d.inv_bonus && d.inv_bonus > 0) {
+    addTx('Бонус за код приглашения', +d.inv_bonus, '🎁');
+    toast(`+${d.inv_bonus} SUP за код приглашения! 🎁`);
+  }
+}
+
+function onAuthErr(msg) {
+  // Показываем ошибку на нужном шаге
+  const step2 = document.getElementById('authStep2');
+  if (step2 && step2.style.display !== 'none') {
+    document.getElementById('authErr2').textContent = msg;
+  } else {
+    document.getElementById('authErr').textContent = msg;
+  }
+  document.getElementById('authBtn').disabled = false;
+  // Возвращаем шаг 1 если ошибка при регистрации
+  if (authTabMode === 'register' && step2 && step2.style.display !== 'none') {
+    // Оставляем на шаге 2 чтобы пользователь видел ошибку
+  }
+}
+
+// ── Status ──────────────────────────────────────────────────────────────────
+function selectMyStatus(btn, status) {
+  myStatus = status;
+  localStorage.setItem('sup_status', status);
+  document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function getStatusLabel(status, online) {
+  if (!online) return '○ не в сети';
+  if (status === 'dnd')  return '🔴 Не беспокоить';
+  if (status === 'away') return '🟡 Отошёл';
+  return '🟢 В сети';
+}
+
+function formatLastSeen(ts) {
+  if (!ts) return '';
+  const now  = Date.now();
+  const diff = now - ts;
+  const mins = Math.floor(diff / 60000);
+  const hrs  = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (mins < 1)   return 'был(а) только что';
+  if (mins < 60)  return `был(а) ${mins} мин. назад`;
+  if (hrs  < 24)  return `был(а) сегодня в ${new Date(ts).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}`;
+  if (days === 1) return 'был(а) вчера';
+  return `был(а) ${new Date(ts).toLocaleDateString('ru',{day:'numeric',month:'short'})}`;
+}
+
+// ── Friends ─────────────────────────────────────────────────────────────────
+function getDisplayName(username) {
+  const f = friends[username];
+  if (f) return `${f.first}${f.last ? ' ' + f.last : ''}`;
+  return '@' + username;
+}
+
+function openAddFriendModal() {
+  document.getElementById('friendFirstName').value = '';
+  document.getElementById('friendLastName').value  = '';
+  document.getElementById('addFriendErr').textContent = '';
+  closeModal('peerProfModal');
+  document.getElementById('addFriendModal').classList.add('show');
+}
+
+function confirmAddFriend() {
+  const first = document.getElementById('friendFirstName').value.trim();
+  const last  = document.getElementById('friendLastName').value.trim();
+  const err   = document.getElementById('addFriendErr');
+  if (!first) { err.textContent = 'Введи имя'; return; }
+  if (!viewingPeer) return;
+  friends[viewingPeer] = { first, last };
+  saveFriends();
+  closeModal('addFriendModal');
+  toast(`✅ ${first} добавлен(а) в друзья`);
+  cmd({ cmd:'get_chats' }); // обновить список
+}
+
+// ── Block user ───────────────────────────────────────────────────────────────
+function toggleBlockUser() {
+  if (!viewingPeer) return;
+  if (blacklist.has(viewingPeer)) {
+    blacklist.delete(viewingPeer);
+    toast('🔓 Пользователь разблокирован');
+  } else {
+    blacklist.add(viewingPeer);
+    toast('🔒 Пользователь заблокирован');
+  }
+  localStorage.setItem('sup_bl', JSON.stringify([...blacklist]));
+  closeModal('peerProfModal');
+  cmd({ cmd:'get_chats' });
+  // Обновляем поле ввода если открыт чат с этим пользователем
+  if (activeChat === viewingPeer) updateBlockedInputUI();
+}
+
+function updateBlockedInputUI() {
+  const inpArea = document.querySelector('.inp-area');
+  if (!inpArea) return;
+  let blockedMsg = inpArea.querySelector('.blocked-msg');
+  if (blacklist.has(activeChat)) {
+    if (!blockedMsg) {
+      blockedMsg = document.createElement('div');
+      blockedMsg.className = 'blocked-msg';
+      blockedMsg.style.cssText = 'padding:14px;text-align:center;color:var(--danger);font-size:14px;font-weight:600;background:#fff5f5;border-radius:12px;margin:8px';
+      blockedMsg.textContent = '🚫 Вы не можете писать этому пользователю';
+      inpArea.appendChild(blockedMsg);
+    }
+    document.getElementById('inpRow').style.display = 'none';
+  } else {
+    if (blockedMsg) blockedMsg.remove();
+    document.getElementById('inpRow').style.display = 'flex';
+  }
+}
+
+// ── openViewProfile — полная версия ─────────────────────────────────────────
+function openViewProfile(username) {
+  viewingPeer = username;
+  const cd = chatsData[username] || {};
+  const av = document.getElementById('peerProfAv');
+  if (cd.avatar) av.innerHTML = `<img src="${cd.avatar}">`;
+  else { av.innerHTML=''; av.textContent = username[0].toUpperCase(); }
+
+  // Имя: друг или логин
+  const dispName = getDisplayName(username);
+  document.getElementById('peerProfName').textContent = dispName;
+
+  // Логин (если есть кастомное имя — показываем логин отдельно)
+  const bio = document.getElementById('peerProfBio');
+  bio.innerHTML = '';
+  if (friends[username]) {
+    const loginEl = document.createElement('div');
+    loginEl.style.cssText = 'font-size:12px;color:var(--txt2);margin-bottom:4px';
+    loginEl.textContent = '@' + username;
+    bio.appendChild(loginEl);
+  }
+  if (cd.bio) {
+    const bioEl = document.createElement('div');
+    bioEl.textContent = cd.bio;
+    bio.appendChild(bioEl);
+  }
+
+  // Статус
+  const statusEl = document.getElementById('peerProfStatus');
+  if (cd.online) {
+    statusEl.textContent = getStatusLabel(cd.status, true);
+    statusEl.style.color = cd.status === 'dnd' ? '#e74c3c' : cd.status === 'away' ? '#f39c12' : 'var(--ac)';
+  } else {
+    statusEl.textContent = cd.last_seen ? formatLastSeen(cd.last_seen) : '○ не в сети';
+    statusEl.style.color = 'var(--txt2)';
+  }
+
+  document.getElementById('peerProfDate').textContent = cd.created_at ? `Зарегистрирован: ${cd.created_at}` : '';
+
+  // Кнопки
+  const addBtn   = document.getElementById('addFriendBtn');
+  const blockBtn = document.getElementById('blockUserBtn');
+  addBtn.textContent   = friends[username] ? '✅ В друзьях' : '+ Добавить в друзья';
+  addBtn.style.opacity = friends[username] ? '0.6' : '1';
+  blockBtn.textContent = blacklist.has(username) ? 'Разблокировать' : 'Заблокировать';
+  blockBtn.style.color = blacklist.has(username) ? 'var(--ac)' : 'var(--danger)';
+
+  document.getElementById('peerProfModal').classList.add('show');
+}
+
+// ── Quick react ──────────────────────────────────────────────────────────────
+function quickReact(emoji) {
+  hideAllMenus();
+  if (!ctxMsgId) return;
+  const ctx = activeType === 'group' ? {gid:activeChat} : {to:activeChat};
+  cmd({ cmd:'react', msg_id:ctxMsgId, emoji, ...ctx });
+  // Оптимистичное обновление
+  const el = document.querySelector(`[data-msg-id="${ctxMsgId}"] .reactions-row`);
+  if (el) {
+    const chip = document.createElement('div');
+    chip.className = 'react-chip mine';
+    chip.innerHTML = `${emoji}<span>1</span>`;
+    el.appendChild(chip);
+  }
+}
+
+// ── openProfile (мой профиль) ───────────────────────────────────────────────
+function openProfile() {
+  const av = document.getElementById('profAv');
+  if (myAvatar) av.innerHTML = `<img src="${myAvatar}"><input type="file" id="avInp" accept="image/*" style="display:none" onchange="onAvChange(this)">`;
+  else { av.innerHTML=`<input type="file" id="avInp" accept="image/*" style="display:none" onchange="onAvChange(this)">`; av.prepend(Object.assign(document.createElement('span'),{textContent:me?me[0].toUpperCase():'?'})); }
+  document.getElementById('profLogin').value  = me;
+  document.getElementById('profBio').value    = myBio;
+  document.getElementById('profRefCode').value = myRefCode;
+  document.getElementById('profDate').textContent = '';
+  // Статус
+  document.querySelectorAll('.status-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.status === myStatus);
+  });
+  document.getElementById('profileModal').classList.add('show');
 }
 
 function doAuth() {
@@ -1391,7 +1763,7 @@ function renderChatList(chats) {
     const key = c.gid || c.username;
     chatsData[key] = c;
     const isGroup = !!c.gid;
-    const name = isGroup ? c.name : '@' + c.username;
+    const name = isGroup ? c.name : (getDisplayName ? getDisplayName(c.username) : '@' + c.username);
     const avContent = c.avatar ? `<img src="${c.avatar}">` : (isGroup ? '👥' : c.username[0].toUpperCase());
     const dot = (!isGroup && c.online) ? '<div class="online-dot"></div>' : '';
     const badge = c.unread > 0 ? `<div class="unread-badge">${c.unread}</div>` : '';
@@ -1693,12 +2065,21 @@ function openChatWith(username, avatar, online) {
   headAv.innerHTML = avatar ? `<img src="${avatar}">` : username[0].toUpperCase();
   document.getElementById('headName').textContent = '@' + username;
   const st = document.getElementById('headStatus');
-  st.textContent = online ? '● онлайн · зашифровано' : '○ не в сети';
-  st.className = 'head-status ' + (online ? 'on' : 'off');
+  const cd = chatsData[username] || {};
+  if (online) {
+    const statusLabel = getStatusLabel(cd.status, true);
+    st.textContent = statusLabel + ' · зашифровано';
+    st.className = 'head-status ' + (cd.status === 'dnd' ? 'off' : 'on');
+  } else {
+    const ls = cd.last_seen ? formatLastSeen(cd.last_seen) : '○ не в сети';
+    st.textContent = ls;
+    st.className = 'head-status off';
+  }
   showActiveChat();
   document.getElementById('messages').innerHTML = '';
   loadCustom(username);
   updatePinnedBar();
+  updateBlockedInputUI();
   cmd({ cmd:'get_history', with:username });
   cmd({ cmd:'mark_read', with:username });
   const ci = document.getElementById('ci_' + username);
@@ -2394,32 +2775,31 @@ function cancelReply() {
 
 function showMsgCtxAt(x, y, id, isOut, text, msg) {
   ctxMsgId = id; ctxMsgOut = isOut; ctxMsgText = text;
-  const menu = document.getElementById('msgCtxMenu');
+  const menu    = document.getElementById('msgCtxMenu');
+  const reactBr = document.getElementById('reactBar');
   const editBtn = document.getElementById('ctxEditBtn');
   if (editBtn) editBtn.style.display = isOut ? '' : 'none';
 
-  // Позиция
-  const menuW = 230, menuH = 300;
+  const menuW = 230, menuH = 320, barH = 64;
   let left = Math.max(8, Math.min(x - menuW/2, window.innerWidth - menuW - 8));
-  let top  = y - menuH - 10;
+  let top  = y - menuH - barH - 16;
   if (top < 60) top = y + 20;
-  top = Math.max(60, Math.min(top, window.innerHeight - menuH - 20));
+  top = Math.max(60, Math.min(top, window.innerHeight - menuH - barH - 20));
 
-  menu.style.cssText = `left:${left}px;top:${top}px`;
+  // React bar над меню
+  reactBr.style.cssText = `display:block;left:${Math.max(8, Math.min(x - 200, window.innerWidth - 216))}px;top:${top}px`;
+  menu.style.cssText    = `left:${left}px;top:${top + barH + 6}px`;
 
   // Оверлей
   let overlay = document.getElementById('ctxOverlay');
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'ctxOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:499;background:rgba(0,0,0,.3)';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:499;background:rgba(0,0,0,.35)';
     overlay.onclick = hideAllMenus;
     document.body.appendChild(overlay);
   }
   overlay.style.display = 'block';
-
-  hideAllMenus(); // скрываем другие меню
-  overlay.style.display = 'block'; // показываем оверлей снова
   menu.classList.add('show');
 }
 
@@ -2655,17 +3035,6 @@ function scrollToPinned() {
 // ── Profile ────────────────────────────────────────────────────────────────
 let newAvatarData = null;
 
-function openProfile() {
-  document.getElementById('profLogin').value = me;
-  document.getElementById('profBio').value = myBio;
-  document.getElementById('profRefCode').value = myRefCode;
-  document.getElementById('profDate').textContent = '';
-  const av = document.getElementById('profAv');
-  av.innerHTML = myAvatar ? `<img src="${myAvatar}"><input type="file" id="avInp" accept="image/*" style="display:none" onchange="onAvChange(this)">` :
-    `${me[0].toUpperCase()}<input type="file" id="avInp" accept="image/*" style="display:none" onchange="onAvChange(this)">`;
-  document.getElementById('profileModal').classList.add('show');
-}
-
 function onAvChange(inp) {
   const f = inp.files[0]; if (!f) return;
   const r = new FileReader();
@@ -2679,7 +3048,7 @@ function onAvChange(inp) {
 function saveProfile() {
   myBio = document.getElementById('profBio').value.trim();
   if (newAvatarData) myAvatar = newAvatarData;
-  cmd({ cmd:'save_profile', bio:myBio, avatar:myAvatar });
+  cmd({ cmd:'save_profile', bio:myBio, avatar:myAvatar, status:myStatus });
   updateMyUI();
   closeModal('profileModal');
   toast('Профиль сохранён');
@@ -2693,31 +3062,10 @@ function copyRefCode() {
 
 function openChatInfo() {
   if (activeType === 'group') openGroupInfo();
-  else openPeerProfile();
+  else { viewingPeer = activeChat; openViewProfile(activeChat); }
 }
 
-function openPeerProfile() {
-  viewingPeer = activeChat;
-  const cd = chatsData[activeChat] || {};
-  const av = document.getElementById('peerProfAv');
-  if (cd.avatar) av.innerHTML = `<img src="${cd.avatar}">`;
-  else { av.innerHTML=''; av.textContent = activeChat[0].toUpperCase(); }
-  document.getElementById('peerProfName').textContent = '@' + activeChat;
-  document.getElementById('peerProfBio').textContent = cd.bio || '';
-  document.getElementById('peerProfDate').textContent = cd.created_at ? `Зарегистрирован: ${cd.created_at}` : '';
-  document.getElementById('peerProfModal').classList.add('show');
-}
-
-function openViewProfile(username) {
-  viewingPeer = username;
-  const cd = chatsData[username] || {};
-  const av = document.getElementById('peerProfAv');
-  if (cd.avatar) av.innerHTML = `<img src="${cd.avatar}">`;
-  else { av.innerHTML=''; av.textContent = username[0].toUpperCase(); }
-  document.getElementById('peerProfName').textContent = '@' + username;
-  document.getElementById('peerProfBio').textContent = cd.bio || '';
-  document.getElementById('peerProfModal').classList.add('show');
-}
+function openPeerProfile() { viewingPeer = activeChat; openViewProfile(activeChat); }
 
 function writeToPeer() {
   closeModal('peerProfModal');
@@ -3998,6 +4346,8 @@ function hideAllMenus() {
   document.querySelectorAll('.ctx-menu').forEach(m => m.classList.remove('show'));
   const ov = document.getElementById('ctxOverlay');
   if (ov) ov.style.display = 'none';
+  const rb = document.getElementById('reactBar');
+  if (rb) rb.style.display = 'none';
 }
 
 function positionMenu(menu, e) {

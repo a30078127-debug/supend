@@ -110,6 +110,7 @@ async def ws_handler(request):
             if c == 'save_profile':
                 users[me]['bio'] = d.get('bio','')
                 if d.get('avatar'): users[me]['avatar'] = d['avatar']
+                if d.get('status'): users[me]['status'] = d['status']
                 for ck in messages:
                     if me in ck.split('_'):
                         other = [x for x in ck.split('_') if x != me]
@@ -139,7 +140,9 @@ async def ws_handler(request):
                         ud = users.get(other, {})
                         chats.append({'username':other,'last_msg':lt,'last_time':last['time'],
                             'unread':unread,'online':other in online,
-                            'avatar':ud.get('avatar',''),'bio':ud.get('bio','')})
+                            'avatar':ud.get('avatar',''),'bio':ud.get('bio',''),
+                            'status':ud.get('status','online'),
+                            'last_seen':ud.get('last_seen',0)})
                 for gid, g in groups.items():
                     if me not in g['members']: continue
                     # Группа показывается даже без сообщений
@@ -550,6 +553,7 @@ async def ws_handler(request):
             print(f'WS err: {e}')
 
     if me:
+        users[me]['last_seen'] = ts()  # сохраняем время последнего визита
         online.pop(me, None)
         for ck in messages:
             if me in ck.split('_'):
@@ -606,11 +610,21 @@ async def media_handler(request):
 async def manifest_handler(request):
     m = {"name":"Supend","short_name":"Supend","start_url":"/","display":"standalone",
          "background_color":"#ffffff","theme_color":"#1ABC9C",
-         "icons":[{"src":"/icon.png","sizes":"192x192","type":"image/png"},
-                  {"src":"/icon.png","sizes":"512x512","type":"image/png"}]}
+         "icons":[{"src":"/logo","sizes":"192x192","type":"image/jpeg"},
+                  {"src":"/logo","sizes":"512x512","type":"image/jpeg"}]}
     return web.Response(text=json.dumps(m), content_type='application/json')
 
-async def icon_handler(request):
+async def logo_handler(request):
+    # Отдаём логотип из файла logo.jpg если он есть
+    logo_path = 'logo.jpg'
+    if os.path.exists(logo_path):
+        with open(logo_path, 'rb') as f:
+            data = f.read()
+        return web.Response(body=data, content_type='image/jpeg',
+                          headers={'Cache-Control':'public,max-age=86400'})
+    # Fallback — SVG логотип
+    svg = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#1ABC9C"/><text x="96" y="130" font-size="100" text-anchor="middle" fill="white" font-family="Arial">S</text></svg>'
+    return web.Response(body=svg, content_type='image/svg+xml')
     svg = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#1ABC9C"/><text x="96" y="130" font-size="100" text-anchor="middle" fill="white" font-family="Arial">S</text></svg>'
     return web.Response(body=svg, content_type='image/svg+xml')
 
@@ -649,6 +663,7 @@ async def main():
     app.router.add_get('/manifest.json', manifest_handler)
     app.router.add_get('/icon.png',      icon_handler)
     app.router.add_post('/translate',    translate_handler)
+    app.router.add_get('/logo',          logo_handler)
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, '0.0.0.0', port).start()
