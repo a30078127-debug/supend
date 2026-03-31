@@ -494,10 +494,41 @@ async def ws_handler(request):
                 oid = d.get('order_id','')
                 o = exchange_orders.get(oid)
                 if not o or o['status'] != 'open' or o['seller'] == me: continue
-                o['status'] = 'pending'; o['buyer'] = me
+                o['status'] = 'pending'; o['buyer'] = me; o['deal_status'] = 'waiting_payment'
+                if not o.get('chat_msgs'): o['chat_msgs'] = []
                 await push(o['seller'], {'type':'order_deal','order':o,'buyer':me,
                     'buyer_avatar':users[me].get('avatar','')})
-                await send({'type':'order_deal_started','order':o})
+                await send({'type':'order_deal_started','order_id':oid,'order':o})
+
+            elif c == 'deal_paid':
+                oid = d.get('order_id','')
+                o = exchange_orders.get(oid)
+                if not o or o.get('buyer') != me: continue
+                o['deal_status'] = 'paid'
+                await push(o['seller'], {'type':'deal_status','order_id':oid,'deal_status':'paid'})
+                await send({'type':'deal_status','order_id':oid,'deal_status':'paid'})
+
+            elif c == 'deal_dispute':
+                oid = d.get('order_id','')
+                o = exchange_orders.get(oid)
+                if not o or o.get('seller') != me: continue
+                o['deal_status'] = 'dispute'
+                buyer = o.get('buyer','')
+                await push(buyer, {'type':'deal_status','order_id':oid,'deal_status':'dispute'})
+                await send({'type':'deal_status','order_id':oid,'deal_status':'dispute'})
+
+            elif c == 'deal_chat_msg':
+                oid  = d.get('order_id','')
+                text = d.get('text','').strip()
+                o    = exchange_orders.get(oid)
+                if not o or not text: continue
+                if me not in (o.get('seller',''), o.get('buyer','')): continue
+                partner = o.get('buyer') if me == o.get('seller') else o.get('seller')
+                msg = {'from':me,'text':text,'time':tstr()}
+                if not o.get('chat_msgs'): o['chat_msgs'] = []
+                o['chat_msgs'].append(msg)
+                await push(partner, {'type':'deal_chat_msg','order_id':oid,'from':me,'text':text,'time':tstr()})
+                await send({'type':'deal_chat_msg','order_id':oid,'from':me,'text':text,'time':tstr()})
 
             elif c == 'confirm_deal':
                 oid = d.get('order_id','')

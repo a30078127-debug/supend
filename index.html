@@ -912,21 +912,116 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 
 <!-- Exchange -->
 <div class="exchange-page" id="exchangePage">
+  <!-- Header -->
   <div class="ex-head">
-    <div style="display:flex;align-items:center;gap:14px">
-      <button onclick="closeExchange()" style="background:none;border:none;color:#848e9c;cursor:pointer;font-size:22px">←</button>
+    <div style="display:flex;align-items:center;gap:12px">
+      <button onclick="closeExchange()" style="background:none;border:none;color:#848e9c;cursor:pointer;font-size:22px;padding:0;line-height:1">←</button>
       <div style="font-size:16px;font-weight:700;color:#fff">P2P Обменник</div>
-      <div style="background:#f0b90b;color:#000;font-size:10px;font-weight:800;padding:2px 7px;border-radius:4px">SUP</div>
+      <div style="background:#f0b90b;color:#000;font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px;flex-shrink:0">SUP</div>
     </div>
-    <button onclick="showCreateOrder()" class="ex-btn">+ Создать ордер</button>
+    <button onclick="showCreateOrder()" style="padding:8px 14px;border:none;border-radius:10px;background:#f0b90b;color:#000;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0">+ Ордер</button>
   </div>
-  <div style="display:flex;border-bottom:1px solid #1e2329;padding:0 24px;flex-shrink:0">
+  <!-- Tabs -->
+  <div style="display:flex;border-bottom:1px solid #1e2329;padding:0 20px;flex-shrink:0;overflow-x:auto">
     <button class="ex-tab active" id="exTabBuy" onclick="switchExTab('buy')">Купить SUP</button>
     <button class="ex-tab" id="exTabSell" onclick="switchExTab('sell')">Мои ордера</button>
+    <button class="ex-tab" id="exTabDeals" onclick="switchExTab('deals')">Сделки</button>
     <button class="ex-tab" id="exTabHistory" onclick="switchExTab('history')">История</button>
   </div>
-  <div class="ex-list" id="exList">
-    <div style="text-align:center;padding:60px 20px;color:#848e9c" id="exEmpty">Ордеров пока нет</div>
+  <!-- Content -->
+  <div class="ex-list" id="exList"></div>
+</div>
+
+<!-- Create order modal step 1: amount + price -->
+<div class="modal-overlay" id="createOrderModal1">
+  <div class="modal-sheet" style="background:#161a1e">
+    <div class="modal-handle" style="background:#2b3139"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <button onclick="closeModal('createOrderModal1')" style="border:none;background:none;font-size:22px;cursor:pointer;color:#848e9c;padding:0">‹</button>
+      <div style="font-size:18px;font-weight:700;color:#fff">Создать ордер</div>
+      <div style="font-size:12px;color:#848e9c;margin-left:auto">Шаг 1 из 2</div>
+    </div>
+    <div style="background:#0b0e11;border-radius:14px;padding:16px;margin-bottom:14px">
+      <div style="font-size:11px;color:#848e9c;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Количество SUP для продажи</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input id="coAmount" type="number" min="1" placeholder="0" style="flex:1;background:none;border:none;font-size:28px;font-weight:700;color:#fff;outline:none;font-family:var(--font)">
+        <div style="font-size:16px;font-weight:700;color:#f0b90b">SUP</div>
+      </div>
+      <div style="font-size:12px;color:#848e9c;margin-top:6px">Доступно: <span id="coAvail" style="color:#0ecb81;font-weight:600">0 SUP</span></div>
+    </div>
+    <div style="background:#0b0e11;border-radius:14px;padding:16px;margin-bottom:20px">
+      <div style="font-size:11px;color:#848e9c;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Цена за 1 SUP (₽)</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input id="coPrice" type="number" min="0.01" step="0.01" placeholder="0.00" style="flex:1;background:none;border:none;font-size:28px;font-weight:700;color:#fff;outline:none;font-family:var(--font)">
+        <div style="font-size:16px;font-weight:700;color:#848e9c">₽</div>
+      </div>
+      <div style="font-size:12px;color:#848e9c;margin-top:6px">Итого: <span id="coTotal" style="color:#fff;font-weight:600">0 ₽</span></div>
+    </div>
+    <div id="coStep1Err" style="color:#f6465d;font-size:13px;text-align:center;margin-bottom:10px;min-height:16px"></div>
+    <button onclick="coGoStep2()" style="width:100%;padding:15px;border:none;border-radius:14px;background:#f0b90b;color:#000;font-family:var(--font);font-size:16px;font-weight:800;cursor:pointer">Далее →</button>
+  </div>
+</div>
+
+<!-- Create order modal step 2: payment method -->
+<div class="modal-overlay" id="createOrderModal2">
+  <div class="modal-sheet" style="background:#161a1e;max-height:92dvh">
+    <div class="modal-handle" style="background:#2b3139"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <button onclick="coBack()" style="border:none;background:none;font-size:22px;cursor:pointer;color:#848e9c;padding:0">‹</button>
+      <div style="font-size:18px;font-weight:700;color:#fff">Способ оплаты</div>
+      <div style="font-size:12px;color:#848e9c;margin-left:auto">Шаг 2 из 2</div>
+    </div>
+    <!-- Bank picker -->
+    <div style="font-size:12px;color:#848e9c;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em">Выберите банк</div>
+    <div id="bankList" style="display:flex;flex-direction:column;gap:8px;max-height:42dvh;overflow-y:auto;margin-bottom:14px"></div>
+    <!-- Card input -->
+    <div id="coCardWrap" style="display:none;margin-bottom:14px">
+      <div style="font-size:12px;color:#848e9c;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Номер карты / телефона</div>
+      <input id="coCard" type="text" placeholder="0000 0000 0000 0000" maxlength="19"
+        oninput="fmtCard(this)"
+        style="width:100%;background:#0b0e11;border:1px solid #2b3139;border-radius:12px;padding:14px 16px;color:#fff;font-size:16px;font-family:var(--font);outline:none;letter-spacing:.06em"
+        onfocus="this.style.borderColor='#f0b90b'" onblur="this.style.borderColor='#2b3139'">
+    </div>
+    <div id="coStep2Err" style="color:#f6465d;font-size:13px;text-align:center;margin-bottom:10px;min-height:16px"></div>
+    <button onclick="coSubmit()" style="width:100%;padding:15px;border:none;border-radius:14px;background:#f0b90b;color:#000;font-family:var(--font);font-size:16px;font-weight:800;cursor:pointer">Создать ордер</button>
+  </div>
+</div>
+
+<!-- Deal modal -->
+<div class="modal-overlay" id="dealModal" style="z-index:160">
+  <div style="background:#161a1e;border-radius:20px 20px 0 0;width:100%;max-width:480px;display:flex;flex-direction:column;max-height:90dvh">
+    <!-- Deal header -->
+    <div style="padding:16px 20px;border-bottom:1px solid #1e2329;display:flex;align-items:center;gap:12px;flex-shrink:0">
+      <button onclick="closeModal('dealModal')" style="background:none;border:none;color:#848e9c;font-size:22px;cursor:pointer;padding:0">‹</button>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:700;color:#fff" id="dealTitle">Сделка</div>
+        <div style="font-size:12px;color:#848e9c;margin-top:2px" id="dealSubtitle"></div>
+      </div>
+      <button onclick="toggleDealChat()" title="Чат сделки" style="width:38px;height:38px;border-radius:50%;background:#1e2329;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#848e9c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </button>
+    </div>
+    <!-- Status bar -->
+    <div id="dealStatus" style="padding:10px 20px;background:#0f1923;border-bottom:1px solid #1e2329;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div id="dealStatusDot" style="width:8px;height:8px;border-radius:50%;background:#f0b90b;flex-shrink:0"></div>
+        <div id="dealStatusText" style="font-size:13px;color:#f0b90b;font-weight:600"></div>
+      </div>
+    </div>
+    <!-- Deal info -->
+    <div id="dealInfo" style="padding:16px 20px;border-bottom:1px solid #1e2329;flex-shrink:0"></div>
+    <!-- Deal chat (collapsible) -->
+    <div id="dealChatWrap" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+      <div id="dealChatMsgs" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;min-height:120px;max-height:200px"></div>
+      <div style="padding:10px 16px;border-top:1px solid #1e2329;display:flex;gap:8px;flex-shrink:0">
+        <input id="dealChatInp" placeholder="Сообщение..." onkeydown="if(event.key==='Enter')sendDealChatMsg()"
+          style="flex:1;background:#0b0e11;border:1px solid #2b3139;border-radius:10px;padding:9px 13px;color:#fff;font-size:14px;font-family:var(--font);outline:none"
+          onfocus="this.style.borderColor='#f0b90b'" onblur="this.style.borderColor='#2b3139'">
+        <button onclick="sendDealChatMsg()" style="padding:9px 14px;background:#f0b90b;border:none;border-radius:10px;color:#000;font-weight:700;cursor:pointer;font-size:14px">→</button>
+      </div>
+    </div>
+    <!-- Actions -->
+    <div id="dealActions" style="padding:14px 20px;flex-shrink:0"></div>
   </div>
 </div>
 
@@ -1021,7 +1116,9 @@ function handle(d) {
     case 'order_cancelled': onOrderCancelled(d.order_id); break;
     case 'order_created': cmd({cmd:'get_orders'}); break;
     case 'order_deal':    onOrderDeal(d);     break;
-    case 'order_deal_started': toast('Сделка начата!'); break;
+    case 'order_deal_started': { const o=allOrders.find(o=>o.id===d.order_id);if(o){o.status='pending';o.buyer=me;o.deal_status='waiting_payment';}renderDeals&&renderDeals();toast('Сделка открыта!'); break; }
+    case 'deal_status':   onDealStatusUpdate(d); break;
+    case 'deal_chat_msg': onDealChatMsg(d);   break;
     case 'deal_confirmed': onDealConfirmed(d); break;
   }
 }
@@ -2829,13 +2926,34 @@ function earnSup(textLen) {
 // ── Exchange ───────────────────────────────────────────────────────────────
 let exTab = 'buy';
 let allOrders = [];
+let activeDeal = null; // текущая открытая сделка
+let dealChatOpen = false;
+let coSelectedBank = '';
+let coStep1Data = {};
+
+const BANKS = [
+  {id:'sber',     name:'Сбербанк',       color:'#1DB954'},
+  {id:'tinkoff',  name:'Тинькофф (Т-Банк)',color:'#f0b90b'},
+  {id:'vtb',      name:'ВТБ',             color:'#003087'},
+  {id:'alfa',     name:'Альфа-Банк',      color:'#ef3124'},
+  {id:'gazprom',  name:'Газпромбанк',     color:'#005bbb'},
+  {id:'raiffeisen',name:'Райффайзен',     color:'#f5ec00'},
+  {id:'rosselhoz',name:'Россельхозбанк',  color:'#007a3d'},
+  {id:'otkrytie', name:'Открытие',        color:'#ff6600'},
+  {id:'sovkom',   name:'Совкомбанк',      color:'#cc0000'},
+  {id:'mkb',      name:'МКБ',             color:'#d10000'},
+  {id:'psb',      name:'Промсвязьбанк',   color:'#004b87'},
+  {id:'post',     name:'Почта Банк',      color:'#007bff'},
+  {id:'uralsib',  name:'Уралсиб',         color:'#00529c'},
+  {id:'sbp',      name:'СБП (по телефону)',color:'#8b5cf6'},
+];
 
 function openExchange() {
   closeWallet();
   document.getElementById('exchangePage').classList.add('show');
   cmd({ cmd:'get_orders' });
+  switchExTab('buy');
 }
-
 function closeExchange() { document.getElementById('exchangePage').classList.remove('show'); }
 
 function switchExTab(tab) {
@@ -2844,9 +2962,11 @@ function switchExTab(tab) {
   const tabEl = document.getElementById('exTab' + tab.charAt(0).toUpperCase() + tab.slice(1));
   if (tabEl) tabEl.classList.add('active');
   if (tab === 'history') renderExHistory();
+  else if (tab === 'deals') renderDeals();
   else renderOrders(allOrders);
 }
 
+// ── Render orders ──────────────────────────────────────────────────────────
 function renderOrders(orders) {
   allOrders = orders || allOrders;
   const list = document.getElementById('exList');
@@ -2855,93 +2975,432 @@ function renderOrders(orders) {
     if (exTab === 'sell') return o.seller === me && o.status !== 'cancelled';
     return false;
   });
+
   if (!filtered.length) {
-    list.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#848e9c" id="exEmpty">Ордеров нет</div>`;
+    list.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#848e9c">
+      <div style="font-size:40px;margin-bottom:12px">📭</div>
+      <div>${exTab === 'buy' ? 'Нет активных ордеров' : 'Ты ещё не создавал ордеров'}</div>
+      ${exTab === 'sell' ? '<div style="font-size:12px;margin-top:6px;opacity:.6">Нажми «+ Ордер» чтобы создать</div>' : ''}
+    </div>`;
     return;
   }
-  list.innerHTML = filtered.map(o => `
-    <div class="ex-row">
-      <div>
-        <div style="font-size:14px;font-weight:700;color:#fff">@${o.seller}</div>
-        <div style="font-size:12px;color:#848e9c;margin-top:2px">${o.bank||''}</div>
+
+  list.innerHTML = filtered.map(o => {
+    const isMine = o.seller === me;
+    const statusColor = o.status === 'open' ? '#0ecb81' : o.status === 'pending' ? '#f0b90b' : '#848e9c';
+    const statusLabel = o.status === 'open' ? 'Открыт' : o.status === 'pending' ? 'В сделке' : 'Закрыт';
+    return `
+    <div style="background:#161a1e;border-radius:14px;margin:10px 16px;padding:16px;border:1px solid #1e2329">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:38px;height:38px;border-radius:50%;background:#2b3139;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff">${(o.seller||'?')[0].toUpperCase()}</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#fff">@${o.seller}</div>
+            <div style="font-size:11px;color:#848e9c">${o.bank||''}</div>
+          </div>
+        </div>
+        <div style="background:${statusColor}22;color:${statusColor};font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px">${statusLabel}</div>
       </div>
-      <div style="font-size:14px;font-weight:700;color:#0ecb81">${o.price} ₽</div>
-      <div style="font-size:14px;font-weight:600;color:#fff">${o.amount} SUP</div>
-      <div>
-        ${o.seller === me
-          ? `<button class="ex-btn" style="background:#e74c3c" onclick="cancelOrder('${o.id}')">Отменить</button>`
-          : `<button class="ex-btn" onclick="buyOrder('${o.id}')">Купить</button>`}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:#0b0e11;border-radius:10px;padding:10px">
+          <div style="font-size:11px;color:#848e9c;margin-bottom:3px">Количество</div>
+          <div style="font-size:17px;font-weight:700;color:#fff">${o.amount} <span style="font-size:12px;color:#f0b90b">SUP</span></div>
+        </div>
+        <div style="background:#0b0e11;border-radius:10px;padding:10px">
+          <div style="font-size:11px;color:#848e9c;margin-bottom:3px">Цена за SUP</div>
+          <div style="font-size:17px;font-weight:700;color:#0ecb81">${o.price} <span style="font-size:12px;color:#848e9c">₽</span></div>
+        </div>
       </div>
-    </div>`).join('');
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:13px;color:#848e9c">Итого: <span style="color:#fff;font-weight:600">${(o.amount * o.price).toFixed(0)} ₽</span></div>
+        ${isMine
+          ? `<button onclick="cancelOrder('${o.id}')" style="padding:8px 16px;border:1px solid #f6465d;border-radius:10px;background:none;color:#f6465d;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">Отменить</button>`
+          : o.status === 'open'
+            ? `<button onclick="buyOrder('${o.id}')" style="padding:8px 20px;border:none;border-radius:10px;background:#f0b90b;color:#000;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer">Купить</button>`
+            : ''}
+      </div>
+    </div>`;
+  }).join('');
 }
 
-function renderExHistory() {
+// ── Deals tab ──────────────────────────────────────────────────────────────
+function renderDeals() {
   const list = document.getElementById('exList');
-  if (!exchangeHistory.length) {
-    list.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#848e9c">История пуста</div>';
+  const activeDeals = allOrders.filter(o => o.status === 'pending' && (o.seller === me || o.buyer === me));
+  if (!activeDeals.length) {
+    list.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#848e9c"><div style="font-size:40px;margin-bottom:12px">🤝</div><div>Нет активных сделок</div></div>`;
     return;
   }
-  list.innerHTML = exchangeHistory.map(h => `
-    <div class="ex-row">
-      <div style="font-size:14px;font-weight:700;color:${h.type==='bought'?'#0ecb81':'#e74c3c'}">${h.type==='bought'?'Куплено':'Продано'}</div>
-      <div style="font-size:13px;color:#fff">${h.amount} SUP</div>
-      <div style="font-size:13px;color:#848e9c">${h.price}₽ · ${h.bank||''}</div>
-      <div style="font-size:12px;color:#848e9c">${h.date} ${h.time}</div>
-    </div>`).join('');
+  list.innerHTML = activeDeals.map(o => {
+    const isSeller = o.seller === me;
+    const partner = isSeller ? o.buyer : o.seller;
+    const dealStatus = o.deal_status || 'waiting_payment';
+    const statusMap = {
+      waiting_payment: {text:'Ожидаем оплату', color:'#f0b90b'},
+      paid:            {text:'Покупатель оплатил', color:'#0ecb81'},
+      dispute:         {text:'Открыт спор', color:'#f6465d'},
+    };
+    const st = statusMap[dealStatus] || {text:dealStatus, color:'#848e9c'};
+    return `
+    <div style="background:#161a1e;border-radius:14px;margin:10px 16px;padding:16px;border:1px solid ${st.color}44;cursor:pointer" onclick="openDeal('${o.id}')">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:14px;font-weight:700;color:#fff">${o.amount} SUP · ${(o.amount*o.price).toFixed(0)} ₽</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="event.stopPropagation();openDeal('${o.id}',true)" title="Чат сделки" style="background:#2b3139;border:none;border-radius:8px;padding:6px 8px;cursor:pointer;display:flex;align-items:center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#848e9c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </button>
+          <div style="background:${st.color}22;color:${st.color};font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px">${st.text}</div>
+        </div>
+      </div>
+      <div style="font-size:13px;color:#848e9c">${isSeller ? '👤 Покупатель: @' + (partner||'…') : '👤 Продавец: @' + (partner||'…')} · ${o.bank}</div>
+    </div>`;
+  }).join('');
 }
 
-function onNewOrder(order) {
-  allOrders.push(order);
-  if (exTab === 'buy') renderOrders();
-}
+// ── Open deal modal ────────────────────────────────────────────────────────
+function openDeal(oid, openChat = false) {
+  activeDeal = allOrders.find(o => o.id === oid);
+  if (!activeDeal) return;
+  const o = activeDeal;
+  const isSeller = o.seller === me;
+  const partner  = isSeller ? o.buyer : o.seller;
+  const dealStatus = o.deal_status || 'waiting_payment';
 
-function onOrderCancelled(oid) {
-  const o = allOrders.find(o => o.id === oid);
-  if (o) o.status = 'cancelled';
-  renderOrders();
-}
+  document.getElementById('dealTitle').textContent = `${o.amount} SUP · ${(o.amount*o.price).toFixed(0)} ₽`;
+  document.getElementById('dealSubtitle').textContent = (isSeller ? 'Покупатель: ' : 'Продавец: ') + '@' + (partner||'…');
 
-function onOrderDeal(d) {
-  toast(`💱 @${d.buyer} хочет купить ${d.order.amount} SUP`);
-}
+  const statusMap = {
+    waiting_payment: {text:'Ожидаем оплату', color:'#f0b90b'},
+    paid:            {text:'Покупатель оплатил', color:'#0ecb81'},
+    dispute:         {text:'Открыт спор', color:'#f6465d'},
+  };
+  const st = statusMap[dealStatus] || {text:dealStatus, color:'#848e9c'};
+  document.getElementById('dealStatusDot').style.background = st.color;
+  document.getElementById('dealStatusText').style.color = st.color;
+  document.getElementById('dealStatusText').textContent = st.text;
 
-function onDealConfirmed(d) {
-  updateSup(d.sup);
-  if (d.amount) {
-    addTx('P2P покупка SUP', d.amount);
-    toast(`+${d.amount} SUP получено! ✅`);
+  // Info block
+  const info = document.getElementById('dealInfo');
+  if (isSeller) {
+    // Продавец ждёт подтверждения
+    info.innerHTML = `
+      <div style="font-size:13px;color:#848e9c;margin-bottom:8px">Ваши реквизиты для оплаты:</div>
+      <div style="background:#0b0e11;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between"><span style="color:#848e9c;font-size:13px">Банк</span><span style="color:#fff;font-weight:700">${o.bank}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:#848e9c;font-size:13px">Карта</span><span style="color:#fff;font-weight:700">${o.card||'—'}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:#848e9c;font-size:13px">Сумма</span><span style="color:#0ecb81;font-weight:800">${(o.amount*o.price).toFixed(0)} ₽</span></div>
+      </div>`;
   } else {
-    addTx('P2P продажа SUP', -allOrders.find(o=>o.id===d.order_id)?.amount||0);
-    toast('Сделка подтверждена ✅');
+    // Покупатель видит реквизиты продавца
+    info.innerHTML = `
+      <div style="font-size:13px;color:#848e9c;margin-bottom:8px">Реквизиты продавца:</div>
+      <div style="background:#0b0e11;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between"><span style="color:#848e9c;font-size:13px">Банк</span><span style="color:#fff;font-weight:700">${o.bank}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:#848e9c;font-size:13px">Карта</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="color:#fff;font-weight:700">${o.card||'—'}</span>
+            <button onclick="navigator.clipboard?.writeText('${o.card||''}')" style="background:#f0b90b22;border:none;border-radius:6px;padding:3px 8px;color:#f0b90b;font-size:11px;font-weight:700;cursor:pointer">Копировать</button>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between"><span style="color:#848e9c;font-size:13px">Сумма</span><span style="color:#0ecb81;font-weight:800">${(o.amount*o.price).toFixed(0)} ₽</span></div>
+      </div>`;
   }
-  const o = allOrders.find(o=>o.id===d.order_id);
-  if (o) o.status = 'closed';
+
+  // Actions
+  renderDealActions(dealStatus, isSeller);
+
+  // Deal chat
+  renderDealChatMsgs();
+  dealChatOpen = openChat;
+  document.getElementById('dealChatWrap').style.display = openChat ? 'flex' : 'none';
+
+  document.getElementById('dealModal').classList.add('show');
 }
 
-let createOrderData = {};
+function renderDealActions(status, isSeller) {
+  const el = document.getElementById('dealActions');
+  if (isSeller) {
+    if (status === 'paid') {
+      el.innerHTML = `
+        <div style="display:flex;gap:10px">
+          <button onclick="dealConfirm()" style="flex:1;padding:14px;border:none;border-radius:14px;background:#0ecb81;color:#000;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer">✓ Подтвердить</button>
+          <button onclick="dealDispute()" style="flex:1;padding:14px;border:1.5px solid #f6465d;border-radius:14px;background:none;color:#f6465d;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer">⚑ Спор</button>
+        </div>`;
+    } else if (status === 'waiting_payment') {
+      el.innerHTML = `<div style="text-align:center;color:#848e9c;font-size:13px;padding:8px 0">Ожидаем оплаты от покупателя...</div>`;
+    } else {
+      el.innerHTML = '';
+    }
+  } else {
+    if (status === 'waiting_payment') {
+      el.innerHTML = `<button onclick="dealPaid()" style="width:100%;padding:15px;border:none;border-radius:14px;background:#0ecb81;color:#000;font-family:var(--font);font-size:16px;font-weight:800;cursor:pointer">✓ Я оплатил</button>`;
+    } else if (status === 'paid') {
+      el.innerHTML = `<div style="text-align:center;color:#0ecb81;font-size:13px;padding:8px 0">Ожидаем подтверждения продавца...</div>`;
+    } else {
+      el.innerHTML = '';
+    }
+  }
+}
+
+function toggleDealChat() {
+  dealChatOpen = !dealChatOpen;
+  document.getElementById('dealChatWrap').style.display = dealChatOpen ? 'flex' : 'none';
+}
+
+function renderDealChatMsgs() {
+  if (!activeDeal) return;
+  const msgs = activeDeal.chat_msgs || [];
+  const el = document.getElementById('dealChatMsgs');
+  if (!msgs.length) { el.innerHTML = '<div style="text-align:center;color:#848e9c;font-size:12px;padding:20px">Начните общение</div>'; return; }
+  el.innerHTML = msgs.map(m => {
+    const isMe = m.from === me;
+    return `<div style="display:flex;justify-content:${isMe?'flex-end':'flex-start'}">
+      <div style="background:${isMe?'#f0b90b':'#2b3139'};color:${isMe?'#000':'#fff'};border-radius:12px;padding:8px 12px;max-width:75%;font-size:13px">
+        ${!isMe?`<div style="font-size:10px;color:#848e9c;margin-bottom:3px">@${m.from}</div>`:''}
+        ${esc(m.text)}<span style="font-size:10px;color:${isMe?'rgba(0,0,0,.5)':'#848e9c'};margin-left:8px">${m.time||''}</span>
+      </div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function sendDealChatMsg() {
+  if (!activeDeal) return;
+  const inp = document.getElementById('dealChatInp');
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  cmd({ cmd:'deal_chat_msg', order_id:activeDeal.id, text });
+  if (!activeDeal.chat_msgs) activeDeal.chat_msgs = [];
+  activeDeal.chat_msgs.push({ from:me, text, time:tstr() });
+  renderDealChatMsgs();
+}
+
+function dealPaid() {
+  if (!activeDeal) return;
+  cmd({ cmd:'deal_paid', order_id:activeDeal.id });
+  activeDeal.deal_status = 'paid';
+  renderDealActions('paid', false);
+  document.getElementById('dealStatusText').textContent = 'Оплата отправлена';
+  document.getElementById('dealStatusDot').style.background = '#0ecb81';
+  toast('✅ Продавец уведомлён об оплате');
+}
+
+function dealConfirm() {
+  if (!activeDeal) return;
+  cmd({ cmd:'confirm_deal', order_id:activeDeal.id });
+  closeModal('dealModal');
+  toast('✅ Сделка подтверждена! SUP переведены');
+}
+
+function dealDispute() {
+  if (!activeDeal) return;
+  cmd({ cmd:'deal_dispute', order_id:activeDeal.id });
+  activeDeal.deal_status = 'dispute';
+  renderDealActions('dispute', true);
+  document.getElementById('dealStatusText').textContent = 'Открыт спор';
+  document.getElementById('dealStatusDot').style.background = '#f6465d';
+  toast('⚑ Спор открыт');
+}
+
+// ── Create order ───────────────────────────────────────────────────────────
 function showCreateOrder() {
-  const amount = parseInt(prompt('Количество SUP для продажи:'));
-  if (!amount || amount < 1) return;
-  if (amount > mySup) { toast('Недостаточно SUP'); return; }
-  const price = parseInt(prompt('Цена за SUP (₽):'));
-  if (!price || price < 1) return;
-  const bank = prompt('Способ оплаты (Сбербанк / Тинькофф / СБП...):');
-  if (!bank) return;
-  cmd({ cmd:'create_order', amount, price, bank, card:'' });
-  toast('Ордер создан!');
+  coSelectedBank = '';
+  coStep1Data = {};
+  document.getElementById('coAmount').value = '';
+  document.getElementById('coPrice').value = '';
+  document.getElementById('coTotal').textContent = '0 ₽';
+  document.getElementById('coAvail').textContent = mySup + ' SUP';
+  document.getElementById('coStep1Err').textContent = '';
+  // Обновляем total при вводе
+  const updateTotal = () => {
+    const a = parseFloat(document.getElementById('coAmount').value)||0;
+    const p = parseFloat(document.getElementById('coPrice').value)||0;
+    document.getElementById('coTotal').textContent = (a*p).toFixed(0) + ' ₽';
+  };
+  document.getElementById('coAmount').oninput = updateTotal;
+  document.getElementById('coPrice').oninput  = updateTotal;
+  document.getElementById('createOrderModal1').classList.add('show');
+}
+
+function coGoStep2() {
+  const amount = parseFloat(document.getElementById('coAmount').value);
+  const price  = parseFloat(document.getElementById('coPrice').value);
+  const err    = document.getElementById('coStep1Err');
+  err.textContent = '';
+  if (!amount || amount < 1)  { err.textContent = 'Введи количество SUP'; return; }
+  if (amount > mySup)          { err.textContent = `Недостаточно SUP. У тебя ${mySup} SUP`; return; }
+  if (!price || price <= 0)    { err.textContent = 'Введи цену'; return; }
+  coStep1Data = { amount, price };
+  closeModal('createOrderModal1');
+  // Рендерим банки
+  coSelectedBank = '';
+  document.getElementById('coCard').value = '';
+  document.getElementById('coCardWrap').style.display = 'none';
+  document.getElementById('coStep2Err').textContent = '';
+  const bankList = document.getElementById('bankList');
+  bankList.innerHTML = BANKS.map(b => `
+    <div id="bank_${b.id}" onclick="selectBank('${b.id}','${b.name}')"
+      style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#0b0e11;border-radius:12px;cursor:pointer;border:1.5px solid #1e2329;transition:.15s">
+      <div style="width:36px;height:36px;border-radius:50%;background:${b.color}22;border:2px solid ${b.color};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:${b.color};flex-shrink:0">${b.name[0]}</div>
+      <div style="font-size:14px;font-weight:600;color:#fff;flex:1">${b.name}</div>
+      <div id="bankcheck_${b.id}" style="width:22px;height:22px;border-radius:50%;border:2px solid #2b3139;transition:.15s"></div>
+    </div>`).join('');
+  document.getElementById('createOrderModal2').classList.add('show');
+}
+
+function selectBank(id, name) {
+  // Сброс предыдущего выбора
+  BANKS.forEach(b => {
+    const el = document.getElementById('bank_'+b.id);
+    const ch = document.getElementById('bankcheck_'+b.id);
+    if (el) el.style.borderColor = '#1e2329';
+    if (ch) { ch.style.background=''; ch.style.borderColor='#2b3139'; ch.innerHTML=''; }
+  });
+  coSelectedBank = name;
+  const el = document.getElementById('bank_'+id);
+  const ch = document.getElementById('bankcheck_'+id);
+  if (el) el.style.borderColor = '#f0b90b';
+  if (ch) {
+    ch.style.background = '#f0b90b';
+    ch.style.borderColor = '#f0b90b';
+    ch.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+  }
+  // Показать поле карты
+  const cardWrap = document.getElementById('coCardWrap');
+  cardWrap.style.display = '';
+  const cardInp = document.getElementById('coCard');
+  cardInp.placeholder = id === 'sbp' ? '+7 900 000 00 00' : '0000 0000 0000 0000';
+  cardInp.focus();
+}
+
+function fmtCard(inp) {
+  let v = inp.value.replace(/\D/g,'');
+  if (inp.placeholder.startsWith('+')) {
+    // Телефон
+    inp.value = v.replace(/(\d{1})(\d{3})(\d{3})(\d{2})(\d{2})/, '+$1 $2 $3 $4 $5').replace(/(\d{1})(\d{3})(\d{3})(\d{2})$/, '+$1 $2 $3 $4').replace(/(\d{1})(\d{3})(\d{3})$/, '+$1 $2 $3');
+  } else {
+    inp.value = v.replace(/(\d{4})/g,'$1 ').trim();
+  }
+}
+
+function coBack() {
+  closeModal('createOrderModal2');
+  document.getElementById('createOrderModal1').classList.add('show');
+}
+
+function coSubmit() {
+  const card = document.getElementById('coCard').value.trim();
+  const err  = document.getElementById('coStep2Err');
+  err.textContent = '';
+  if (!coSelectedBank)    { err.textContent = 'Выбери способ оплаты'; return; }
+  if (!card)              { err.textContent = 'Введи номер карты / телефона'; return; }
+  cmd({ cmd:'create_order', amount:coStep1Data.amount, price:coStep1Data.price, bank:coSelectedBank, card });
+  closeModal('createOrderModal2');
+  toast('✅ Ордер создан!');
 }
 
 function cancelOrder(oid) {
   if (!confirm('Отменить ордер?')) return;
   cmd({ cmd:'cancel_order', order_id:oid });
-  const o = allOrders.find(o=>o.id===oid);
+  const o = allOrders.find(o => o.id === oid);
   if (o) o.status = 'cancelled';
   renderOrders();
 }
 
 function buyOrder(oid) {
-  if (!confirm('Начать сделку?')) return;
+  const o = allOrders.find(o => o.id === oid);
+  if (!o) return;
+  if (!confirm(`Купить ${o.amount} SUP за ${(o.amount*o.price).toFixed(0)} ₽ у @${o.seller}?`)) return;
   cmd({ cmd:'buy_order', order_id:oid });
+}
+
+function renderExHistory() {
+  const list = document.getElementById('exList');
+  if (!exchangeHistory.length) {
+    list.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#848e9c"><div style="font-size:40px;margin-bottom:12px">📋</div><div>История пуста</div></div>`;
+    return;
+  }
+  list.innerHTML = exchangeHistory.map(h => `
+    <div style="background:#161a1e;border-radius:14px;margin:10px 16px;padding:14px;display:flex;align-items:center;gap:12px">
+      <div style="width:40px;height:40px;border-radius:50%;background:${h.type==='bought'?'#0ecb8122':'#f6465d22'};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${h.type==='bought'?'↙':'↗'}</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:${h.type==='bought'?'#0ecb81':'#f6465d'}">${h.type==='bought'?'Куплено':'Продано'} ${h.amount} SUP</div>
+        <div style="font-size:12px;color:#848e9c;margin-top:2px">${h.bank||''} · ${h.date||''}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:14px;font-weight:700;color:#fff">${(h.amount*h.price).toFixed(0)} ₽</div>
+        <div style="font-size:11px;color:#848e9c">${h.price} ₽/SUP</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── Order/deal events from server ──────────────────────────────────────────
+function onNewOrder(order) {
+  // Убираем дубли
+  allOrders = allOrders.filter(o => o.id !== order.id);
+  allOrders.push(order);
+  if (exTab === 'buy' && document.getElementById('exchangePage').classList.contains('show')) renderOrders();
+}
+
+function onOrderCancelled(oid) {
+  const o = allOrders.find(o => o.id === oid);
+  if (o) o.status = 'cancelled';
+  if (document.getElementById('exchangePage').classList.contains('show')) renderOrders();
+}
+
+function onOrderDeal(d) {
+  // Продавцу пришло что кто-то хочет купить
+  const o = allOrders.find(o => o.id === d.order.id);
+  if (o) { o.status = 'pending'; o.buyer = d.buyer; o.deal_status = 'waiting_payment'; }
+  toast(`💱 @${d.buyer} хочет купить ${d.order.amount} SUP`);
+  if (document.getElementById('exchangePage').classList.contains('show')) {
+    renderOrders(); renderDeals();
+  }
+}
+
+function onDealStatusUpdate(d) {
+  const o = allOrders.find(o => o.id === d.order_id);
+  if (o) o.deal_status = d.deal_status;
+  if (activeDeal && activeDeal.id === d.order_id) {
+    activeDeal.deal_status = d.deal_status;
+    renderDealActions(d.deal_status, o?.seller === me);
+    if (d.deal_status === 'paid') {
+      document.getElementById('dealStatusText').textContent = 'Покупатель оплатил';
+      document.getElementById('dealStatusDot').style.background = '#0ecb81';
+    }
+  }
+  if (d.deal_status === 'paid' && o?.seller === me) {
+    toast('💰 Покупатель сообщил об оплате! Проверь и подтверди.');
+  }
+  if (document.getElementById('exchangePage').classList.contains('show')) renderDeals();
+}
+
+function onDealChatMsg(d) {
+  const o = allOrders.find(o => o.id === d.order_id);
+  if (o) {
+    if (!o.chat_msgs) o.chat_msgs = [];
+    o.chat_msgs.push({ from:d.from, text:d.text, time:d.time });
+    if (activeDeal && activeDeal.id === d.order_id && dealChatOpen) renderDealChatMsgs();
+  }
+}
+
+function onDealConfirmed(d) {
+  updateSup(d.sup);
+  const o = allOrders.find(o => o.id === d.order_id);
+  if (o) o.status = 'closed';
+  if (d.amount) {
+    addTx(`P2P покупка ${d.amount} SUP`, +d.amount, '💱');
+    exchangeHistory.push({type:'bought', amount:d.amount, price:o?.price||0, bank:o?.bank||'', date:new Date().toLocaleDateString('ru')});
+    toast(`+${d.amount} SUP получено! ✅`);
+  } else {
+    const amt = o?.amount||0;
+    addTx(`P2P продажа ${amt} SUP`, -amt, '💱');
+    exchangeHistory.push({type:'sold', amount:amt, price:o?.price||0, bank:o?.bank||'', date:new Date().toLocaleDateString('ru')});
+    toast('✅ Сделка подтверждена!');
+  }
+  closeModal('dealModal');
+  if (document.getElementById('exchangePage').classList.contains('show')) { renderDeals(); renderExHistory(); }
 }
 
 // ── Customization ──────────────────────────────────────────────────────────
