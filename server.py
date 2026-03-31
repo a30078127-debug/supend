@@ -1,5 +1,6 @@
 """Supend PWA Server — чистый переписанный бэкенд."""
 import asyncio, json, os, hashlib, time, uuid, mimetypes
+import urllib.request, urllib.error
 from aiohttp import web
 
 users          = {}   # username -> {password, bio, avatar, created_at, sup_balance, ref_code}
@@ -613,15 +614,62 @@ async def icon_handler(request):
     svg = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#1ABC9C"/><text x="96" y="130" font-size="100" text-anchor="middle" fill="white" font-family="Arial">S</text></svg>'
     return web.Response(body=svg, content_type='image/svg+xml')
 
+async def translate_handler(request):
+    try:
+        body = await request.json()
+        text = body.get('text', '').strip()
+        lang = body.get('lang', 'en')
+        if not text:
+            return web.Response(text=json.dumps({'result': ''}), content_type='application/json')
+
+        lang_names = {
+            'ru':'Russian','en':'English','de':'German','fr':'French','es':'Spanish',
+            'it':'Italian','zh':'Chinese','ja':'Japanese','ko':'Korean',
+            'ar':'Arabic','tr':'Turkish','uk':'Ukrainian'
+        }
+        lang_name = lang_names.get(lang, lang)
+
+        api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+        if not api_key:
+            return web.Response(text=json.dumps({'result':'⚠️ API ключ не настроен. Добавь ANTHROPIC_API_KEY в переменные Railway.'}), content_type='application/json')
+
+        payload = json.dumps({
+            'model': 'claude-haiku-4-5-20251001',
+            'max_tokens': 1024,
+            'messages': [{'role':'user','content':f'Translate the following text to {lang_name}. Output ONLY the translation, no explanations:\n\n{text}'}]
+        }).encode()
+
+        req = urllib.request.Request(
+            'https://api.anthropic.com/v1/messages',
+            data=payload,
+            headers={
+                'Content-Type': 'application/json',
+                'x-api-key': api_key,
+                'anthropic-version': '2023-06-01'
+            }
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read())
+            result = data['content'][0]['text']
+        return web.Response(text=json.dumps({'result': result}), content_type='application/json')
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode()
+        print(f'[translate] HTTP {e.code}: {err_body}')
+        return web.Response(text=json.dumps({'result': f'Ошибка API: {e.code}'}), content_type='application/json')
+    except Exception as e:
+        print(f'[translate] error: {e}')
+        return web.Response(text=json.dumps({'result': f'Ошибка: {str(e)}'}), content_type='application/json')
+
 async def main():
     port = int(os.environ.get('PORT', 8080))
     app  = web.Application(client_max_size=50*1024*1024)
-    app.router.add_get('/',             index_handler)
-    app.router.add_get('/ws',           ws_handler)
-    app.router.add_post('/upload',      upload_handler)
-    app.router.add_get('/media/{fid}',  media_handler)
-    app.router.add_get('/manifest.json',manifest_handler)
-    app.router.add_get('/icon.png',     icon_handler)
+    app.router.add_get('/',              index_handler)
+    app.router.add_get('/ws',            ws_handler)
+    app.router.add_post('/upload',       upload_handler)
+    app.router.add_get('/media/{fid}',   media_handler)
+    app.router.add_get('/manifest.json', manifest_handler)
+    app.router.add_get('/icon.png',      icon_handler)
+    app.router.add_post('/translate',    translate_handler)
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, '0.0.0.0', port).start()

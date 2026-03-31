@@ -499,6 +499,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
           <button class="head-act-btn" onclick="startCall('voice')" title="Голосовой звонок">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.6 3.38 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.08 6.08l1.14-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
           </button>
+          <button class="head-act-btn" onclick="startCall('video')" title="Видеозвонок">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+            </svg>
+          </button>
           <button class="head-act-btn" onclick="toggleCustomPanel()" title="Кастомизация">🎨</button>
         </div>
       </div>
@@ -899,13 +904,25 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 
 <!-- Call overlay -->
 <div class="call-overlay" id="callOverlay">
-  <div class="call-av" id="callAv">?</div>
-  <div class="call-name" id="callName">–</div>
-  <div class="call-status" id="callStatus">Звоним...</div>
-  <div class="call-btns">
-    <button class="call-btn call-btn-mic" id="callMicBtn" onclick="toggleMic()" title="Микрофон">🎤</button>
+  <!-- Video mode: remote full screen + local small -->
+  <video id="remoteVideo" autoplay playsinline style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0"></video>
+  <video id="localVideo"  autoplay playsinline muted style="display:none;position:absolute;bottom:120px;right:16px;width:110px;height:160px;object-fit:cover;border-radius:16px;border:2px solid rgba(255,255,255,.4);z-index:2"></video>
+  <!-- Voice mode: avatar + name -->
+  <div id="callVoiceUI" style="display:flex;flex-direction:column;align-items:center;z-index:1">
+    <div class="call-av" id="callAv">?</div>
+    <div class="call-name" id="callName">–</div>
+    <div class="call-status" id="callStatus">Звоним...</div>
+  </div>
+  <!-- Controls -->
+  <div class="call-btns" style="z-index:3;position:absolute;bottom:40px;left:0;right:0;display:flex;justify-content:center;gap:20px">
+    <button class="call-btn call-btn-mic" id="callMicBtn" onclick="toggleMic()" title="Микрофон">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+    </button>
+    <button id="callCamBtn" onclick="toggleCam()" title="Камера" style="display:none" class="call-btn" style="background:rgba(255,255,255,.15)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+    </button>
     <button class="call-btn call-btn-end" onclick="endCall()" title="Завершить">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 2 2 0 0 1-.45-2.11 12.84 12.84 0 0 0 .7-2.81 2 2 0 0 1-2-2v-3a2 2 0 0 1 1.72-2 12.84 12.84 0 0 0 .7-2.81 2 2 0 0 1 .45-2.11L3.07 2.07A19.79 19.79 0 0 0 0 10.7 2 2 0 0 0 2 12.88h3a2 2 0 0 0 1.72-2z"/></svg>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.6 3.38 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.125.96.327 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.08 6.08l1.14-.95z"/></svg>
     </button>
   </div>
   <audio id="remoteAudio" autoplay></audio>
@@ -2458,21 +2475,18 @@ async function doTranslate() {
   resEl.style.display = 'none';
   loadEl.style.display = 'block';
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('/translate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 500,
-        messages: [{ role: 'user', content: `Translate this text to ${translateTargetLang}. Reply with ONLY the translation, nothing else:\n\n${text}` }]
-      })
+      body: JSON.stringify({ text, lang: translateTargetLang })
     });
+    if (!resp.ok) throw new Error('Server error ' + resp.status);
     const data = await resp.json();
-    const translated = data.content?.[0]?.text || 'Ошибка перевода';
-    resEl.textContent = translated;
+    resEl.textContent = data.result || 'Ошибка перевода';
     resEl.style.display = 'block';
   } catch(e) {
-    resEl.textContent = 'Ошибка перевода. Проверь соединение.';
+    console.error('Translate error:', e);
+    resEl.textContent = 'Ошибка перевода: ' + e.message;
     resEl.style.display = 'block';
   }
   loadEl.style.display = 'none';
@@ -3058,37 +3072,98 @@ function doLogout() {
 }
 
 // ── WebRTC calls ───────────────────────────────────────────────────────────
+let isVideoCall = false;
+let isCamOn = true;
+
 async function startCall(type='voice') {
   if (!activeChat || activeType !== 'peer') return;
+  isVideoCall = (type === 'video');
   callWith = activeChat;
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({audio:true, video: type==='video'});
-    peerConn = createPeer();
+    localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: isVideoCall ? {facingMode:'user'} : false
+    });
+    peerConn = createPeer(isVideoCall);
     localStream.getTracks().forEach(t => peerConn.addTrack(t, localStream));
     const offer = await peerConn.createOffer();
     await peerConn.setLocalDescription(offer);
-    cmd({ cmd:'call_signal', to:callWith, signal:{type:'offer',sdp:offer.sdp}, call_type:type });
-    showCallOverlay(callWith);
-  } catch(e) { toast('Нет доступа к микрофону/камере'); }
+    cmd({ cmd:'call_signal', to:callWith, signal:{type:'offer', sdp:offer.sdp}, call_type:type });
+    showCallOverlay(callWith, isVideoCall);
+  } catch(e) {
+    console.error('Call error:', e);
+    toast('Нет доступа к ' + (isVideoCall ? 'камере' : 'микрофону'));
+  }
 }
 
-function createPeer() {
+function createPeer(isVideo) {
   const pc = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
-  pc.onicecandidate = e => { if (e.candidate) cmd({cmd:'call_signal',to:callWith,signal:{type:'candidate',candidate:e.candidate}}); };
-  pc.ontrack = e => { document.getElementById('remoteAudio').srcObject = e.streams[0]; };
+  pc.onicecandidate = e => {
+    if (e.candidate) cmd({cmd:'call_signal', to:callWith, signal:{type:'candidate', candidate:e.candidate}});
+  };
+  pc.ontrack = e => {
+    const stream = e.streams[0];
+    if (isVideo || stream.getVideoTracks().length > 0) {
+      const vid = document.getElementById('remoteVideo');
+      vid.srcObject = stream;
+    } else {
+      document.getElementById('remoteAudio').srcObject = stream;
+    }
+  };
   return pc;
+}
+
+function showCallOverlay(user, isVideo) {
+  const cd = chatsData[user] || {};
+  const av = document.getElementById('callAv');
+  if (cd.avatar) av.innerHTML = `<img src="${cd.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  else av.textContent = user[0].toUpperCase();
+  document.getElementById('callName').textContent = '@' + user;
+  document.getElementById('callStatus').textContent = isVideo ? '📹 Видеозвонок...' : '📞 Звоним...';
+
+  const voiceUI  = document.getElementById('callVoiceUI');
+  const remVideo = document.getElementById('remoteVideo');
+  const locVideo = document.getElementById('localVideo');
+  const camBtn   = document.getElementById('callCamBtn');
+
+  if (isVideo) {
+    voiceUI.style.display  = 'none';
+    remVideo.style.display = 'block';
+    locVideo.style.display = 'block';
+    camBtn.style.display   = 'flex';
+    // Показываем локальное видео
+    if (localStream) locVideo.srcObject = localStream;
+  } else {
+    voiceUI.style.display  = 'flex';
+    remVideo.style.display = 'none';
+    locVideo.style.display = 'none';
+    camBtn.style.display   = 'none';
+  }
+  document.getElementById('callOverlay').classList.add('show');
+}
+
+function toggleCam() {
+  if (!localStream) return;
+  const videoTrack = localStream.getVideoTracks()[0];
+  if (!videoTrack) return;
+  isCamOn = !isCamOn;
+  videoTrack.enabled = isCamOn;
+  const btn = document.getElementById('callCamBtn');
+  btn.style.opacity = isCamOn ? '1' : '0.4';
+  toast(isCamOn ? '📹 Камера включена' : '📷 Камера выключена');
 }
 
 async function handleCallSignal(d) {
   const sig = d.signal;
+  const callIsVideo = d.call_type === 'video';
   if (sig.type === 'offer') {
-    callWith = d.from; pendingOffer = sig;
+    callWith = d.from; pendingOffer = sig; isVideoCall = callIsVideo;
     document.getElementById('incName').textContent = '@' + d.from;
-    document.getElementById('incType').textContent = d.call_type==='video' ? '📹 Видеозвонок' : '📞 Голосовой';
+    document.getElementById('incType').textContent = callIsVideo ? '📹 Видеозвонок' : '📞 Голосовой звонок';
     document.getElementById('incomingCall').classList.add('show');
   } else if (sig.type === 'answer') {
-    if (peerConn) await peerConn.setRemoteDescription({type:'answer',sdp:sig.sdp});
-    document.getElementById('callStatus').textContent = 'Соединено';
+    if (peerConn) await peerConn.setRemoteDescription({type:'answer', sdp:sig.sdp});
+    document.getElementById('callStatus').textContent = isVideoCall ? '📹 Видео соединено' : '📞 Соединено';
   } else if (sig.type === 'candidate') {
     if (peerConn) await peerConn.addIceCandidate(sig.candidate).catch(()=>{});
   }
@@ -3097,15 +3172,21 @@ async function handleCallSignal(d) {
 async function acceptCall() {
   document.getElementById('incomingCall').classList.remove('show');
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({audio:true});
-    peerConn = createPeer();
+    localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: isVideoCall ? {facingMode:'user'} : false
+    });
+    peerConn = createPeer(isVideoCall);
     localStream.getTracks().forEach(t => peerConn.addTrack(t, localStream));
-    await peerConn.setRemoteDescription({type:'offer',sdp:pendingOffer.sdp});
+    await peerConn.setRemoteDescription({type:'offer', sdp:pendingOffer.sdp});
     const answer = await peerConn.createAnswer();
     await peerConn.setLocalDescription(answer);
-    cmd({cmd:'call_signal',to:callWith,signal:{type:'answer',sdp:answer.sdp}});
-    showCallOverlay(callWith);
-  } catch(e) { toast('Ошибка'); }
+    cmd({cmd:'call_signal', to:callWith, signal:{type:'answer', sdp:answer.sdp}});
+    showCallOverlay(callWith, isVideoCall);
+  } catch(e) {
+    console.error('Accept call error:', e);
+    toast('Ошибка при подключении');
+  }
 }
 
 function rejectCall() {
