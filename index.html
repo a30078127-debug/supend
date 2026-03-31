@@ -375,9 +375,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
     <input class="inp" id="authBio" placeholder="О себе (необязательно)" style="display:none">
     <input class="inp" id="authInvCode" placeholder="Код приглашения (необязательно)" style="display:none" autocapitalize="characters">
     <div class="auth-err" id="authErr"></div>
-    <button class="btn-primary" id="authBtn" onclick="doAuth()">Войти</button>
+    <button class="btn-primary" id="authBtn" onclick="doAuth()" disabled>Войти</button>
   </div>
   <div class="auth-hint">Supend — P2P мессенджер нового поколения 🔒</div>
+  <div id="wsStatus" style="font-size:12px;margin-top:8px;color:#bbb">⏳ Подключение...</div>
 </div>
 
 <!-- App -->
@@ -813,9 +814,16 @@ function connect() {
   ws = new WebSocket(`${proto}://${location.host}/ws`);
   ws.onopen = () => {
     console.log('WS connected');
+    const st = document.getElementById('wsStatus');
+    if (st) { st.textContent = '🟢 Соединение установлено'; st.style.color = '#1ABC9C'; }
+    document.getElementById('authBtn').disabled = false;
     if (me && myPassword) cmd({ cmd:'login', username:me, password:myPassword });
   };
-  ws.onclose = () => setTimeout(connect, 2000);
+  ws.onclose = () => {
+    const st = document.getElementById('wsStatus');
+    if (st) { st.textContent = '🔴 Переподключение...'; st.style.color = '#e53935'; }
+    setTimeout(connect, 2000);
+  };
   ws.onerror  = () => {};
   ws.onmessage = e => {
     try { handle(JSON.parse(e.data)); } catch(err) { console.error(err); }
@@ -892,18 +900,43 @@ function doAuth() {
   const bio   = document.getElementById('authBio').value.trim();
   const inv   = document.getElementById('authInvCode').value.trim().toUpperCase();
   const err   = document.getElementById('authErr');
+  const btn   = document.getElementById('authBtn');
   err.textContent = '';
+
   if (!login || !pass) { err.textContent = 'Введи логин и пароль'; return; }
   if (authTabMode === 'register') {
     if (pass !== pass2) { err.textContent = 'Пароли не совпадают'; return; }
     if (pass.length < 4) { err.textContent = 'Пароль минимум 4 символа'; return; }
-    myPassword = pass;
+  }
+
+  // Проверяем соединение
+  if (!ws || ws.readyState !== 1) {
+    err.textContent = 'Нет соединения с сервером — подключаемся...';
+    btn.disabled = true;
+    // Ждём подключения и повторяем
+    const waitAndRetry = setInterval(() => {
+      if (ws && ws.readyState === 1) {
+        clearInterval(waitAndRetry);
+        err.textContent = '';
+        btn.disabled = false;
+        doAuth(); // повторяем
+      }
+    }, 300);
+    // Принудительно переподключаемся если нет ws
+    if (!ws || ws.readyState === 3) connect();
+    setTimeout(() => { clearInterval(waitAndRetry); btn.disabled = false; }, 8000);
+    return;
+  }
+
+  btn.disabled = true;
+  myPassword = pass;
+  if (authTabMode === 'register') {
     cmd({ cmd:'register', username:login, password:pass, bio, inv_code:inv });
   } else {
-    myPassword = pass;
     cmd({ cmd:'login', username:login, password:pass });
   }
-  document.getElementById('authBtn').disabled = true;
+  // Разблокируем кнопку если ответ не пришёл за 10 секунд
+  setTimeout(() => { btn.disabled = false; }, 10000);
 }
 
 function onAuthOk(d) {
