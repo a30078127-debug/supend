@@ -126,11 +126,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .messages{flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
 .msg-wrap{display:flex;flex-direction:column;margin-bottom:4px}
 .msg-wrap.out{align-items:flex-end}.msg-wrap.in{align-items:flex-start}
+.msg-content-wrap{display:flex;flex-direction:column;max-width:75%}
+.msg-content-wrap.out{align-items:flex-end}
+.msg-content-wrap.in{align-items:flex-start}
 .msg-av-row{display:flex;align-items:flex-end;gap:8px}
 .msg-av-sm{width:28px;height:28px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;cursor:pointer}
 .msg-av-sm img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.bubble{max-width:75%;padding:10px 14px;border-radius:18px;font-size:15px;line-height:1.55;position:relative;word-break:break-word;overflow-wrap:break-word}
-.bubble.voice-outer{padding:12px 14px;min-width:240px;max-width:min(300px,72vw)}
+.bubble{width:100%;padding:10px 14px;border-radius:18px;font-size:15px;line-height:1.55;position:relative;word-break:break-word;overflow-wrap:break-word}
+.bubble.voice-outer{padding:12px 14px}
 .out .bubble{background:var(--out);color:var(--out-t);border-bottom-right-radius:4px}
 .in .bubble{background:var(--in);color:var(--in-t);border-bottom-left-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .msg-time{font-size:11px;margin-top:3px;padding:0 4px}
@@ -188,6 +191,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .inp-extra-btns{display:flex;gap:4px;align-items:flex-end}
 .inp-btn{width:40px;height:40px;border:none;background:none;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--txt2);font-size:20px;transition:.15s;flex-shrink:0}
 .inp-btn:hover{color:var(--ac);background:var(--hov)}
+.mic-btn{background:none;border:none;padding:0;transition:transform .15s}
+.mic-btn:active{transform:scale(.88)}
 .msg-textarea{flex:1;border:1.5px solid var(--brd);border-radius:22px;padding:10px 16px;font-family:var(--font);font-size:15px;color:var(--txt);outline:none;resize:none;max-height:120px;line-height:1.5;transition:.2s;background:#fafafa}
 .msg-textarea:focus{border-color:var(--ac);background:#fff}
 .send-btn{width:42px;height:42px;border:none;border-radius:50%;background:var(--ac);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:.15s;box-shadow:0 2px 8px rgba(26,188,156,.3)}
@@ -498,7 +503,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
         <div class="inp-row" id="inpRow">
           <div class="inp-extra-btns">
             <button class="inp-btn" onclick="triggerFile()" title="Фото/файл">📎</button>
-            <button class="inp-btn" id="voiceBtn" onmousedown="startRec()" ontouchstart="startRec()" title="Голосовое">🎤</button>
+            <button class="inp-btn mic-btn" id="voiceBtn" onmousedown="startRec()" ontouchstart="startRec()" title="Голосовое">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="8.5" y="1" width="7" height="13" rx="3.5" fill="#1ABC9C"/>
+                <path d="M5 11C5 14.866 8.13401 18 12 18C15.866 18 19 14.866 19 11" stroke="#1ABC9C" stroke-width="2" stroke-linecap="round"/>
+                <line x1="12" y1="18" x2="12" y2="22" stroke="#1ABC9C" stroke-width="2" stroke-linecap="round"/>
+                <line x1="9" y1="22" x2="15" y2="22" stroke="#1ABC9C" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
           </div>
           <textarea class="msg-textarea" id="msgInp" placeholder="Сообщение..." rows="1"
             oninput="autoH(this)" onkeydown="inpKey(event)"></textarea>
@@ -1228,7 +1240,7 @@ function mkBubble(m) {
   }
 
   const contentWrap = document.createElement('div');
-  contentWrap.style.cssText = 'display:flex;flex-direction:column;' + (isOut?'align-items:flex-end':'align-items:flex-start');
+  contentWrap.className = 'msg-content-wrap ' + (isOut ? 'out' : 'in');
 
   // Sender name in groups
   if (!isOut && activeType === 'group' && m.from) {
@@ -1465,13 +1477,30 @@ async function startRec() {
         toast('Слишком короткое — удерживай дольше'); mediaRec = null; return;
       }
 
-      const dur  = formatDur(recSecs);
-      const file = new File([blob], `voice.${ext}`, {type: actualMime});
+      // Получаем реальную длительность через URL.createObjectURL + Audio
+      let dur = formatDur(recSecs || 1);
+      try {
+        const blobUrl = URL.createObjectURL(blob);
+        const tmpAudio = new Audio();
+        tmpAudio.src = blobUrl;
+        await new Promise((resolve) => {
+          tmpAudio.onloadedmetadata = () => {
+            if (tmpAudio.duration && isFinite(tmpAudio.duration)) {
+              dur = formatDur(Math.round(tmpAudio.duration));
+            }
+            URL.revokeObjectURL(blobUrl);
+            resolve();
+          };
+          tmpAudio.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(); };
+          setTimeout(resolve, 2000); // таймаут на случай если metadata не загрузится
+        });
+      } catch(e) { /* используем recSecs */ }
 
+      const file = new File([blob], `voice.${ext}`, {type: actualMime});
       toast('⏳ Отправляем...');
       const url = await uploadMedia(file);
       if (url) {
-        const base = { cmd:'send_msg', mtype:'voice', url, duration:dur, text:'🎤 Голосовое', mime: actualMime };
+        const base = { cmd:'send_msg', mtype:'voice', url, duration:dur, text:'🎤 Голосовое' };
         if (activeType === 'group') cmd({...base, gid:activeChat});
         else cmd({...base, to:activeChat});
       } else {
@@ -1534,22 +1563,7 @@ function playVoice(btn) {
 
   if (!audio) {
     audio = new Audio();
-    // Устанавливаем тип по расширению URL — Safari нужно знать MIME заранее
-    const urlLower = url.toLowerCase();
-    const typeMap = {'.mp4':'audio/mp4', '.webm':'audio/webm', '.ogg':'audio/ogg', '.mp3':'audio/mpeg'};
-    for (const [ext, type] of Object.entries(typeMap)) {
-      if (urlLower.includes(ext)) {
-        // Создаём source элемент
-        const src = document.createElement('source');
-        src.src  = url;
-        src.type = type;
-        audio.appendChild(src);
-        break;
-      }
-    }
-    if (!audio.children.length) {
-      audio.src = url; // fallback
-    }
+    audio.src = url;  // прямо устанавливаем src
 
     const durEl  = document.getElementById('dur_'+vid);
     const progEl = document.getElementById('prog_'+vid);
@@ -1577,14 +1591,13 @@ function playVoice(btn) {
       }
     };
 
-    audio.onerror = (e) => {
-      console.error('Audio error:', audio.error);
+    audio.onerror = () => {
+      console.error('Audio error code:', audio.error?.code);
       const b = document.getElementById('btn_'+vid);
       if (b) b.innerHTML = b.dataset.play;
-      const code = audio.error ? audio.error.code : '?';
-      // Код 4 = MEDIA_ERR_SRC_NOT_SUPPORTED
-      if (code === 4) toast('Формат аудио не поддерживается браузером');
-      else toast('Ошибка воспроизведения (' + code + ')');
+      const code = audio.error?.code;
+      if (code === 4) toast('Формат не поддерживается. Попробуй Chrome');
+      else toast('Ошибка воспроизведения (код ' + code + ')');
       delete audioPlayers[vid];
     };
 
