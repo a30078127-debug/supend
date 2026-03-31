@@ -799,7 +799,7 @@ let chatCustom = JSON.parse(localStorage.getItem('sup_chat_custom')||'{}');
 let pinnedMsgs = {};  // chatKey -> {id, text}
 let walletTx = JSON.parse(localStorage.getItem('sup_tx')||'[]');
 let exchangeHistory = [];
-let mediaRec = null, recTimer, recSecs = 0, mediaChunks = [];
+let mediaRec = null, recTimer, recSecs = 0, mediaChunks = [], recStream = null;
 let peerConn = null, localStream = null, callWith = null, isMicMuted = false;
 let pendingOffer = null;
 let searchResult = null;
@@ -1446,55 +1446,69 @@ async function uploadMedia(file) {
 }
 
 // ── Voice recording ────────────────────────────────────────────────────────
+let recStream = null; // сохраняем stream отдельно чтобы точно остановить
+
 async function startRec() {
   if (mediaRec) return;
   if (!activeChat) { toast('Открой чат перед записью'); return; }
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+    recStream = await navigator.mediaDevices.getUserMedia({audio: true});
 
-    // Выбираем формат: Safari поддерживает только mp4, остальные — webm
+    // Определяем поддерживаемый формат
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+                  || /iPad|iPhone|iPod/.test(navigator.userAgent);
+
     let mimeType = '';
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    if (isSafari || !MediaRecorder.isTypeSupported('audio/webm')) {
-      if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
-      else if (MediaRecorder.isTypeSupported('audio/aac')) mimeType = 'audio/aac';
-    } else {
+    if (!isSafari) {
+      // Chrome/Firefox — webm с opus
       if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
-      else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
+      else if (MediaRecorder.isTypeSupported('audio/webm'))        mimeType = 'audio/webm';
     }
+    // Safari — не указываем mimeType вообще, пусть сам выбирает (обычно mp4/aac)
+    // Принудительное audio/mp4 на Safari часто ломает запись
 
-    const opts = mimeType ? {mimeType} : {};
-    mediaRec = new MediaRecorder(stream, opts);
-    mediaChunks = [];
-    mediaRec.ondataavailable = e => { if (e.data && e.data.size > 0) mediaChunks.push(e.data); };
+    const opts = (mimeType && !isSafari) ? {mimeType} : {};
+    mediaRec    = new MediaRecorder(recStream, opts);
+    mediaChunks = []; // обнуляем перед каждой записью
+
+    mediaRec.ondataavailable = e => {
+      if (e.data && e.data.size > 0) mediaChunks.push(e.data);
+    };
 
     mediaRec.onstop = async () => {
-      const actualMime = mediaRec.mimeType || mimeType || 'audio/webm';
-      const ext  = actualMime.includes('mp4') || actualMime.includes('aac') ? 'mp4' : 'webm';
+      clearInterval(recTimer);
+      const actualMime = mediaRec.mimeType || 'audio/webm';
+      const ext = (actualMime.includes('mp4') || actualMime.includes('aac') || actualMime.includes('m4a'))
+                  ? 'mp4' : 'webm';
       const blob = new Blob(mediaChunks, {type: actualMime});
 
-      if (blob.size < 200) {
-        toast('Слишком короткое — удерживай дольше'); mediaRec = null; return;
+      console.log('[Voice] size=' + blob.size + ' mime=' + actualMime + ' chunks=' + mediaChunks.length + ' secs=' + recSecs);
+
+      // Убираем жёсткую проверку размера — используем только время
+      if (recSecs < 1 && blob.size < 500) {
+        toast('Слишком короткое');
+        if (recStream) { recStream.getTracks().forEach(t => t.stop()); recStream = null; }
+        mediaRec = null; return;
       }
 
-      // Получаем реальную длительность через URL.createObjectURL + Audio
+      // Длительность: сначала пробуем из recSecs, потом из metadata
       let dur = formatDur(recSecs || 1);
       try {
         const blobUrl = URL.createObjectURL(blob);
-        const tmpAudio = new Audio();
-        tmpAudio.src = blobUrl;
-        await new Promise((resolve) => {
-          tmpAudio.onloadedmetadata = () => {
-            if (tmpAudio.duration && isFinite(tmpAudio.duration)) {
-              dur = formatDur(Math.round(tmpAudio.duration));
+        await new Promise(resolve => {
+          const tmp = new Audio();
+          const cleanup = () => { URL.revokeObjectURL(blobUrl); resolve(); };
+          tmp.onloadedmetadata = () => {
+            if (tmp.duration && isFinite(tmp.duration) && tmp.duration > 0) {
+              dur = formatDur(Math.round(tmp.duration));
             }
-            URL.revokeObjectURL(blobUrl);
-            resolve();
+            cleanup();
           };
-          tmpAudio.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(); };
-          setTimeout(resolve, 2000); // таймаут на случай если metadata не загрузится
+          tmp.onerror   = cleanup;
+          tmp.src       = blobUrl;
+          setTimeout(cleanup, 1500); // не ждём дольше 1.5с
         });
-      } catch(e) { /* используем recSecs */ }
+      } catch(e) {}
 
       const file = new File([blob], `voice.${ext}`, {type: actualMime});
       toast('⏳ Отправляем...');
@@ -1504,13 +1518,20 @@ async function startRec() {
         if (activeType === 'group') cmd({...base, gid:activeChat});
         else cmd({...base, to:activeChat});
       } else {
-        toast('Ошибка загрузки голосового');
+        toast('Ошибка загрузки — попробуй ещё раз');
       }
-      stream.getTracks().forEach(t => t.stop());
+      if (recStream) { recStream.getTracks().forEach(t => t.stop()); recStream = null; }
       mediaRec = null;
     };
 
-    mediaRec.start(200);
+    // Важно: на Safari timeslice лучше не указывать вообще — он может дробить mp4
+    // и последний чанк будет неполным. Без timeslice данные придут одним куском в onstop.
+    if (isSafari) {
+      mediaRec.start(); // без timeslice — Safari сам решит когда отдавать данные
+    } else {
+      mediaRec.start(1000); // Chrome: каждую секунду
+    }
+
     recSecs = 0;
     document.getElementById('recIndicator').classList.add('show');
     document.getElementById('inpRow').style.display = 'none';
@@ -1518,19 +1539,32 @@ async function startRec() {
       recSecs++;
       document.getElementById('recTime').textContent = formatDur(recSecs);
     }, 1000);
+
   } catch(e) {
     console.error('Rec error:', e);
-    if (e.name === 'NotAllowedError') toast('Разреши доступ к микрофону в настройках браузера');
+    mediaRec = null; mediaChunks = [];
+    if (recStream) { recStream.getTracks().forEach(t => t.stop()); recStream = null; }
+    if (e.name === 'NotAllowedError') toast('Разреши доступ к микрофону в настройках');
     else toast('Ошибка микрофона: ' + e.message);
   }
 }
 
 function sendVoice() {
-  if (mediaRec && mediaRec.state === 'recording') { mediaRec.stop(); stopRecUI(); }
+  if (mediaRec && mediaRec.state === 'recording') {
+    mediaRec.stop(); // onstop сработает сам
+    stopRecUI();
+  }
 }
 
 function cancelRec() {
-  if (mediaRec) { mediaRec.ondataavailable=null; mediaRec.onstop=null; mediaRec.stop(); mediaRec=null; }
+  if (mediaRec) {
+    mediaRec.ondataavailable = null;
+    mediaRec.onstop = null;
+    try { mediaRec.stop(); } catch(e) {}
+    mediaRec = null;
+  }
+  if (recStream) { recStream.getTracks().forEach(t => t.stop()); recStream = null; }
+  mediaChunks = [];
   stopRecUI();
 }
 
@@ -1605,24 +1639,27 @@ function playVoice(btn) {
   }
 
   if (audio.paused) {
-    // Safari требует явный .load() перед .play() если src только что установлен
-    if (audio.readyState === 0) audio.load();
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-      playPromise.then(() => {
+    const tryPlay = () => {
+      const p = audio.play();
+      if (p !== undefined) {
+        p.then(() => {
+          btn.innerHTML = btn.dataset.pause;
+        }).catch(e => {
+          console.error('Play failed:', e.name, e.message);
+          if (e.name === 'NotAllowedError') toast('Нажми ещё раз');
+          else if (e.name === 'NotSupportedError') toast('Формат не поддерживается на этом устройстве');
+          else toast('Ошибка воспроизведения');
+        });
+      } else {
         btn.innerHTML = btn.dataset.pause;
-      }).catch(e => {
-        console.error('Play failed:', e);
-        if (e.name === 'NotAllowedError') {
-          toast('Нажми ещё раз для воспроизведения');
-        } else if (e.name === 'NotSupportedError') {
-          toast('Формат не поддерживается на этом устройстве');
-        } else {
-          toast('Ошибка: ' + e.message);
-        }
-      });
+      }
+    };
+    // Если аудио ещё не готово — ждём
+    if (audio.readyState >= 2) {
+      tryPlay();
     } else {
-      btn.innerHTML = btn.dataset.pause;
+      audio.oncanplay = () => { audio.oncanplay = null; tryPlay(); };
+      audio.load();
     }
   } else {
     audio.pause();
