@@ -459,10 +459,24 @@ async def upload_handler(request):
         if not field: raise web.HTTPBadRequest()
         filename = field.filename or 'file'
         data = await field.read()
+        # Получаем MIME из заголовка
         mime = field.headers.get('Content-Type','application/octet-stream')
-        ext  = os.path.splitext(filename)[1] or (mimetypes.guess_extension(mime) or '.bin')
-        fid  = str(uuid.uuid4()) + ext
+        # Нормализуем MIME для аудио
+        if 'webm' in mime:   mime = 'audio/webm'
+        elif 'mp4' in mime and 'video' not in mime: mime = 'audio/mp4'
+        elif 'ogg' in mime:  mime = 'audio/ogg'
+        elif 'mpeg' in mime or 'mp3' in mime: mime = 'audio/mpeg'
+        # Определяем расширение
+        ext_map = {
+            'audio/webm': '.webm', 'audio/mp4': '.mp4', 'audio/ogg': '.ogg',
+            'audio/mpeg': '.mp3', 'image/jpeg': '.jpg', 'image/png': '.png',
+            'image/gif': '.gif', 'image/webp': '.webp', 'video/mp4': '.mp4',
+            'video/webm': '.webm',
+        }
+        ext = ext_map.get(mime) or os.path.splitext(filename)[1] or '.bin'
+        fid = str(uuid.uuid4()) + ext
         media[fid] = (data, mime)
+        print(f'[UPLOAD] {fid} mime={mime} size={len(data)}')
         return web.Response(text=json.dumps({'url':f'/media/{fid}'}), content_type='application/json')
     except Exception as e:
         print(f'Upload err: {e}'); raise web.HTTPInternalServerError()
@@ -471,7 +485,13 @@ async def media_handler(request):
     fid = request.match_info['fid']
     if fid not in media: raise web.HTTPNotFound()
     data, mime = media[fid]
-    return web.Response(body=data, content_type=mime, headers={'Cache-Control':'public,max-age=86400'})
+    # Accept-Ranges нужен для Safari чтобы воспроизводить аудио
+    headers = {
+        'Cache-Control': 'public,max-age=86400',
+        'Accept-Ranges': 'bytes',
+        'Access-Control-Allow-Origin': '*',
+    }
+    return web.Response(body=data, content_type=mime, headers=headers)
 
 async def manifest_handler(request):
     m = {"name":"Supend","short_name":"Supend","start_url":"/","display":"standalone",

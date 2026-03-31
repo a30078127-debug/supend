@@ -130,6 +130,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .msg-av-sm{width:28px;height:28px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;cursor:pointer}
 .msg-av-sm img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .bubble{max-width:75%;padding:10px 14px;border-radius:18px;font-size:15px;line-height:1.55;position:relative;word-break:break-word;overflow-wrap:break-word}
+.bubble.voice-outer{padding:12px 14px;min-width:240px;max-width:min(300px,72vw)}
 .out .bubble{background:var(--out);color:var(--out-t);border-bottom-right-radius:4px}
 .in .bubble{background:var(--in);color:var(--in-t);border-bottom-left-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .msg-time{font-size:11px;margin-top:3px;padding:0 4px}
@@ -139,14 +140,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .msg-sender{font-size:11px;font-weight:700;color:var(--ac);margin-bottom:3px;padding:0 2px}
 .msg-img{max-width:240px;border-radius:12px;cursor:pointer;display:block}
 .msg-file{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.15);border-radius:10px;padding:8px 10px;cursor:pointer}
-.voice-bubble{display:flex;align-items:center;gap:12px;min-width:220px;max-width:280px;padding:2px 0}
+.voice-bubble{display:flex;align-items:center;gap:12px;width:100%;padding:2px 0}
 /* Кнопка play/pause — Telegram стиль */
-.voice-play{width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s,filter .15s;position:relative}
-.out .voice-play{background:rgba(255,255,255,.25);backdrop-filter:blur(4px)}
-.in .voice-play{background:linear-gradient(135deg,#1ABC9C,#16a085);box-shadow:0 3px 12px rgba(26,188,156,.45)}
-.voice-play:hover{filter:brightness(1.1)}
-.voice-play:active{transform:scale(.9)}
-.voice-right{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0}
+.voice-play{width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s;position:relative}
+.out .voice-play{background:rgba(255,255,255,.28);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.5)}
+.in .voice-play{background:var(--ac);box-shadow:0 3px 10px rgba(26,188,156,.4)}
+.voice-play:active{transform:scale(.88)}
+.voice-right{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;overflow:hidden}
 /* Waveform бары */
 .voice-bars{display:flex;align-items:center;gap:2px;height:26px;overflow:hidden}
 .voice-bar{width:3px;border-radius:3px;flex-shrink:0;transition:background .15s,opacity .15s}
@@ -1438,31 +1438,40 @@ async function startRec() {
   if (mediaRec) return;
   if (!activeChat) { toast('Открой чат перед записью'); return; }
   try {
-    // Пробуем разные форматы — Safari поддерживает mp4, Chrome — webm
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-      ? 'audio/webm;codecs=opus'
-      : MediaRecorder.isTypeSupported('audio/webm')
-      ? 'audio/webm'
-      : MediaRecorder.isTypeSupported('audio/mp4')
-      ? 'audio/mp4'
-      : '';
-    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+
+    // Выбираем формат: Safari поддерживает только mp4, остальные — webm
+    let mimeType = '';
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    if (isSafari || !MediaRecorder.isTypeSupported('audio/webm')) {
+      if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+      else if (MediaRecorder.isTypeSupported('audio/aac')) mimeType = 'audio/aac';
+    } else {
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
+      else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
+    }
+
     const opts = mimeType ? {mimeType} : {};
     mediaRec = new MediaRecorder(stream, opts);
     mediaChunks = [];
     mediaRec.ondataavailable = e => { if (e.data && e.data.size > 0) mediaChunks.push(e.data); };
+
     mediaRec.onstop = async () => {
       const actualMime = mediaRec.mimeType || mimeType || 'audio/webm';
-      const ext = actualMime.includes('mp4') ? 'mp4' : 'webm';
+      const ext  = actualMime.includes('mp4') || actualMime.includes('aac') ? 'mp4' : 'webm';
       const blob = new Blob(mediaChunks, {type: actualMime});
-      if (blob.size < 100) { toast('Голосовое слишком короткое'); mediaRec=null; return; }
-      const dur = formatDur(recSecs);
+
+      if (blob.size < 200) {
+        toast('Слишком короткое — удерживай дольше'); mediaRec = null; return;
+      }
+
+      const dur  = formatDur(recSecs);
       const file = new File([blob], `voice.${ext}`, {type: actualMime});
-      // НЕ показываем локальный preview — ждём echo от сервера с реальным URL
-      toast('Отправляем голосовое...');
+
+      toast('⏳ Отправляем...');
       const url = await uploadMedia(file);
       if (url) {
-        const base = { cmd:'send_msg', mtype:'voice', url, duration:dur, text:'🎤 Голосовое' };
+        const base = { cmd:'send_msg', mtype:'voice', url, duration:dur, text:'🎤 Голосовое', mime: actualMime };
         if (activeType === 'group') cmd({...base, gid:activeChat});
         else cmd({...base, to:activeChat});
       } else {
@@ -1471,7 +1480,8 @@ async function startRec() {
       stream.getTracks().forEach(t => t.stop());
       mediaRec = null;
     };
-    mediaRec.start(250); // timeslice 250ms — чаще получаем данные
+
+    mediaRec.start(200);
     recSecs = 0;
     document.getElementById('recIndicator').classList.add('show');
     document.getElementById('inpRow').style.display = 'none';
@@ -1481,7 +1491,8 @@ async function startRec() {
     }, 1000);
   } catch(e) {
     console.error('Rec error:', e);
-    toast('Нет доступа к микрофону: ' + e.message);
+    if (e.name === 'NotAllowedError') toast('Разреши доступ к микрофону в настройках браузера');
+    else toast('Ошибка микрофона: ' + e.message);
   }
 }
 
@@ -1505,36 +1516,54 @@ const audioPlayers = {};
 function playVoice(btn) {
   const url = btn.dataset.url;
   const vid = btn.dataset.vid;
-  if (!url || !vid) { toast('Ошибка: нет URL аудио'); return; }
+  if (!url || !vid) { toast('Нет URL аудио'); return; }
 
   // Остановить все другие плееры
   Object.keys(audioPlayers).forEach(id => {
-    if (id !== vid && audioPlayers[id] && !audioPlayers[id].paused) {
-      audioPlayers[id].pause();
-      const b = document.getElementById('btn_'+id);
-      if (b) b.innerHTML = b.dataset.play;
+    if (id !== vid) {
+      const a = audioPlayers[id];
+      if (a && !a.paused) {
+        a.pause();
+        const b = document.getElementById('btn_'+id);
+        if (b) b.innerHTML = b.dataset.play;
+      }
     }
   });
 
-  // Создать Audio объект если нет
-  if (!audioPlayers[vid]) {
-    const audio = new Audio(url);
-    audio.preload = 'metadata';
+  let audio = audioPlayers[vid];
+
+  if (!audio) {
+    audio = new Audio();
+    // Устанавливаем тип по расширению URL — Safari нужно знать MIME заранее
+    const urlLower = url.toLowerCase();
+    const typeMap = {'.mp4':'audio/mp4', '.webm':'audio/webm', '.ogg':'audio/ogg', '.mp3':'audio/mpeg'};
+    for (const [ext, type] of Object.entries(typeMap)) {
+      if (urlLower.includes(ext)) {
+        // Создаём source элемент
+        const src = document.createElement('source');
+        src.src  = url;
+        src.type = type;
+        audio.appendChild(src);
+        break;
+      }
+    }
+    if (!audio.children.length) {
+      audio.src = url; // fallback
+    }
 
     const durEl  = document.getElementById('dur_'+vid);
     const progEl = document.getElementById('prog_'+vid);
     const barsEl = document.getElementById('bars_'+vid);
 
     audio.ontimeupdate = () => {
-      if (!audio.duration) return;
+      if (!audio.duration || !isFinite(audio.duration)) return;
       const pct = (audio.currentTime / audio.duration) * 100;
       if (progEl) progEl.style.width = pct + '%';
-      if (durEl)  durEl.textContent  = formatDur(Math.floor(audio.currentTime));
-      // Подсветить бары
+      if (durEl)  durEl.textContent = formatDur(Math.floor(audio.currentTime));
       if (barsEl) {
         const barEls = barsEl.querySelectorAll('.voice-bar');
         const played = Math.floor(pct / 100 * barEls.length);
-        barEls.forEach((b, i) => b.classList.toggle('played', i < played));
+        barEls.forEach((b2, i) => b2.classList.toggle('played', i < played));
       }
     };
 
@@ -1542,22 +1571,46 @@ function playVoice(btn) {
       const b = document.getElementById('btn_'+vid);
       if (b) b.innerHTML = b.dataset.play;
       if (progEl) progEl.style.width = '0%';
-      if (durEl && audio.duration) durEl.textContent = formatDur(Math.floor(audio.duration));
-      if (barsEl) barsEl.querySelectorAll('.voice-bar').forEach(b => b.classList.remove('played'));
+      if (barsEl) barsEl.querySelectorAll('.voice-bar').forEach(b2 => b2.classList.remove('played'));
+      if (durEl && audio.duration && isFinite(audio.duration)) {
+        durEl.textContent = formatDur(Math.floor(audio.duration));
+      }
     };
 
-    audio.onerror = () => toast('Ошибка воспроизведения аудио');
+    audio.onerror = (e) => {
+      console.error('Audio error:', audio.error);
+      const b = document.getElementById('btn_'+vid);
+      if (b) b.innerHTML = b.dataset.play;
+      const code = audio.error ? audio.error.code : '?';
+      // Код 4 = MEDIA_ERR_SRC_NOT_SUPPORTED
+      if (code === 4) toast('Формат аудио не поддерживается браузером');
+      else toast('Ошибка воспроизведения (' + code + ')');
+      delete audioPlayers[vid];
+    };
+
     audioPlayers[vid] = audio;
   }
 
-  const audio = audioPlayers[vid];
   if (audio.paused) {
-    audio.play().then(() => {
+    // Safari требует явный .load() перед .play() если src только что установлен
+    if (audio.readyState === 0) audio.load();
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        btn.innerHTML = btn.dataset.pause;
+      }).catch(e => {
+        console.error('Play failed:', e);
+        if (e.name === 'NotAllowedError') {
+          toast('Нажми ещё раз для воспроизведения');
+        } else if (e.name === 'NotSupportedError') {
+          toast('Формат не поддерживается на этом устройстве');
+        } else {
+          toast('Ошибка: ' + e.message);
+        }
+      });
+    } else {
       btn.innerHTML = btn.dataset.pause;
-    }).catch(e => {
-      console.error('Play error:', e);
-      toast('Не удалось воспроизвести аудио');
-    });
+    }
   } else {
     audio.pause();
     btn.innerHTML = btn.dataset.play;
@@ -1566,7 +1619,7 @@ function playVoice(btn) {
 
 function seekVoice(e, vid) {
   const audio = audioPlayers[vid];
-  if (!audio || !audio.duration) return;
+  if (!audio || !audio.duration || !isFinite(audio.duration)) return;
   const rect = e.currentTarget.getBoundingClientRect();
   const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
   audio.currentTime = pct * audio.duration;
