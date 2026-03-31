@@ -183,6 +183,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .out .voice-dur{color:rgba(255,255,255,.8)}
 .in .voice-dur{color:var(--txt2)}
 .date-sep{text-align:center;font-size:12px;color:var(--txt2);padding:8px 0;font-weight:600}
+.translate-lang-btn{padding:7px 12px;border:1.5px solid var(--brd);border-radius:20px;background:none;font-family:var(--font);font-size:13px;cursor:pointer;transition:.15s;color:var(--txt)}
+.translate-lang-btn:hover{border-color:var(--ac);color:var(--ac)}
+.translate-lang-btn.active{background:var(--ac);color:#fff;border-color:var(--ac)}
+#selectBar{display:none;position:fixed;top:0;left:0;right:0;z-index:200;background:var(--ac);padding:12px 16px;align-items:center;gap:12px;box-shadow:0 2px 10px rgba(26,188,156,.3)}
 .reply-preview{border-left:3px solid rgba(255,255,255,.5);padding:4px 8px;margin-bottom:6px;border-radius:4px;font-size:12px;opacity:.85;cursor:pointer}
 .in .reply-preview{border-color:var(--ac)}
 .reply-preview-name{font-size:11px;font-weight:700;color:var(--ac);margin-bottom:2px}
@@ -490,9 +494,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.6 3.38 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.08 6.08l1.14-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
           </button>
           <button class="head-act-btn" onclick="toggleCustomPanel()" title="Кастомизация">🎨</button>
-          <button class="head-act-btn" onclick="showChatCtx(event)" title="Ещё">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-          </button>
         </div>
       </div>
 
@@ -580,22 +581,98 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 <!-- Toast -->
 <div id="toast"></div>
 
-<!-- Chat context menu -->
-<div class="ctx-menu" id="chatCtxMenu">
-  <div class="ctx-item" onclick="ctxPinMsg()">📌 Закрепить</div>
-  <div class="ctx-item" onclick="ctxClearHistory()">🧹 Очистить историю</div>
-  <div class="ctx-item" id="ctxBlockBtn" onclick="ctxToggleBlock()">🔒 Добавить в ЧС</div>
-  <div class="ctx-item danger" onclick="ctxDeleteChat()">🗑 Удалить чат</div>
+<!-- Chat item long-press menu (3 actions) -->
+<div class="ctx-menu" id="chatItemCtxMenu">
+  <div class="ctx-item" onclick="ctxChatPin()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    Закрепить чат
+  </div>
+  <div class="ctx-item" onclick="ctxChatMute()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+    <span id="chatCtxMuteLabel">Откл. звук</span>
+  </div>
+  <div class="ctx-item" onclick="ctxChatBlock()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+    <span id="chatCtxBlockLabel">Добавить в ЧС</span>
+  </div>
 </div>
 
-<!-- Message context menu -->
+<!-- Message context menu (5 actions) -->
 <div class="ctx-menu" id="msgCtxMenu">
-  <div class="ctx-item" onclick="ctxReply()">↩ Ответить</div>
-  <div class="ctx-item" id="ctxEditBtn" onclick="ctxEdit()" style="display:none">✏️ Изменить</div>
-  <div class="ctx-item" onclick="ctxReact()">😊 Реакция</div>
-  <div class="ctx-item" onclick="ctxPinThisMsg()">📌 Закрепить</div>
-  <div class="ctx-item" id="ctxCopyBtn" onclick="ctxCopy()">📋 Копировать</div>
-  <div class="ctx-item danger" id="ctxDeleteBtn" onclick="ctxDeleteMsg()">🗑 Удалить</div>
+  <div class="ctx-item" onclick="ctxReply()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+    Ответить
+  </div>
+  <div class="ctx-item" onclick="ctxTranslate()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg>
+    Перевести
+  </div>
+  <div class="ctx-item" onclick="ctxPinThisMsg()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/></svg>
+    Закрепить
+  </div>
+  <div class="ctx-item" onclick="ctxSelect()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+    Выбрать
+  </div>
+  <div class="ctx-item" id="ctxEditBtn" onclick="ctxEdit()" style="display:none">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    Изменить
+  </div>
+  <div class="ctx-item danger" onclick="ctxDeleteMsg()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+    Удалить
+  </div>
+</div>
+
+<!-- Translate modal -->
+<div class="modal-overlay" id="translateModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Перевод</div>
+    <div style="background:var(--hov);border-radius:14px;padding:14px;margin-bottom:16px;font-size:15px;color:var(--txt);line-height:1.5" id="translateOrigText"></div>
+    <div style="font-size:12px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Выбери язык</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+      <button class="translate-lang-btn active" data-lang="ru" onclick="selectLang(this)">🇷🇺 Русский</button>
+      <button class="translate-lang-btn" data-lang="en" onclick="selectLang(this)">🇺🇸 English</button>
+      <button class="translate-lang-btn" data-lang="de" onclick="selectLang(this)">🇩🇪 Deutsch</button>
+      <button class="translate-lang-btn" data-lang="fr" onclick="selectLang(this)">🇫🇷 Français</button>
+      <button class="translate-lang-btn" data-lang="es" onclick="selectLang(this)">🇪🇸 Español</button>
+      <button class="translate-lang-btn" data-lang="it" onclick="selectLang(this)">🇮🇹 Italiano</button>
+      <button class="translate-lang-btn" data-lang="zh" onclick="selectLang(this)">🇨🇳 中文</button>
+      <button class="translate-lang-btn" data-lang="ja" onclick="selectLang(this)">🇯🇵 日本語</button>
+      <button class="translate-lang-btn" data-lang="ko" onclick="selectLang(this)">🇰🇷 한국어</button>
+      <button class="translate-lang-btn" data-lang="ar" onclick="selectLang(this)">🇸🇦 العربية</button>
+      <button class="translate-lang-btn" data-lang="tr" onclick="selectLang(this)">🇹🇷 Türkçe</button>
+      <button class="translate-lang-btn" data-lang="uk" onclick="selectLang(this)">🇺🇦 Українська</button>
+    </div>
+    <div id="translateResult" style="display:none;background:var(--ac-l);border-radius:14px;padding:14px;margin-bottom:16px;font-size:15px;line-height:1.5;color:var(--txt)"></div>
+    <div id="translateLoading" style="display:none;text-align:center;padding:16px;color:var(--txt2)">⏳ Переводим...</div>
+    <button class="btn-save" onclick="doTranslate()">Перевести</button>
+  </div>
+</div>
+
+<!-- Delete message modal -->
+<div class="modal-overlay" id="deleteMsgModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Удалить сообщение?</div>
+    <button onclick="deleteMsgForMe()" style="width:100%;padding:14px;border:none;border-radius:14px;background:#f5f5f5;color:var(--txt);font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;text-align:left">
+      🗑 Удалить у меня
+    </button>
+    <button id="deleteMsgForAllBtn" onclick="deleteMsgForAll()" style="width:100%;padding:14px;border:none;border-radius:14px;background:var(--danger);color:#fff;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;text-align:left">
+      🗑 Удалить у всех
+    </button>
+    <button onclick="closeModal('deleteMsgModal')" style="width:100%;padding:13px;border:1.5px solid var(--brd);border-radius:14px;background:none;font-family:var(--font);font-size:14px;cursor:pointer;color:var(--txt2)">Отмена</button>
+  </div>
+</div>
+
+<!-- Select mode bar -->
+<div id="selectBar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:200;background:var(--ac);padding:12px 16px;display:none;align-items:center;gap:12px">
+  <button onclick="cancelSelectMode()" style="border:none;background:none;color:#fff;font-size:22px;cursor:pointer;padding:0">×</button>
+  <div style="flex:1;font-size:15px;font-weight:700;color:#fff" id="selectCount">0 выбрано</div>
+  <button onclick="translateSelected()" style="border:none;background:rgba(255,255,255,.2);color:#fff;padding:8px 14px;border-radius:10px;font-family:var(--font);font-weight:700;cursor:pointer">Перевести</button>
+  <button onclick="deleteSelected()" style="border:none;background:rgba(255,255,255,.2);color:#fff;padding:8px 14px;border-radius:10px;font-family:var(--font);font-weight:700;cursor:pointer">Удалить</button>
 </div>
 
 <!-- Emoji picker -->
@@ -933,7 +1010,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 </div>
 
 <!-- Create order modal step 1: amount + price -->
-<div class="modal-overlay" id="createOrderModal1">
+<div class="modal-overlay" id="createOrderModal1" style="z-index:220">
   <div class="modal-sheet" style="background:#161a1e">
     <div class="modal-handle" style="background:#2b3139"></div>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
@@ -963,7 +1040,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 </div>
 
 <!-- Create order modal step 2: payment method -->
-<div class="modal-overlay" id="createOrderModal2">
+<div class="modal-overlay" id="createOrderModal2" style="z-index:220">
   <div class="modal-sheet" style="background:#161a1e;max-height:92dvh">
     <div class="modal-handle" style="background:#2b3139"></div>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
@@ -1242,9 +1319,13 @@ function startChat() {
 }
 
 // ── Chat list ──────────────────────────────────────────────────────────────
-let mutedChats = new Set(JSON.parse(localStorage.getItem('sup_muted')||'[]'));
+let mutedChats   = new Set(JSON.parse(localStorage.getItem('sup_muted')||'[]'));
+let pinnedChats  = new Set(JSON.parse(localStorage.getItem('sup_pinned')||'[]'));
+let ctxChatKey   = null; // ключ чата для long-press меню
+let ctxChatIsGroup = false;
 
-function saveMuted() { localStorage.setItem('sup_muted', JSON.stringify([...mutedChats])); }
+function saveMuted()  { localStorage.setItem('sup_muted',  JSON.stringify([...mutedChats])); }
+function savePinned() { localStorage.setItem('sup_pinned', JSON.stringify([...pinnedChats])); }
 
 function renderChatList(chats) {
   const list = document.getElementById('chatsList');
@@ -1253,7 +1334,14 @@ function renderChatList(chats) {
     list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--txt2);font-size:14px">Нет чатов. Найди кого-то!</div>';
     return;
   }
-  chats.forEach(c => {
+  // Закреплённые — сначала
+  const sorted = [...chats].sort((a, b) => {
+    const ka = a.gid || a.username, kb = b.gid || b.username;
+    const pa = pinnedChats.has(ka) ? 1 : 0, pb = pinnedChats.has(kb) ? 1 : 0;
+    return pb - pa;
+  });
+
+  sorted.forEach(c => {
     const key = c.gid || c.username;
     chatsData[key] = c;
     const isGroup = !!c.gid;
@@ -1262,16 +1350,14 @@ function renderChatList(chats) {
     const dot = (!isGroup && c.online) ? '<div class="online-dot"></div>' : '';
     const badge = c.unread > 0 ? `<div class="unread-badge">${c.unread}</div>` : '';
     const lock = (!isGroup && blacklist.has(c.username)) ? '🔒 ' : '';
-    const isMuted = mutedChats.has(key);
-    const muteIcon = isMuted ? '🔔' : '🔕';
+    const isMuted  = mutedChats.has(key);
+    const isPinned = pinnedChats.has(key);
     const muteLabel = isMuted ? 'Вкл. звук' : 'Откл. звук';
 
-    // Обёртка
     const wrap = document.createElement('div');
     wrap.className = 'chat-swipe-wrap';
     wrap.id = 'sw_' + key;
 
-    // Кнопки позади
     wrap.innerHTML = `
       <div class="chat-swipe-actions" id="sa_${key}">
         <button class="swipe-btn swipe-btn-mute" onclick="swipeMute('${key}')">
@@ -1290,7 +1376,6 @@ function renderChatList(chats) {
         </button>
       </div>`;
 
-    // Элемент чата
     const el = document.createElement('div');
     el.className = 'chat-item' + (activeChat === key ? ' active' : '');
     el.id = 'ci_' + key;
@@ -1298,7 +1383,7 @@ function renderChatList(chats) {
       <div class="ci-av">${avContent}${dot}</div>
       <div class="ci-body">
         <div class="ci-top">
-          <div class="ci-name">${lock}${esc(name)}${isMuted?' 🔕':''}</div>
+          <div class="ci-name">${lock}${esc(name)}${isMuted?' 🔕':''}${isPinned?' 📌':''}</div>
           <div class="ci-right">${badge}<div class="ci-time">${formatTime(c.last_time)}</div></div>
         </div>
         <div class="ci-last">${esc(c.last_msg||'нет сообщений')}</div>
@@ -1309,12 +1394,77 @@ function renderChatList(chats) {
       else openChatWith(c.username, c.avatar, c.online);
     };
 
+    // Long-press → context menu
+    let pressTimer;
+    const startPress = () => { pressTimer = setTimeout(() => showChatItemLongPress(key, isGroup), 500); };
+    const cancelPress = () => clearTimeout(pressTimer);
+    el.addEventListener('touchstart', startPress, {passive:true});
+    el.addEventListener('touchend',   cancelPress, {passive:true});
+    el.addEventListener('touchmove',  cancelPress, {passive:true});
+    el.addEventListener('contextmenu', e => { e.preventDefault(); showChatItemLongPress(key, isGroup); });
+
     wrap.appendChild(el);
     list.appendChild(wrap);
-
-    // Добавляем свайп
     addSwipe(wrap, el, key);
   });
+}
+
+// Long-press context menu for chat items
+function showChatItemLongPress(key, isGroup) {
+  ctxChatKey = key; ctxChatIsGroup = isGroup;
+  const menu = document.getElementById('chatItemCtxMenu');
+  // Pin label
+  menu.querySelector('[onclick="ctxChatPin()"]').innerHTML = pinnedChats.has(key)
+    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/></svg> Открепить`
+    : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/></svg> Закрепить`;
+  // Mute label
+  document.getElementById('chatCtxMuteLabel').textContent = mutedChats.has(key) ? 'Вкл. звук' : 'Откл. звук';
+  // Block label (only peer)
+  const blockItem = menu.querySelector('[onclick="ctxChatBlock()"]');
+  if (isGroup) {
+    blockItem.style.display = 'none';
+  } else {
+    blockItem.style.display = '';
+    document.getElementById('chatCtxBlockLabel').textContent = blacklist.has(key) ? 'Убрать из ЧС' : 'Добавить в ЧС';
+  }
+  // Position in center-bottom
+  menu.style.left = '50%';
+  menu.style.transform = 'translateX(-50%)';
+  menu.style.top = 'auto';
+  menu.style.bottom = '80px';
+  menu.style.right = 'auto';
+  hideAllMenus();
+  menu.classList.add('show');
+  setTimeout(() => document.addEventListener('touchstart', hideAllMenus, {once:true, passive:true}), 100);
+}
+
+function ctxChatPin() {
+  hideAllMenus();
+  if (!ctxChatKey) return;
+  if (pinnedChats.has(ctxChatKey)) { pinnedChats.delete(ctxChatKey); toast('Откреплено'); }
+  else { pinnedChats.add(ctxChatKey); toast('📌 Закреплено'); }
+  savePinned();
+  cmd({ cmd:'get_chats' });
+}
+
+function ctxChatMute() {
+  hideAllMenus();
+  if (!ctxChatKey) return;
+  if (mutedChats.has(ctxChatKey)) mutedChats.delete(ctxChatKey);
+  else mutedChats.add(ctxChatKey);
+  saveMuted();
+  toast(mutedChats.has(ctxChatKey) ? '🔕 Уведомления выключены' : '🔔 Уведомления включены');
+  cmd({ cmd:'get_chats' });
+}
+
+function ctxChatBlock() {
+  hideAllMenus();
+  if (!ctxChatKey || ctxChatIsGroup) return;
+  if (blacklist.has(ctxChatKey)) blacklist.delete(ctxChatKey);
+  else blacklist.add(ctxChatKey);
+  localStorage.setItem('sup_bl', JSON.stringify([...blacklist]));
+  toast(blacklist.has(ctxChatKey) ? '🔒 Добавлен в ЧС' : '🔓 Убран из ЧС');
+  cmd({ cmd:'get_chats' });
 }
 
 // ── Swipe logic ────────────────────────────────────────────────────────────
@@ -1812,6 +1962,13 @@ function mkBubble(m) {
   else wrap.appendChild(contentWrap);
 
   bubble.oncontextmenu = e => { e.preventDefault(); showMsgCtx(e, m.id, isOut, m.text||'', m); };
+  // Long-press for mobile
+  let pressT;
+  bubble.addEventListener('touchstart', e => { pressT = setTimeout(() => showMsgCtx(e.touches[0], m.id, isOut, m.text||'', m), 500); }, {passive:true});
+  bubble.addEventListener('touchend',  () => clearTimeout(pressT), {passive:true});
+  bubble.addEventListener('touchmove', () => clearTimeout(pressT), {passive:true});
+  // Select mode tap
+  bubble.addEventListener('click', () => { if (selectMode && m.id) toggleSelectMsg(m.id); });
   return wrap;
 }
 
@@ -2150,12 +2307,16 @@ function cancelReply() {
 }
 
 // ── Message context menu ───────────────────────────────────────────────────
+let selectMode = false;
+let selectedMsgs = new Set();
+let translateTargetLang = 'ru';
+
 function showMsgCtx(e, id, isOut, text, msg) {
   e.preventDefault(); e.stopPropagation();
   ctxMsgId = id; ctxMsgOut = isOut; ctxMsgText = text;
   const menu = document.getElementById('msgCtxMenu');
-  document.getElementById('ctxEditBtn').style.display = isOut ? '' : 'none';
-  document.getElementById('ctxDeleteBtn').style.display = isOut ? '' : 'none';
+  const editBtn = document.getElementById('ctxEditBtn');
+  if (editBtn) editBtn.style.display = isOut ? '' : 'none';
   positionMenu(menu, e);
   hideAllMenus();
   menu.classList.add('show');
@@ -2167,7 +2328,7 @@ function ctxReply() {
   if (!ctxMsgId) return;
   const el = document.querySelector(`[data-msg-id="${ctxMsgId}"]`);
   if (!el) return;
-  const from = el.querySelector('.msg-sender')?.textContent?.replace('@','') || (el.classList.contains('out')?me:activeChat);
+  const from = el.querySelector('.msg-sender')?.textContent?.replace('@','') || (el.classList.contains('out') ? me : activeChat);
   setReply(ctxMsgId, ctxMsgText, from);
 }
 
@@ -2179,33 +2340,6 @@ function ctxEdit() {
   inp.value = ctxMsgText; inp.focus(); autoH(inp);
 }
 
-function ctxReact() {
-  hideAllMenus();
-  const menu = document.getElementById('emojiPicker');
-  const msgEl = document.querySelector(`[data-msg-id="${ctxMsgId}"]`);
-  if (!msgEl) return;
-  const rect = msgEl.getBoundingClientRect();
-  menu.style.top  = (rect.top - 60) + 'px';
-  menu.style.left = Math.min(rect.left, window.innerWidth - 250) + 'px';
-  menu.classList.add('show');
-  setTimeout(() => document.addEventListener('click', () => menu.classList.remove('show'), {once:true}), 50);
-}
-
-function pickEmoji(emoji) {
-  document.getElementById('emojiPicker').classList.remove('show');
-  if (!ctxMsgId) return;
-  const ctx = activeType === 'group' ? {gid:activeChat} : {to:activeChat};
-  cmd({ cmd:'react', msg_id:ctxMsgId, emoji, ...ctx });
-  // Optimistic
-  const el = document.querySelector(`[data-msg-id="${ctxMsgId}"] .reactions-row`);
-  if (el) {
-    const chip = document.createElement('div');
-    chip.className = 'react-chip mine';
-    chip.innerHTML = `${emoji}<span>1</span>`;
-    el.appendChild(chip);
-  }
-}
-
 function ctxPinThisMsg() {
   hideAllMenus();
   if (!ctxMsgId) return;
@@ -2213,72 +2347,177 @@ function ctxPinThisMsg() {
   cmd({ cmd:'pin_msg', msg_id:ctxMsgId, text:ctxMsgText, ...ctx });
   pinnedMsgs[activeChat] = { id:ctxMsgId, text:ctxMsgText };
   updatePinnedBar();
+  toast('📌 Сообщение закреплено');
 }
 
-function ctxCopy() {
+// ── Translate ──────────────────────────────────────────────────────────────
+function ctxTranslate() {
   hideAllMenus();
-  navigator.clipboard?.writeText(ctxMsgText).catch(()=>{});
-  toast('Скопировано');
+  document.getElementById('translateOrigText').textContent = ctxMsgText || '';
+  document.getElementById('translateResult').style.display = 'none';
+  document.getElementById('translateLoading').style.display = 'none';
+  // Reset lang selection to ru
+  document.querySelectorAll('.translate-lang-btn').forEach(b => b.classList.remove('active'));
+  const ruBtn = document.querySelector('.translate-lang-btn[data-lang="ru"]');
+  if (ruBtn) { ruBtn.classList.add('active'); translateTargetLang = 'ru'; }
+  document.getElementById('translateModal').classList.add('show');
 }
 
+function selectLang(btn) {
+  document.querySelectorAll('.translate-lang-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  translateTargetLang = btn.dataset.lang;
+  // Авто-перевод при выборе
+  doTranslate();
+}
+
+async function doTranslate() {
+  const text = document.getElementById('translateOrigText').textContent;
+  if (!text) return;
+  const resEl  = document.getElementById('translateResult');
+  const loadEl = document.getElementById('translateLoading');
+  resEl.style.display = 'none';
+  loadEl.style.display = 'block';
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        messages: [{ role: 'user', content: `Translate this text to ${translateTargetLang}. Reply with ONLY the translation, nothing else:\n\n${text}` }]
+      })
+    });
+    const data = await resp.json();
+    const translated = data.content?.[0]?.text || 'Ошибка перевода';
+    resEl.textContent = translated;
+    resEl.style.display = 'block';
+  } catch(e) {
+    resEl.textContent = 'Ошибка перевода. Проверь соединение.';
+    resEl.style.display = 'block';
+  }
+  loadEl.style.display = 'none';
+}
+
+// ── Select mode ────────────────────────────────────────────────────────────
+function ctxSelect() {
+  hideAllMenus();
+  enterSelectMode();
+  if (ctxMsgId) toggleSelectMsg(ctxMsgId);
+}
+
+function enterSelectMode() {
+  selectMode = true;
+  selectedMsgs = new Set();
+  const bar = document.getElementById('selectBar');
+  bar.style.display = 'flex';
+  updateSelectCount();
+}
+
+function cancelSelectMode() {
+  selectMode = false;
+  selectedMsgs = new Set();
+  document.getElementById('selectBar').style.display = 'none';
+  // Убираем все галочки
+  document.querySelectorAll('.msg-select-check').forEach(el => {
+    el.style.display = 'none';
+    el.classList.remove('checked');
+  });
+  document.querySelectorAll('.msg-wrap').forEach(el => el.classList.remove('selected'));
+}
+
+function toggleSelectMsg(id) {
+  const wrap = document.getElementById('msg_' + id);
+  if (!wrap) return;
+  let check = wrap.querySelector('.msg-select-check');
+  if (!check) {
+    check = document.createElement('div');
+    check.className = 'msg-select-check';
+    check.style.cssText = 'position:absolute;left:-32px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:2px solid var(--ac);background:#fff;display:flex;align-items:center;justify-content:center;transition:.15s;cursor:pointer';
+    wrap.style.position = 'relative';
+    wrap.appendChild(check);
+  }
+  check.style.display = 'flex';
+  if (selectedMsgs.has(id)) {
+    selectedMsgs.delete(id);
+    check.innerHTML = '';
+    check.style.background = '#fff';
+    wrap.style.opacity = '1';
+  } else {
+    selectedMsgs.add(id);
+    check.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+    check.style.background = 'var(--ac-l)';
+    wrap.style.opacity = '0.75';
+  }
+  updateSelectCount();
+}
+
+function updateSelectCount() {
+  document.getElementById('selectCount').textContent = `${selectedMsgs.size} выбрано`;
+}
+
+function deleteSelected() {
+  if (!selectedMsgs.size) { toast('Выбери сообщения'); return; }
+  const ctx = activeType === 'group' ? {gid:activeChat} : {to:activeChat};
+  selectedMsgs.forEach(id => {
+    cmd({ cmd:'delete_msg', msg_id:id, for_all:true, ...ctx });
+    onMsgDelete({ msg_id:id });
+  });
+  cancelSelectMode();
+  toast('Сообщения удалены у всех');
+}
+
+function translateSelected() {
+  if (!selectedMsgs.size) { toast('Выбери сообщения'); return; }
+  const texts = [];
+  selectedMsgs.forEach(id => {
+    const el = document.getElementById('msg_' + id);
+    const t = el?.querySelector('.bubble-text')?.textContent;
+    if (t) texts.push(t);
+  });
+  if (!texts.length) { toast('Нет текстовых сообщений'); return; }
+  cancelSelectMode();
+  ctxMsgText = texts.join('\n---\n');
+  ctxTranslate();
+}
+
+// ── Delete message modal ───────────────────────────────────────────────────
 function ctxDeleteMsg() {
   hideAllMenus();
-  if (!ctxMsgId || !ctxMsgOut) return;
+  if (!ctxMsgId) return;
+  // Обновляем кнопку "удалить у всех" с именем собеседника
+  const partner = activeType === 'group' ? 'всех' : '@' + activeChat;
+  const allBtn = document.getElementById('deleteMsgForAllBtn');
+  if (allBtn) allBtn.textContent = `🗑 Удалить у меня и у ${partner}`;
+  document.getElementById('deleteMsgModal').classList.add('show');
+}
+
+function deleteMsgForMe() {
+  closeModal('deleteMsgModal');
+  if (!ctxMsgId) return;
+  onMsgDelete({ msg_id:ctxMsgId }); // локально
+  toast('Удалено у тебя');
+}
+
+function deleteMsgForAll() {
+  closeModal('deleteMsgModal');
+  if (!ctxMsgId) return;
   const ctx = activeType === 'group' ? {gid:activeChat} : {to:activeChat};
-  cmd({ cmd:'delete_msg', msg_id:ctxMsgId, ...ctx });
+  cmd({ cmd:'delete_msg', msg_id:ctxMsgId, for_all:true, ...ctx });
   onMsgDelete({ msg_id:ctxMsgId });
+  toast('Удалено у всех');
 }
 
-// ── Chat context menu ──────────────────────────────────────────────────────
-function showChatCtx(e) {
-  e.stopPropagation();
-  const menu = document.getElementById('chatCtxMenu');
-  const btn = document.getElementById('ctxBlockBtn');
-  if (activeType === 'peer') {
-    btn.style.display = '';
-    btn.textContent = blacklist.has(activeChat) ? '🔓 Убрать из ЧС' : '🔒 Добавить в ЧС';
-  } else {
-    btn.style.display = 'none';
-  }
-  positionMenu(menu, e);
-  hideAllMenus();
-  menu.classList.add('show');
-  setTimeout(() => document.addEventListener('click', hideAllMenus, {once:true}), 50);
-}
-
-function showChatItemCtx(e, key, isGroup) {
-  e.preventDefault(); e.stopPropagation();
-  activeChat = key;
-  activeType = isGroup ? 'group' : 'peer';
-  showChatCtx(e);
-}
-
-function ctxPinMsg() { hideAllMenus(); toast('Нажми и удерживай сообщение чтобы закрепить'); }
-
-function ctxToggleBlock() {
-  hideAllMenus();
-  if (activeType !== 'peer') return;
-  if (blacklist.has(activeChat)) blacklist.delete(activeChat);
-  else blacklist.add(activeChat);
-  localStorage.setItem('sup_bl', JSON.stringify([...blacklist]));
-  toast(blacklist.has(activeChat) ? '🔒 Добавлен в ЧС' : '🔓 Убран из ЧС');
-  cmd({ cmd:'get_chats' });
-}
-
+// ── Chat header context menu (old, kept for compat) ────────────────────────
+function showChatCtx(e) { /* убрано — теперь long-press */ }
+function showChatItemCtx(e, key, isGroup) { /* убрано */ }
 function ctxClearHistory() {
-  hideAllMenus();
-  if (!activeChat) return;
   document.getElementById('messages').innerHTML = '';
   toast('История очищена');
 }
-
-function ctxDeleteChat() {
-  hideAllMenus();
-  if (!confirm('Удалить чат?')) return;
-  closeChat();
-  document.getElementById('noChatPlaceholder').style.display = 'flex';
-  cmd({ cmd:'get_chats' });
-}
+function ctxDeleteChat() { closeChat(); }
+function ctxToggleBlock() { ctxChatBlock(); }
+function ctxPinMsg() { toast('Зажми сообщение для закрепления'); }
 
 // ── Pinned bar ─────────────────────────────────────────────────────────────
 function updatePinnedBar() {
@@ -2514,11 +2753,49 @@ function onGroupAvChange(inp) {
 }
 
 function startEditGroup() {
-  const newName = prompt('Новое название группы:', document.getElementById('groupInfoName').textContent);
-  if (!newName || !newName.trim()) return;
-  cmd({ cmd:'group_update', gid:activeChat, name:newName.trim() });
-  document.getElementById('groupInfoName').textContent = newName.trim();
-  toast('Название обновлено');
+  const g = chatsData[activeChat] || {};
+  // Заполняем поля текущими значениями
+  document.getElementById('cgName').value = g.name || '';
+  document.getElementById('cgDesc').value = g.desc || '';
+  cgAvData = g.avatar || '';
+  const prev = document.getElementById('cgAvPreview');
+  if (g.avatar) {
+    prev.innerHTML = `<img src="${g.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"><input type="file" id="cgAvInp" accept="image/*" style="display:none" onchange="onCgAvChange(this)">`;
+  } else {
+    prev.innerHTML = `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><input type="file" id="cgAvInp" accept="image/*" style="display:none" onchange="onCgAvChange(this)">`;
+  }
+  // Меняем заголовок и кнопку
+  const modal = document.getElementById('createGroupModal');
+  modal.querySelector('.modal-title') && (modal.querySelector('.modal-title').textContent = 'Изменить группу');
+  // Меняем кнопку "Далее" на "Сохранить"
+  const nextBtn = modal.querySelector('.btn-save');
+  if (nextBtn) {
+    nextBtn.textContent = 'Сохранить изменения';
+    nextBtn.onclick = saveGroupEdit;
+  }
+  closeModal('groupInfoModal');
+  modal.classList.add('show');
+}
+
+function saveGroupEdit() {
+  const name = document.getElementById('cgName').value.trim();
+  const desc = document.getElementById('cgDesc').value.trim();
+  if (!name) { toast('Введи название'); return; }
+  const updates = { cmd:'group_update', gid:activeChat, name, desc };
+  if (cgAvData) updates.avatar = cgAvData;
+  cmd(updates);
+  // Обновляем локально
+  if (chatsData[activeChat]) {
+    chatsData[activeChat].name = name;
+    chatsData[activeChat].desc = desc;
+    if (cgAvData) chatsData[activeChat].avatar = cgAvData;
+  }
+  closeModal('createGroupModal');
+  // Восстанавливаем кнопку
+  const nextBtn = document.querySelector('#createGroupModal .btn-save');
+  if (nextBtn) { nextBtn.textContent = 'Далее →'; nextBtn.onclick = cgStep2; }
+  toast('✅ Группа обновлена');
+  cmd({ cmd:'get_chats' });
 }
 
 function leaveGroup() {
