@@ -84,9 +84,24 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 
 /* ── Chat list ─────────────────────────────────── */
 .chats-label{padding:10px 16px 6px;font-size:12px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px}
-.chats-list{flex:1;overflow-y:auto}
-.chat-item{display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;transition:.15s;border-bottom:1px solid var(--brd)}
-.chat-item:hover,.chat-item.active{background:var(--ac-l)}
+.chats-list{flex:1;overflow-y:auto;overflow-x:hidden}
+
+/* Обёртка для свайпа */
+.chat-swipe-wrap{position:relative;overflow:hidden;border-bottom:1px solid var(--brd)}
+/* Кнопки под чатом */
+.chat-swipe-actions{position:absolute;right:0;top:0;bottom:0;display:flex;align-items:stretch;pointer-events:none;opacity:0;transition:opacity .15s}
+.chat-swipe-actions.visible{pointer-events:auto;opacity:1}
+.swipe-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:80px;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#fff;font-family:var(--font);padding:0 6px}
+.swipe-btn-mute{background:#e67e22}
+.swipe-btn-delete{background:#e74c3c}
+.swipe-btn svg{flex-shrink:0}
+
+/* Сам элемент чата — сдвигается влево */
+.chat-item{display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;transition:transform .25s cubic-bezier(.4,0,.2,1),background .15s;background:#fff;position:relative;z-index:1;user-select:none;-webkit-user-select:none}
+.chat-item.active{background:var(--ac-l)}
+/* Анимация удаления */
+@keyframes slideOutLeft{from{transform:translateX(0);opacity:1}to{transform:translateX(-100%);opacity:0}}
+.chat-swipe-wrap.removing{animation:slideOutLeft .3s ease forwards}
 .ci-av{width:50px;height:50px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;position:relative}
 .ci-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .online-dot{position:absolute;bottom:2px;right:2px;width:12px;height:12px;border-radius:50%;background:#2ecc71;border:2px solid #fff}
@@ -995,6 +1010,10 @@ function startChat() {
 }
 
 // ── Chat list ──────────────────────────────────────────────────────────────
+let mutedChats = new Set(JSON.parse(localStorage.getItem('sup_muted')||'[]'));
+
+function saveMuted() { localStorage.setItem('sup_muted', JSON.stringify([...mutedChats])); }
+
 function renderChatList(chats) {
   const list = document.getElementById('chatsList');
   list.innerHTML = '';
@@ -1005,31 +1024,183 @@ function renderChatList(chats) {
   chats.forEach(c => {
     const key = c.gid || c.username;
     chatsData[key] = c;
-    const el = document.createElement('div');
-    el.className = 'chat-item' + (activeChat === key ? ' active' : '');
-    el.id = 'ci_' + key;
     const isGroup = !!c.gid;
     const name = isGroup ? c.name : '@' + c.username;
     const avContent = c.avatar ? `<img src="${c.avatar}">` : (isGroup ? '👥' : c.username[0].toUpperCase());
     const dot = (!isGroup && c.online) ? '<div class="online-dot"></div>' : '';
     const badge = c.unread > 0 ? `<div class="unread-badge">${c.unread}</div>` : '';
     const lock = (!isGroup && blacklist.has(c.username)) ? '🔒 ' : '';
+    const isMuted = mutedChats.has(key);
+    const muteIcon = isMuted ? '🔔' : '🔕';
+    const muteLabel = isMuted ? 'Вкл. звук' : 'Откл. звук';
+
+    // Обёртка
+    const wrap = document.createElement('div');
+    wrap.className = 'chat-swipe-wrap';
+    wrap.id = 'sw_' + key;
+
+    // Кнопки позади
+    wrap.innerHTML = `
+      <div class="chat-swipe-actions" id="sa_${key}">
+        <button class="swipe-btn swipe-btn-mute" onclick="swipeMute('${key}')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            ${isMuted
+              ? '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>'
+              : '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>'}
+          </svg>
+          ${muteLabel}
+        </button>
+        <button class="swipe-btn swipe-btn-delete" onclick="swipeDelete('${key}')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+          Удалить
+        </button>
+      </div>`;
+
+    // Элемент чата
+    const el = document.createElement('div');
+    el.className = 'chat-item' + (activeChat === key ? ' active' : '');
+    el.id = 'ci_' + key;
     el.innerHTML = `
       <div class="ci-av">${avContent}${dot}</div>
       <div class="ci-body">
         <div class="ci-top">
-          <div class="ci-name">${lock}${esc(name)}</div>
+          <div class="ci-name">${lock}${esc(name)}${isMuted?' 🔕':''}</div>
           <div class="ci-right">${badge}<div class="ci-time">${formatTime(c.last_time)}</div></div>
         </div>
         <div class="ci-last">${esc(c.last_msg||'нет сообщений')}</div>
       </div>`;
+
     el.onclick = () => {
       if (isGroup) openGroupChat(c.gid, c.name, c.avatar);
       else openChatWith(c.username, c.avatar, c.online);
     };
-    el.oncontextmenu = e => { e.preventDefault(); showChatItemCtx(e, key, isGroup); };
-    list.appendChild(el);
+
+    wrap.appendChild(el);
+    list.appendChild(wrap);
+
+    // Добавляем свайп
+    addSwipe(wrap, el, key);
   });
+}
+
+// ── Swipe logic ────────────────────────────────────────────────────────────
+const SWIPE_PEEK   = 160; // первый свайп — показать кнопки (ширина 2 кнопок)
+const SWIPE_FULL   = 9999; // второй свайп — удалить
+
+function addSwipe(wrap, el, key) {
+  let startX = 0, startY = 0, curX = 0;
+  let isDragging = false, isHorizontal = null;
+  let currentOffset = 0; // текущее смещение элемента
+  const actions = document.getElementById('sa_' + key);
+  const THRESHOLD = 40; // минимальный свайп для срабатывания
+
+  function getX(e) { return e.touches ? e.touches[0].clientX : e.clientX; }
+  function getY(e) { return e.touches ? e.touches[0].clientY : e.clientY; }
+
+  function onStart(e) {
+    startX = getX(e);
+    startY = getY(e);
+    isDragging = true;
+    isHorizontal = null;
+    el.style.transition = 'none';
+  }
+
+  function onMove(e) {
+    if (!isDragging) return;
+    const dx = getX(e) - startX;
+    const dy = getY(e) - startY;
+
+    // Определяем направление один раз
+    if (isHorizontal === null) {
+      if (Math.abs(dx) > Math.abs(dy) + 3) isHorizontal = true;
+      else if (Math.abs(dy) > Math.abs(dx) + 3) isHorizontal = false;
+      else return;
+    }
+    if (!isHorizontal) return;
+
+    e.preventDefault();
+    const newOffset = Math.max(-SWIPE_PEEK - 40, Math.min(0, currentOffset + dx));
+    el.style.transform = `translateX(${newOffset}px)`;
+
+    // Показываем/скрываем кнопки
+    if (newOffset < -10) {
+      actions.classList.add('visible');
+      // Растягиваем кнопки пропорционально свайпу
+      const pct = Math.min(1, Math.abs(newOffset) / SWIPE_PEEK);
+      actions.style.width = (Math.abs(newOffset)) + 'px';
+    } else {
+      actions.classList.remove('visible');
+      actions.style.width = '';
+    }
+    curX = dx;
+  }
+
+  function onEnd() {
+    if (!isDragging || isHorizontal === false) { isDragging = false; return; }
+    isDragging = false;
+    el.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1)';
+
+    const total = currentOffset + curX;
+
+    if (total < -SWIPE_PEEK - 30) {
+      // Полный свайп — удаляем
+      swipeDelete(key);
+    } else if (total < -THRESHOLD) {
+      // Первый свайп — показать кнопки
+      currentOffset = -SWIPE_PEEK;
+      el.style.transform = `translateX(${-SWIPE_PEEK}px)`;
+      actions.classList.add('visible');
+      actions.style.width = SWIPE_PEEK + 'px';
+      // Клик в любом месте закрывает
+      setTimeout(() => document.addEventListener('touchstart', closeSwipe, {once:true, passive:true}), 100);
+    } else {
+      // Закрыть
+      closeThisSwipe();
+    }
+    curX = 0;
+
+    function closeSwipe() { closeThisSwipe(); }
+    function closeThisSwipe() {
+      currentOffset = 0;
+      el.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1)';
+      el.style.transform = 'translateX(0)';
+      actions.classList.remove('visible');
+      actions.style.width = '';
+    }
+  }
+
+  // Touch
+  el.addEventListener('touchstart', onStart, {passive:true});
+  el.addEventListener('touchmove',  onMove,  {passive:false});
+  el.addEventListener('touchend',   onEnd,   {passive:true});
+  // Mouse (для десктопа)
+  el.addEventListener('mousedown', onStart);
+  el.addEventListener('mousemove', onMove);
+  el.addEventListener('mouseup',   onEnd);
+  el.addEventListener('mouseleave', onEnd);
+}
+
+function swipeMute(key) {
+  if (mutedChats.has(key)) mutedChats.delete(key);
+  else mutedChats.add(key);
+  saveMuted();
+  toast(mutedChats.has(key) ? '🔕 Уведомления выключены' : '🔔 Уведомления включены');
+  cmd({cmd:'get_chats'});
+}
+
+function swipeDelete(key) {
+  const wrap = document.getElementById('sw_' + key);
+  if (wrap) {
+    wrap.classList.add('removing');
+    setTimeout(() => { wrap.remove(); }, 300);
+  }
+  if (activeChat === key) {
+    closeChat();
+    document.getElementById('noChatPlaceholder').style.display = 'flex';
+  }
+  delete chatsData[key];
 }
 
 function updateChatListItem(key, lastMsg, isGroup) {
@@ -1040,13 +1211,16 @@ function updateChatListItem(key, lastMsg, isGroup) {
   if (lastMsg.from !== me) data.unread = (data.unread||0) + 1;
   chatsData[key] = data;
   if (!el) { cmd({cmd:'get_chats'}); return; }
-  const badge = data.unread > 0 ? `<div class="unread-badge">${data.unread}</div>` : '';
-  el.querySelector('.ci-time').textContent = formatTime(data.last_time);
-  el.querySelector('.ci-last').textContent = data.last_msg;
+  el.querySelector('.ci-time') && (el.querySelector('.ci-time').textContent = formatTime(data.last_time));
+  el.querySelector('.ci-last') && (el.querySelector('.ci-last').textContent = data.last_msg);
   const right = el.querySelector('.ci-right');
-  right.innerHTML = badge + `<div class="ci-time">${formatTime(data.last_time)}</div>`;
-  // Move to top
-  el.parentElement.prepend(el);
+  if (right) {
+    const badge = data.unread > 0 ? `<div class="unread-badge">${data.unread}</div>` : '';
+    right.innerHTML = badge + `<div class="ci-time">${formatTime(data.last_time)}</div>`;
+  }
+  // Move wrap to top
+  const wrap = document.getElementById('sw_' + key);
+  if (wrap && wrap.parentElement) wrap.parentElement.prepend(wrap);
 }
 
 // ── Open chat ──────────────────────────────────────────────────────────────
