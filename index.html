@@ -163,6 +163,61 @@ body.dark .no-chat .sub{color:#636366}
 body.dark #qrPage{background:#1c1c1e}
 /* Themes page */
 body.dark #themesPage > div:last-child{background:#000}
+/* ── Settings page dark ─────────────────────────── */
+body.dark #settingsPage{background:#000}
+body.dark #settingsPage > div:first-child{background:#1c1c1e;border-color:#2c2c2e}
+/* Profile card */
+body.dark #settingsAv ~ div{color:#fff}
+body.dark #settingsName{color:#fff}
+body.dark #settingsStatusLabel{color:#8d8e93}
+/* Section labels */
+body.dark #settingsPage [style*="color:#8e8e93"]{color:#636366 !important}
+/* All settings list rows */
+body.dark #settingsPage [style*="background:#fff"]{background:#1c1c1e !important}
+body.dark #settingsPage [style*="background:var(--sb)"]{background:#1c1c1e !important}
+body.dark #settingsPage [onclick] > div[style*="font-size:16px"]{color:#fff}
+body.dark #settingsPage [style*="border-bottom:1px solid #f0f0f0"]{border-color:#2c2c2e !important}
+body.dark #settingsPage [style*="border-radius:14px"]{background:#1c1c1e !important}
+/* Chevrons */
+body.dark #settingsPage svg[stroke="#c7c7cc"]{stroke:#3a3a3c}
+/* Ref code */
+body.dark #settingsRefCode{color:var(--ac)}
+body.dark #settingsPage button[style*="background:#f2f2f7"]{background:#2c2c2e !important;color:var(--ac) !important}
+/* Logout button */
+body.dark #settingsPage [style*="color:#e74c3c"]{color:#ff453a !important}
+/* Settings edit modal */
+body.dark #settingsEditModal .modal-sheet{background:#1c1c1e}
+body.dark #settingsEditModal label{background:#2c2c2e !important;color:#fff}
+body.dark #settingsEditModal label span{color:#fff}
+body.dark #settingsEditModal textarea{background:#2c2c2e;color:#fff}
+body.dark #settingsEditModal input[type="email"]{background:#2c2c2e;color:#fff;border-color:#38383a}
+/* Settings sub-pages */
+body.dark #settingsFoldersPage{background:#000}
+body.dark #settingsFoldersPage > div:first-child{background:#1c1c1e;border-color:#2c2c2e}
+body.dark #settingsFoldersList > div{background:#1c1c1e !important}
+body.dark #settingsFoldersList [style*="border-bottom"]{border-color:#2c2c2e !important}
+body.dark #settingsFoldersList [style*="font-size:16px"]{color:#fff}
+body.dark #settingsFoldersList [style*="font-size:13px"]{color:#8d8e93}
+body.dark #settingsNotifsPage{background:#000}
+body.dark #settingsNotifsPage > div:first-child{background:#1c1c1e;border-color:#2c2c2e}
+body.dark #settingsNotifsPage label{background:#1c1c1e !important;color:#fff}
+body.dark #settingsNotifsPage label > div > div:first-child{color:#fff}
+body.dark #settingsNotifsPage label > div > div:last-child{color:#8d8e93}
+body.dark #settingsNotifsPage [style*="border-radius:14px"]{background:#1c1c1e !important}
+body.dark #settingsNotifsPage [style*="border-bottom"]{border-color:#2c2c2e !important}
+/* Themes page dark */
+body.dark #themesPage > div:first-child{background:#1c1c1e;border-color:#2c2c2e}
+body.dark #themesPage [style*="background:var(--sb)"]{background:#1c1c1e !important}
+body.dark #themesPage [style*="border-bottom:1px solid var(--brd)"]{border-color:#2c2c2e !important}
+body.dark #themesPage [style*="background:#f2f2f7"]{background:#2c2c2e !important}
+body.dark #themesPage [style*="font-size:16px"]{color:#fff}
+body.dark #themesPage .lightScheduleSummary,body.dark #themesPage #lightScheduleSummary,body.dark #themesPage #darkScheduleSummary{color:#8d8e93}
+body.dark #themeScheduleModal .modal-sheet{background:#1c1c1e}
+body.dark #themeScheduleModal [style*="background:#f8f8f8"]{background:#2c2c2e !important}
+body.dark #themeScheduleModal input[type="time"]{color:var(--ac)}
+body.dark #themeScheduleModal input[type="time"]:last-of-type{color:#8d8e93}
+body.dark #themeScheduleModal input#scheduleCity{color:#fff}
+body.dark #themeScheduleModal input#scheduleCity::placeholder{color:#636366}
 .stories-bar{display:flex;gap:4px;padding:8px 12px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
 .stories-bar::-webkit-scrollbar{display:none}
 .story-item{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;flex-shrink:0;min-width:60px}
@@ -5095,10 +5150,13 @@ function saveSettingsEdit() {
   if (radio) { myStatus = radio.value; localStorage.setItem('sup_status', myStatus); }
   cmd({ cmd:'save_profile', bio:myBio, avatar:myAvatar, status:myStatus });
   updateMyUI();
-  closeModal('settingsEditModal');
+  // Закрываем модал БЕЗ показа таббара (мы в настройках)
+  document.getElementById('settingsEditModal')?.classList.remove('show');
   fillSettingsPage();
   toast('Профиль сохранён');
   newAvatarData = null;
+  // Таббар показываем т.к. мы в settingsPage (она поверх всего)
+  showTabBar();
 }
 
 function openSettingsFolders() {
@@ -6167,7 +6225,7 @@ function closeModal(id) {
   document.getElementById(id)?.classList.remove('show');
   // Показываем таббар при закрытии модалей — только если мы в главных вкладках
   const tabbarModals = ['createGroupModal','addFriendModal','addToFolderModal',
-    'createFolderModal','settingsEditModal','translateModal','deleteMsgModal'];
+    'createFolderModal','translateModal','deleteMsgModal'];
   if (tabbarModals.includes(id)) {
     // Показываем таббар только если нет других открытых fullpage поверх
     const qrOpen = document.getElementById('qrPage');
