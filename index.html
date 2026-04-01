@@ -171,7 +171,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 
 /* ── Chat header ───────────────────────────────── */
 .chat-head{background:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--brd);box-shadow:0 1px 4px rgba(0,0,0,.05);flex-shrink:0}
-.back-btn{width:36px;height:36px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ac);font-size:20px;border-radius:50%}
+.back-btn{width:40px;height:40px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ac);font-size:26px;font-weight:700;border-radius:50%;line-height:1}
+/* All inline back arrows in fullpages */
+.fullpage button[onclick*="closeFullPage"], .fullpage button[onclick*="closePeerProfile"], .fullpage button[onclick*="closeQrPage"]{font-size:24px;font-weight:700}
 .head-av{width:40px;height:40px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;cursor:pointer}
 .head-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .head-info{flex:1;cursor:pointer}
@@ -2050,6 +2052,8 @@ function closePeerProfile() {
   const page = document.getElementById('peerProfilePage');
   page.style.transform = 'translateX(100%)';
   setTimeout(() => page.style.display = '', 300);
+  // Показываем таббар только если вернулись в чат
+  // (профиль может открываться из переписки или из чатов)
 }
 
 function togglePeerMute() {
@@ -2154,6 +2158,8 @@ function openPeerQR() {
 
 function openMyQR() {
   closeModal('profileModal');
+  closeModal('settingsEditModal');
+  hideTabBar();
   const page = document.getElementById('qrPage');
   document.getElementById('qrUsername').textContent = '@' + me;
   document.getElementById('qrPageTitle').textContent = 'Мой QR-код';
@@ -2165,7 +2171,15 @@ function openMyQR() {
 function closeQrPage() {
   const page = document.getElementById('qrPage');
   page.style.transform = 'translateX(100%)';
-  setTimeout(() => page.style.display = '', 300);
+  setTimeout(() => { page.style.display = ''; }, 300);
+  // Если настройки открыты — показываем таббар (мы в настройках)
+  const settingsOpen = document.getElementById('settingsPage');
+  if (settingsOpen && settingsOpen.style.display !== 'none' &&
+      settingsOpen.style.transform === 'translateX(0px)') {
+    showTabBar();
+  } else {
+    // Иначе — не показываем (мы в чате или где-то ещё)
+  }
 }
 
 // QR Scanner
@@ -2829,6 +2843,7 @@ function openGroupChat(gid, name, avatar) {
 }
 
 function showActiveChat() {
+  hideTabBar();
   document.getElementById('noChatPlaceholder').style.display = 'none';
   const ac = document.getElementById('activeChat');
   ac.style.display = 'flex'; ac.style.flexDirection = 'column';
@@ -2839,6 +2854,7 @@ function showActiveChat() {
 function closeChat() {
   document.getElementById('chatView').classList.remove('open');
   document.querySelectorAll('.chat-item').forEach(e => e.classList.remove('active'));
+  showTabBar();
 }
 
 // ── History ────────────────────────────────────────────────────────────────
@@ -4019,6 +4035,7 @@ let cgAvData = '';
 let cgSelectedMembers = new Set();
 
 function openCreateGroup() {
+  hideTabBar();
   cgAvData = ''; cgSelectedMembers = new Set();
   document.getElementById('cgName').value = '';
   document.getElementById('cgDesc').value = '';
@@ -5767,7 +5784,12 @@ function loadCustom(key) {
 function applyStoredCustom() { /* Applied per chat on open */ }
 
 // ── Modals ─────────────────────────────────────────────────────────────────
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function closeModal(id) {
+  document.getElementById(id)?.classList.remove('show');
+  // Показываем таббар при закрытии модалей из главного меню
+  const mainMenuModals = ['createGroupModal','addFriendModal','addToFolderModal','createFolderModal'];
+  if (mainMenuModals.includes(id)) showTabBar();
+}
 
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
@@ -6132,10 +6154,12 @@ connect();
 </div>
 
 <!-- Edit mode bottom action bar -->
-<div id="editActionBar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:300;align-items:center;background:#fff;border-top:1px solid var(--brd);padding:10px 0 calc(10px + env(safe-area-inset-bottom))">
-  <button onclick="markSelectedRead()" style="flex:1;border:none;background:none;font-family:var(--font);font-size:14px;color:var(--ac);font-weight:600;cursor:pointer;padding:8px">Прочитать</button>
-  <button onclick="deleteSelectedChats()" id="editDelBtn" style="flex:1;border:none;background:none;font-family:var(--font);font-size:14px;color:var(--danger);font-weight:600;cursor:pointer;padding:8px;border-left:1px solid var(--brd);border-right:1px solid var(--brd)">Удалить</button>
-  <button onclick="toggleEditMode()" style="flex:1;border:none;background:none;font-family:var(--font);font-size:14px;color:var(--ac);font-weight:600;cursor:pointer;padding:8px">Готово</button>
+<div id="editActionBar" style="display:none;position:fixed;bottom:calc(14px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:500;background:#fff;border-radius:30px;box-shadow:0 4px 24px rgba(0,0,0,.15),0 1px 4px rgba(0,0,0,.08);padding:5px 6px;align-items:center;gap:0;white-space:nowrap">
+  <button onclick="markSelectedRead()" style="border:none;background:none;font-family:var(--font);font-size:13px;color:var(--ac);font-weight:600;cursor:pointer;padding:8px 16px;border-radius:22px">Прочитать</button>
+  <div style="width:1px;height:18px;background:#ddd;flex-shrink:0"></div>
+  <button onclick="deleteSelectedChats()" id="editDelBtn" style="border:none;background:none;font-family:var(--font);font-size:13px;color:var(--danger);font-weight:600;cursor:pointer;padding:8px 16px;border-radius:22px">Удалить</button>
+  <div style="width:1px;height:18px;background:#ddd;flex-shrink:0"></div>
+  <button onclick="toggleEditMode()" style="border:none;background:none;font-family:var(--font);font-size:13px;color:var(--ac);font-weight:600;cursor:pointer;padding:8px 16px;border-radius:22px">Готово</button>
 </div>
 
 </body>
