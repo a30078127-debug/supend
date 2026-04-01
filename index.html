@@ -87,19 +87,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .folder-tab.active{background:var(--ac);color:#fff}
 #foldersBar::-webkit-scrollbar{display:none}
 /* ── Edit mode ─────────────────────────────────── */
-.chat-item.edit-mode{padding-left:44px}
-.chat-delete-btn{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:#e74c3c;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:900;line-height:1}
+@keyframes chatShake{0%,100%{transform:translateX(0) rotate(0)}25%{transform:translateX(-1px) rotate(-.5deg)}75%{transform:translateX(1px) rotate(.5deg)}}
+.chat-item.edit-mode{padding-left:50px;animation:chatShake .4s ease-in-out infinite}
+.chat-select-circle{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;border:2px solid #c7c7cc;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s;flex-shrink:0}
+.chat-select-circle.checked{border-color:var(--ac);background:var(--ac)}
+.chat-delete-btn{position:absolute;left:-8px;top:-8px;width:22px;height:22px;border-radius:50%;background:#1c1c1e;border:2px solid #fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:900;line-height:1;z-index:2;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 /* ── Calls/Settings fullscreen page ───────────── */
 .fullpage{position:fixed;inset:0;z-index:95;background:#fff;display:none;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
 .fullpage.show{display:flex;transform:translateX(0)}
-.bottom-tabbar{display:flex;border-top:1px solid var(--brd);background:#fff;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom)}
-.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 6px;border:none;background:none;cursor:pointer;color:var(--txt2);font-family:var(--font);font-size:11px;font-weight:600;transition:.15s}
-.tab-btn.active{color:var(--ac)}
+.bottom-tabbar{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:150;display:flex;align-items:center;background:#fff;border-radius:30px;box-shadow:0 4px 24px rgba(0,0,0,.15),0 1px 4px rgba(0,0,0,.08);padding:5px 6px;gap:2px}
+.tab-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 18px;border:none;background:none;cursor:pointer;color:#8e8e93;font-family:var(--font);font-size:10px;font-weight:600;transition:.15s;border-radius:22px;min-width:64px}
+.tab-btn.active{color:var(--ac);background:rgba(26,188,156,.1)}
 .tab-btn svg{stroke:currentColor}
-.tab-btn span{font-size:10px}
-.tab-my-av{width:24px;height:24px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;overflow:hidden}
+.tab-my-av{width:22px;height:22px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;overflow:hidden}
 .tab-my-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .tab-content{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-height:0}
+.sidebar{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+.fullpage{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
 .chats-list{flex:1;overflow-y:auto;overflow-x:hidden}
 /* ── Chats list stays same ─────────────────────── */
 .sb-search{padding:10px 16px 12px;border-bottom:1px solid var(--brd)}
@@ -546,14 +550,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
       <div id="callsList" style="flex:1;overflow-y:auto"></div>
     </div>
 
-    <!-- Bottom tab bar -->
-    <div class="bottom-tabbar">
+    <!-- Bottom tab bar — floating pill -->
+    <div class="bottom-tabbar" id="mainTabBar">
       <button class="tab-btn" id="tabBtnCalls" onclick="switchTab2('calls')">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.6 3.38 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.08 6.08l1.14-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.6 3.38 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.08 6.08l1.14-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         <span>Звонки</span>
       </button>
       <button class="tab-btn active" id="tabBtnChats" onclick="switchTab2('chats')">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         <span>Чаты</span>
       </button>
       <button class="tab-btn" id="tabBtnSettings" onclick="switchTab2('settings')">
@@ -2710,10 +2714,9 @@ function onMessage(d) {
     document.getElementById('messages').scrollTop = 9999999;
     if (d.from !== me) cmd({ cmd:'mark_read', with:d.from });
   } else if (d.from !== me) {
-    toast(`💬 @${d.from}: ${(d.text||'Медиа').slice(0,40)}`);
-    // Push уведомление если приложение свёрнуто
-    const name = getDisplayName ? getDisplayName(d.from) : '@' + d.from;
-    const body = d.mtype === 'voice' ? '🎤 Голосовое сообщение' : d.mtype === 'image' ? '📷 Фото' : (d.text||'').slice(0,60);
+    const name = getDisplayName(d.from) || ('@' + d.from);
+    const body = d.mtype === 'voice' ? '🎤 Голосовое' : d.mtype === 'image' ? '📷 Фото' : (d.text||'').slice(0,60);
+    toast(`${name}: ${body}`);
     sendPushNotif(name, body, 'msg-' + d.from);
   }
   updateChatListItem(other, d, false);
@@ -4221,30 +4224,93 @@ function handleCallStatus(d) {
 // ── Wallet ─────────────────────────────────────────────────────────────────
 // ── Edit mode ────────────────────────────────────────────────────────────────
 let editMode = false;
+let selectedChats = new Set();
+
 function toggleEditMode() {
   editMode = !editMode;
+  selectedChats.clear();
   const btn = document.getElementById('editModeBtn');
   btn.textContent = editMode ? 'Готово' : 'Изм.';
   btn.style.background = editMode ? 'var(--ac)' : 'var(--ac-l)';
   btn.style.color = editMode ? '#fff' : 'var(--ac)';
-  document.querySelectorAll('.chat-item').forEach(el => {
-    el.classList.toggle('edit-mode', editMode);
-    let delBtn = el.querySelector('.chat-delete-btn');
-    if (editMode && !delBtn) {
-      delBtn = document.createElement('button');
-      delBtn.className = 'chat-delete-btn';
-      delBtn.innerHTML = '−';
-      delBtn.onclick = (e) => {
-        e.stopPropagation();
-        const key = el.id.replace('ci_','');
-        el.closest('.chat-swipe-wrap')?.classList.add('removing');
-        setTimeout(() => { cmd({cmd:'get_chats'}); }, 350);
-      };
-      el.appendChild(delBtn);
-    } else if (!editMode && delBtn) {
-      delBtn.remove();
+
+  document.querySelectorAll('.chat-swipe-wrap').forEach(wrap => {
+    const el = wrap.querySelector('.chat-item');
+    const key = wrap.id.replace('sw_','');
+    const isGroup = chatsData[key]?.gid;
+
+    if (editMode) {
+      el.classList.add('edit-mode');
+      wrap.style.position = 'relative';
+
+      // Checkbox (circle) for selection
+      let circle = wrap.querySelector('.chat-select-circle');
+      if (!circle) {
+        circle = document.createElement('div');
+        circle.className = 'chat-select-circle';
+        circle.innerHTML = '';
+        circle.onclick = (e) => { e.stopPropagation(); toggleChatSelect(key, circle); };
+        wrap.appendChild(circle);
+      }
+
+      // Delete X button (black, top-left of avatar) for groups
+      if (isGroup) {
+        let xBtn = wrap.querySelector('.chat-delete-btn');
+        if (!xBtn) {
+          xBtn = document.createElement('button');
+          xBtn.className = 'chat-delete-btn';
+          xBtn.innerHTML = '×';
+          xBtn.title = 'Удалить группу';
+          xBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (confirm('Покинуть группу?')) {
+              cmd({cmd:'leave_group', gid:key});
+              wrap.classList.add('removing');
+              setTimeout(() => cmd({cmd:'get_chats'}), 350);
+            }
+          };
+          const av = el.querySelector('.ci-av');
+          if (av) { av.style.position = 'relative'; av.appendChild(xBtn); }
+        }
+      }
+    } else {
+      el.classList.remove('edit-mode');
+      wrap.querySelector('.chat-select-circle')?.remove();
+      el.querySelector('.chat-delete-btn')?.remove();
     }
   });
+
+  const bar = document.getElementById('editActionBar');
+  bar.style.display = editMode && selectedChats.size > 0 ? 'block' : 'none';
+}
+
+function toggleChatSelect(key, circle) {
+  if (selectedChats.has(key)) {
+    selectedChats.delete(key);
+    circle.classList.remove('checked');
+    circle.innerHTML = '';
+  } else {
+    selectedChats.add(key);
+    circle.classList.add('checked');
+    circle.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  }
+  const count = selectedChats.size;
+  const bar = document.getElementById('editActionBar');
+  document.getElementById('editDeleteCount').textContent = count;
+  bar.style.display = editMode && count > 0 ? 'block' : 'none';
+}
+
+function deleteSelectedChats() {
+  if (!selectedChats.size) return;
+  if (!confirm(`Удалить ${selectedChats.size} чат(ов)?`)) return;
+  selectedChats.forEach(key => {
+    const wrap = document.getElementById('sw_' + key);
+    if (wrap) wrap.classList.add('removing');
+  });
+  setTimeout(() => {
+    cmd({cmd:'get_chats'});
+    toggleEditMode(); // exit edit mode
+  }, 350);
 }
 
 // ── Live search ──────────────────────────────────────────────────────────────
@@ -5632,5 +5698,10 @@ document.addEventListener('visibilitychange', () => {
 
 connect();
 </script>
+<!-- Edit mode bottom action bar -->
+<div id="editActionBar" style="display:none;position:fixed;bottom:calc(80px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:200;background:#e74c3c;color:#fff;border-radius:20px;padding:12px 28px;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(231,76,60,.4)" id="editDeleteBtn" onclick="deleteSelectedChats()">
+  Удалить <span id="editDeleteCount">0</span>
+</div>
+
 </body>
 </html>
