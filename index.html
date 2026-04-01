@@ -72,30 +72,97 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 
 /* ── Dark theme ────────────────────────────────── */
 body.dark{
-  --txt:#f2f2f2;--txt2:#8e8e93;--brd:#38383a;--hov:rgba(255,255,255,.06);
-  --sb:#1c1c1e;--ac:#1ABC9C;--ac-l:rgba(26,188,156,.15);--danger:#ff453a;
-  --chat-bg:#000;--inp-bg:#2c2c2e;
+  --txt:#ffffff;--txt2:#8d8e93;--brd:#2c2c2e;--hov:rgba(255,255,255,.05);
+  --sb:#1c1c1e;--ac:#1ABC9C;--ac-l:rgba(26,188,156,.18);--danger:#ff453a;
+  --chat-bg:#000000;--inp-bg:#1c1c1e;
 }
-body.dark .chat-item{background:#1c1c1e}
-body.dark .chat-item.active{background:rgba(26,188,156,.15)}
-body.dark .inp-area{background:#1c1c1e;border-color:#38383a}
-body.dark .msg-textarea{background:#2c2c2e;color:#f2f2f2}
-body.dark .chat-head{background:#1c1c1e;border-color:#38383a}
-body.dark .modal-sheet{background:#1c1c1e}
-body.dark .modal-inp,.dark .modal-textarea{background:#2c2c2e;border-color:#38383a;color:#f2f2f2}
+/* Sidebar & chat list */
+body.dark .sidebar{background:#1c1c1e}
+body.dark .chats-label{color:#636366}
+body.dark .chat-item{background:#1c1c1e;color:#fff}
+body.dark .chat-item:active,body.dark .chat-item.active{background:#2c2c2e}
+body.dark .ci-name{color:#fff}
+body.dark .ci-last{color:#8d8e93}
+body.dark .ci-time{color:#636366}
+body.dark .chat-swipe-wrap{border-bottom:1px solid #2c2c2e}
+body.dark .unread-badge{background:var(--ac)}
+/* Search */
 body.dark .search-inp-wrap{background:#2c2c2e}
-body.dark .search-inp{color:#f2f2f2}
-body.dark .ctx-menu{background:#2c2c2e;box-shadow:0 8px 32px rgba(0,0,0,.4)}
-body.dark .ctx-item:active{background:#3a3a3c}
-body.dark .bottom-tabbar{background:#1c1c1e;box-shadow:0 4px 24px rgba(0,0,0,.4)}
-body.dark #editActionBar{background:#1c1c1e;box-shadow:0 4px 24px rgba(0,0,0,.4)}
-body.dark .fullpage{background:#000}
-body.dark .folder-tab{color:#8e8e93}
+body.dark .search-inp{color:#fff}
+body.dark .search-inp::placeholder{color:#636366}
+body.dark #srchInp{color:#fff}
+body.dark #srchInp::placeholder{color:#636366}
+body.dark #liveSearchRes{background:#1c1c1e;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+/* Folders */
 body.dark .folders-pill{background:#2c2c2e}
 body.dark .folder-pill-indicator{background:#3a3a3c}
-body.dark .chat-swipe-wrap{border-color:#38383a}
-body.dark .inp{background:#2c2c2e;border-color:#38383a;color:#f2f2f2}
-body.dark #mainTabBar{background:#1c1c1e}
+body.dark .folder-tab{color:#8d8e93}
+body.dark .folder-tab.active{color:var(--ac)}
+/* Topbar */
+body.dark .sb-topbar{background:#1c1c1e}
+body.dark #editModeBtn{background:#2c2c2e;color:#1ABC9C}
+/* Stories */
+body.dark .stories-bar{background:#1c1c1e}
+body.dark .story-name{color:#8d8e93}
+/* Tab bar */
+body.dark .bottom-tabbar{background:#1c1c1e;box-shadow:0 -1px 0 #2c2c2e,0 4px 24px rgba(0,0,0,.6)}
+body.dark .tab-btn{color:#636366}
+body.dark .tab-btn.active{color:var(--ac)}
+body.dark #tabIndicator{background:rgba(26,188,156,.15)}
+body.dark #searchBubble{background:#2c2c2e}
+body.dark #searchBubble svg{stroke:#8d8e93}
+/* Edit action bar */
+body.dark #editActionBar{background:#1c1c1e;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+/* Chat view */
+body.dark #activeChat{background:#000}
+body.dark .chat-head{background:#1c1c1e;border-bottom:1px solid #2c2c2e}
+body.dark .head-name{color:#fff}
+body.dark .head-act-btn{color:#8d8e93}
+body.dark .messages{background:#000}
+body.dark .bubble{background:#2c2c2e;color:#fff}
+body.dark .bubble.out{background:var(--ac)}
+body.dark .bubble-text{color:#fff}
+body.dark .msg-time{color:#636366}
+body.dark .inp-area{background:#1c1c1e;border-top:1px solid #2c2c2e}
+body.dark .msg-textarea{background:#2c2c2e;color:#fff}
+body.dark .msg-textarea::placeholder{color:#636366}
+body.dark .send-btn{background:var(--ac)}
+/* Modals */
+body.dark .modal-overlay{background:rgba(0,0,0,.7)}
+body.dark .modal-sheet{background:#1c1c1e}
+body.dark .modal-title{color:#fff}
+body.dark .modal-label{color:#8d8e93}
+body.dark .modal-inp{background:#2c2c2e;border-color:#38383a;color:#fff}
+body.dark .modal-inp::placeholder{color:#636366}
+body.dark .modal-textarea{background:#2c2c2e;border-color:#38383a;color:#fff}
+body.dark .modal-field{border-bottom:1px solid #2c2c2e}
+/* Context menu */
+body.dark .ctx-menu{background:#2c2c2e;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+body.dark .ctx-item{color:#fff}
+body.dark .ctx-sep{background:#38383a}
+/* Fullpages */
+body.dark .fullpage{background:#000}
+body.dark .fullpage > div:first-child{background:#1c1c1e;border-color:#2c2c2e}
+/* Settings page */
+body.dark #settingsPage > div:last-child{background:#000}
+body.dark #settingsPage .profile-card-inner > div{background:#1c1c1e}
+/* Group info & peer profile */
+body.dark #peerProfilePage{background:#000}
+body.dark #peerProfilePage > div:first-child{background:#1c1c1e}
+body.dark #chatSearchPage{background:#000}
+body.dark #chatSearchPage > div:first-child{background:#1c1c1e}
+/* Auth */
+body.dark #authScreen{background:#000}
+body.dark .inp{background:#1c1c1e;border-color:#2c2c2e;color:#fff}
+body.dark .inp::placeholder{color:#636366}
+/* No chat placeholder */
+body.dark .no-chat{background:#000}
+body.dark .no-chat .title{color:#fff}
+body.dark .no-chat .sub{color:#636366}
+/* QR page */
+body.dark #qrPage{background:#1c1c1e}
+/* Themes page */
+body.dark #themesPage > div:last-child{background:#000}
 .stories-bar{display:flex;gap:4px;padding:8px 12px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
 .stories-bar::-webkit-scrollbar{display:none}
 .story-item{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;flex-shrink:0;min-width:60px}
@@ -842,50 +909,48 @@ body.dark #mainTabBar{background:#1c1c1e}
     <button onclick="closeFullPage('themesPage');showTabBar()" style="border:none;background:none;font-size:26px;font-weight:700;cursor:pointer;color:var(--ac);padding:0;margin-right:8px;line-height:1">‹</button>
     <div style="flex:1;font-size:17px;font-weight:700;color:var(--txt)">Оформление и темы</div>
   </div>
-  <div style="flex:1;overflow-y:auto;background:#f2f2f7;padding:16px" id="themesContent">
-
-    <!-- Theme selector -->
+  <div style="flex:1;overflow-y:auto;background:#f2f2f7;padding:16px">
     <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:#8e8e93;text-transform:uppercase;letter-spacing:.4px">Тема</div>
     <div style="background:var(--sb);border-radius:14px;overflow:hidden;margin-bottom:20px">
       <!-- Light -->
-      <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--brd);cursor:pointer" onclick="setTheme('light')" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
-        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#fff,#f2f2f7);border:1.5px solid #ddd;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px">☀️</div>
-        <div style="flex:1">
-          <div style="font-size:16px;font-weight:600;color:var(--txt)">Светлая тема</div>
-          <div style="font-size:13px;color:#8e8e93;margin-top:2px">Всегда светлая</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <button onclick="event.stopPropagation();openThemeSchedule('light')" style="width:28px;height:28px;border:none;background:#f2f2f7;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer" title="Расписание">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-          </button>
+      <div style="padding:16px;border-bottom:1px solid var(--brd)">
+        <div style="display:flex;align-items:center;gap:14px;cursor:pointer;margin-bottom:12px" onclick="setTheme('light')">
+          <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#fff,#f2f2f7);border:1.5px solid #ddd;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px">☀️</div>
+          <div style="flex:1">
+            <div style="font-size:16px;font-weight:600;color:var(--txt)">Светлая тема</div>
+            <div style="font-size:13px;color:#8e8e93;margin-top:2px" id="lightScheduleLabel">Всегда светлая</div>
+          </div>
           <div id="themeCheckLight" style="width:22px;height:22px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
         </div>
+        <!-- Light schedule -->
+        <div style="background:#f2f2f7;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <div style="flex:1;font-size:13px;color:#8e8e93" id="lightScheduleSummary">Расписание не настроено</div>
+          <button onclick="openThemeSchedule('light')" style="border:none;background:var(--ac-l);color:var(--ac);padding:6px 12px;border-radius:10px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Настроить</button>
+        </div>
       </div>
       <!-- Dark -->
-      <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer" onclick="setTheme('dark')" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
-        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#1c1c1e,#2c2c2e);border:1.5px solid #444;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px">🌙</div>
-        <div style="flex:1">
-          <div style="font-size:16px;font-weight:600;color:var(--txt)">Тёмная тема</div>
-          <div style="font-size:13px;color:#8e8e93;margin-top:2px">Всегда тёмная</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <button onclick="event.stopPropagation();openThemeSchedule('dark')" style="width:28px;height:28px;border:none;background:#f2f2f7;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer" title="Расписание">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-          </button>
-          <div id="themeCheckDark" style="width:22px;height:22px;border-radius:50%;background:#ddd;display:flex;align-items:center;justify-content:center;display:none">
+      <div style="padding:16px">
+        <div style="display:flex;align-items:center;gap:14px;cursor:pointer;margin-bottom:12px" onclick="setTheme('dark')">
+          <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#1c1c1e,#2c2c2e);border:1.5px solid #444;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px">🌙</div>
+          <div style="flex:1">
+            <div style="font-size:16px;font-weight:600;color:var(--txt)">Тёмная тема</div>
+            <div style="font-size:13px;color:#8e8e93;margin-top:2px" id="darkScheduleLabel">Всегда тёмная</div>
+          </div>
+          <div id="themeCheckDark" style="width:22px;height:22px;border-radius:50%;background:var(--ac);display:none;align-items:center;justify-content:center">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
         </div>
+        <!-- Dark schedule -->
+        <div style="background:#f2f2f7;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <div style="flex:1;font-size:13px;color:#8e8e93" id="darkScheduleSummary">Расписание не настроено</div>
+          <button onclick="openThemeSchedule('dark')" style="border:none;background:var(--ac-l);color:var(--ac);padding:6px 12px;border-radius:10px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Настроить</button>
+        </div>
       </div>
     </div>
-
-    <!-- Schedule info -->
-    <div id="themeScheduleInfo" style="display:none;background:var(--ac-l);border-radius:14px;padding:14px 16px;margin-bottom:20px">
-      <div style="font-size:14px;font-weight:600;color:var(--ac)" id="themeScheduleText"></div>
-    </div>
-
   </div>
 </div>
 
@@ -893,30 +958,26 @@ body.dark #mainTabBar{background:#1c1c1e}
 <div class="modal-overlay" id="themeScheduleModal">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
-    <div style="display:flex;align-items:center;margin-bottom:16px">
-      <div style="flex:1;font-size:17px;font-weight:800">Расписание тем</div>
+    <div style="display:flex;align-items:center;margin-bottom:6px">
+      <div style="flex:1;font-size:17px;font-weight:800">Расписание</div>
       <button onclick="closeModal('themeScheduleModal')" style="border:none;background:none;font-size:22px;cursor:pointer;color:var(--txt2)">×</button>
     </div>
-    <div style="font-size:14px;color:var(--txt2);margin-bottom:16px">Укажи когда включать <span id="scheduleThemeName" style="font-weight:700;color:var(--txt)">тему</span></div>
-
+    <div style="font-size:14px;color:var(--txt2);margin-bottom:20px">Когда включать <span id="scheduleThemeName" style="font-weight:700;color:var(--txt)">тему</span>?</div>
     <!-- Time inputs -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div style="background:#f8f8f8;border-radius:14px;padding:14px;text-align:center">
-        <div style="font-size:12px;font-weight:700;color:#8e8e93;margin-bottom:6px">ВКЛЮЧИТЬ В</div>
+        <div style="font-size:11px;font-weight:700;color:#8e8e93;margin-bottom:6px;text-transform:uppercase">Включить в</div>
         <input type="time" id="scheduleTimeOn" value="21:00" style="font-size:22px;font-weight:700;border:none;background:none;color:var(--ac);text-align:center;width:100%;outline:none;font-family:var(--font)">
       </div>
       <div style="background:#f8f8f8;border-radius:14px;padding:14px;text-align:center">
-        <div style="font-size:12px;font-weight:700;color:#8e8e93;margin-bottom:6px">ВЫКЛЮЧИТЬ В</div>
+        <div style="font-size:11px;font-weight:700;color:#8e8e93;margin-bottom:6px;text-transform:uppercase">Выключить в</div>
         <input type="time" id="scheduleTimeOff" value="06:00" style="font-size:22px;font-weight:700;border:none;background:none;color:var(--txt2);text-align:center;width:100%;outline:none;font-family:var(--font)">
       </div>
     </div>
-
-    <!-- City -->
     <div style="background:#f8f8f8;border-radius:14px;padding:14px;margin-bottom:16px">
-      <div style="font-size:12px;font-weight:700;color:#8e8e93;margin-bottom:8px">ГОРОД (для часового пояса)</div>
-      <input id="scheduleCity" placeholder="Например: Москва, Шяуляй, Минск..." style="width:100%;border:none;background:none;font-family:var(--font);font-size:15px;color:var(--txt);outline:none">
+      <div style="font-size:11px;font-weight:700;color:#8e8e93;margin-bottom:8px;text-transform:uppercase">Город (для часового пояса)</div>
+      <input id="scheduleCity" placeholder="Например: Москва, Вильнюс, Минск..." style="width:100%;border:none;background:none;font-family:var(--font);font-size:15px;color:var(--txt);outline:none">
     </div>
-
     <button class="btn-save" onclick="saveThemeSchedule()">Сохранить расписание</button>
     <button onclick="clearThemeSchedule()" style="width:100%;padding:13px;border:none;border-radius:14px;background:none;color:var(--danger);font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;margin-top:8px">Отключить расписание</button>
   </div>
@@ -1294,7 +1355,7 @@ body.dark #mainTabBar{background:#1c1c1e}
 </div>
 
 <!-- QR code fullscreen -->
-<div id="qrPage" style="position:fixed;inset:0;z-index:92;background:#fff;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;align-items:center">
+<div id="qrPage" style="position:fixed;inset:0;z-index:600;background:var(--sb);transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;align-items:center">
   <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--brd);width:100%;flex-shrink:0">
     <button onclick="closeQrPage()" style="border:none;background:none;font-size:22px;cursor:pointer;color:var(--ac);padding:0">‹</button>
     <div style="flex:1;font-size:17px;font-weight:700" id="qrPageTitle">QR-код</div>
@@ -2276,33 +2337,31 @@ function openPeerQR() {
 
 function openMyQR() {
   hideTabBar();
-  // Закрываем любые модалы
-  ['profileModal','settingsEditModal'].forEach(id => {
-    document.getElementById(id)?.classList.remove('show');
-  });
   const page = document.getElementById('qrPage');
   if (!page) return;
   document.getElementById('qrUsername').textContent = '@' + (me || '');
   document.getElementById('qrPageTitle').textContent = 'Мой QR-код';
   renderQR(me, 'qrCodeCanvas');
-  // Открываем мгновенно поверх всего
-  page.style.transition = 'none';
+  // Показываем поверх всего
   page.style.display = 'flex';
-  page.style.transform = 'translateX(0)';
-  requestAnimationFrame(() => { page.style.transition = ''; });
+  page.style.transition = 'none';
+  page.style.transform = 'translateX(100%)';
+  requestAnimationFrame(() => {
+    page.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1)';
+    page.style.transform = 'translateX(0)';
+  });
 }
 
 function closeQrPage() {
   const page = document.getElementById('qrPage');
   if (!page) return;
+  page.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1)';
   page.style.transform = 'translateX(100%)';
-  setTimeout(() => { page.style.display = ''; page.style.transform = ''; }, 300);
-  // Восстанавливаем таббар только если мы в главных вкладках
-  const settingsOpen = document.getElementById('settingsPage');
-  const isSettingsVisible = settingsOpen &&
-    settingsOpen.style.display !== 'none' &&
-    settingsOpen.style.transform === 'translateX(0px)';
-  if (isSettingsVisible || currentTab === 'settings') {
+  setTimeout(() => {
+    page.style.display = 'none';
+  }, 260);
+  // Таббар показываем если мы в настройках или в главном меню чатов
+  if (currentTab === 'settings' || currentTab === 'chats') {
     showTabBar();
   }
 }
@@ -5301,9 +5360,92 @@ function renderTx() {
     </div>`).join('');
 }
 
-// ── Themes ───────────────────────────────────────────────────────────────────
+// ── Global search ─────────────────────────────────────────────────────────────
+function openGlobalSearch() {
+  hideTabBar();
+  document.getElementById('searchBubble').style.display = 'none';
+  const page = document.getElementById('globalSearchPage');
+  page.style.display = 'flex';
+  document.getElementById('globalSearchInp').value = '';
+  document.getElementById('globalSearchResults').innerHTML =
+    '<div style="padding:16px;color:var(--txt2);font-size:14px;text-align:center;margin-top:40px">Начни вводить имя или текст сообщения</div>';
+  setTimeout(() => document.getElementById('globalSearchInp').focus(), 100);
+}
+
+function closeGlobalSearch() {
+  document.getElementById('globalSearchPage').style.display = 'none';
+  document.getElementById('searchBubble').style.display = 'flex';
+  showTabBar();
+}
+
+function doGlobalSearch(q) {
+  const res = document.getElementById('globalSearchResults');
+  if (!q.trim()) {
+    res.innerHTML = '<div style="padding:16px;color:var(--txt2);font-size:14px;text-align:center;margin-top:40px">Начни вводить имя или текст сообщения</div>';
+    return;
+  }
+  const lower = q.toLowerCase();
+  // Search through chatsData
+  const chatMatches = Object.values(chatsData).filter(c => {
+    const name = (c.username || c.name || '').toLowerCase();
+    const disp = c.username ? getDisplayName(c.username).toLowerCase() : '';
+    return name.includes(lower) || disp.includes(lower);
+  });
+
+  let html = '';
+
+  if (chatMatches.length) {
+    html += `<div style="padding:10px 16px 6px;font-size:12px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px">Чаты и контакты</div>`;
+    html += chatMatches.slice(0,8).map(c => {
+      const key  = c.gid || c.username;
+      const name = c.gid ? c.name : getDisplayName(c.username);
+      const sub  = c.gid ? 'Группа' : '@' + c.username;
+      const bg   = getAvatarColor(key);
+      const avHtml = c.avatar
+        ? `<img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+        : (c.username||c.name||'?')[0].toUpperCase();
+      const hl = name.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),
+        '<span style="color:var(--ac);font-weight:700">$1</span>');
+      return `<div onclick="closeGlobalSearch();${c.gid?`openGroupChat('${c.gid}','${c.name||''}','${c.avatar||''}')`:`openChatWith('${c.username}','${c.avatar||''}',${!!c.online})`}"
+        style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--brd)"
+        onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
+        <div style="width:46px;height:46px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden">${avHtml}</div>
+        <div>
+          <div style="font-size:15px;font-weight:600;color:var(--txt)">${hl}</div>
+          <div style="font-size:13px;color:var(--txt2);margin-top:2px">${sub}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  if (!html) {
+    html = `<div style="padding:40px 16px;text-align:center;color:var(--txt2)">
+      <div style="font-size:40px;margin-bottom:12px">🔍</div>
+      <div style="font-size:15px">Ничего не найдено</div>
+      <div style="font-size:13px;margin-top:6px">Попробуй другой запрос</div>
+    </div>`;
+  }
+
+  res.innerHTML = html;
+}
+
+// Hide search bubble when tabbar is hidden
+const _origHideTabBar = hideTabBar;
+hideTabBar = function() {
+  _origHideTabBar();
+  const sb = document.getElementById('searchBubble');
+  if (sb) sb.style.display = 'none';
+};
+const _origShowTabBar = showTabBar;
+showTabBar = function() {
+  _origShowTabBar();
+  const sb = document.getElementById('searchBubble');
+  if (sb) sb.style.display = 'flex';
+};
+
+// ── Themes ────────────────────────────────────────────────────────────────────
 let currentTheme = localStorage.getItem('sup_theme') || 'light';
-let themeSchedule = JSON.parse(localStorage.getItem('sup_theme_schedule') || 'null');
+let themeSchedules = JSON.parse(localStorage.getItem('sup_theme_schedules') || '{}');
 let themeCheckInterval = null;
 let scheduleTargetTheme = 'dark';
 
@@ -5312,6 +5454,7 @@ function applyTheme(theme) {
   document.body.classList.toggle('dark', theme === 'dark');
   localStorage.setItem('sup_theme', theme);
   updateThemeChecks();
+  updateAllScheduleLabels();
 }
 
 function updateThemeChecks() {
@@ -5321,87 +5464,97 @@ function updateThemeChecks() {
   if (dark)  dark.style.display  = currentTheme === 'dark'  ? 'flex' : 'none';
 }
 
-function setTheme(theme) {
-  applyTheme(theme);
-  if (themeSchedule) { themeSchedule = null; localStorage.removeItem('sup_theme_schedule'); updateScheduleInfo(); }
+function setTheme(theme) { applyTheme(theme); }
+
+function updateAllScheduleLabels() {
+  const ls = themeSchedules.light;
+  const ds = themeSchedules.dark;
+  const lEl = document.getElementById('lightScheduleSummary');
+  const dEl = document.getElementById('darkScheduleSummary');
+  const lLb = document.getElementById('lightScheduleLabel');
+  const dLb = document.getElementById('darkScheduleLabel');
+  if (lEl) lEl.textContent = ls ? 'Вкл. в '+ls.on+' · Выкл. в '+ls.off+(ls.city?' · '+ls.city:'') : 'Расписание не настроено';
+  if (dEl) dEl.textContent = ds ? 'Вкл. в '+ds.on+' · Выкл. в '+ds.off+(ds.city?' · '+ds.city:'') : 'Расписание не настроено';
+  if (lLb) lLb.textContent = ls ? 'По расписанию: '+ls.on+'–'+ls.off : 'Всегда светлая';
+  if (dLb) dLb.textContent = ds ? 'По расписанию: '+ds.on+'–'+ds.off : 'Всегда тёмная';
 }
 
 function openSettingsThemes() {
   hideTabBar();
   updateThemeChecks();
-  updateScheduleInfo();
+  updateAllScheduleLabels();
   openFullPageAnimated('themesPage');
 }
 
 function openThemeSchedule(theme) {
   scheduleTargetTheme = theme;
   document.getElementById('scheduleThemeName').textContent = theme === 'dark' ? 'Тёмную тему' : 'Светлую тему';
-  if (themeSchedule) {
-    document.getElementById('scheduleTimeOn').value  = themeSchedule.on  || '21:00';
-    document.getElementById('scheduleTimeOff').value = themeSchedule.off || '06:00';
-    document.getElementById('scheduleCity').value    = themeSchedule.city || '';
-  }
+  const s = themeSchedules[theme] || {};
+  document.getElementById('scheduleTimeOn').value  = s.on   || (theme === 'dark' ? '21:00' : '07:00');
+  document.getElementById('scheduleTimeOff').value = s.off  || (theme === 'dark' ? '07:00' : '21:00');
+  document.getElementById('scheduleCity').value    = s.city || '';
   hideTabBar();
   document.getElementById('themeScheduleModal').classList.add('show');
 }
 
 function saveThemeSchedule() {
-  themeSchedule = {
-    theme: scheduleTargetTheme,
+  const t = scheduleTargetTheme;
+  themeSchedules[t] = {
     on:   document.getElementById('scheduleTimeOn').value  || '21:00',
     off:  document.getElementById('scheduleTimeOff').value || '06:00',
     city: document.getElementById('scheduleCity').value.trim()
   };
-  localStorage.setItem('sup_theme_schedule', JSON.stringify(themeSchedule));
+  localStorage.setItem('sup_theme_schedules', JSON.stringify(themeSchedules));
   closeModal('themeScheduleModal');
   startThemeScheduler();
-  updateScheduleInfo();
-  toast('✅ Расписание сохранено');
+  updateAllScheduleLabels();
+  toast('Расписание сохранено');
 }
 
 function clearThemeSchedule() {
-  themeSchedule = null;
-  localStorage.removeItem('sup_theme_schedule');
-  if (themeCheckInterval) clearInterval(themeCheckInterval);
+  delete themeSchedules[scheduleTargetTheme];
+  localStorage.setItem('sup_theme_schedules', JSON.stringify(themeSchedules));
   closeModal('themeScheduleModal');
-  updateScheduleInfo();
+  updateAllScheduleLabels();
+  if (!themeSchedules.dark && !themeSchedules.light) {
+    if (themeCheckInterval) { clearInterval(themeCheckInterval); themeCheckInterval = null; }
+  }
   toast('Расписание отключено');
-}
-
-function updateScheduleInfo() {
-  const el = document.getElementById('themeScheduleInfo');
-  const tx = document.getElementById('themeScheduleText');
-  if (!el || !tx) return;
-  if (themeSchedule) {
-    el.style.display = 'block';
-    tx.textContent = `${themeSchedule.theme==='dark'?'Тёмная':'Светлая'} тема: ${themeSchedule.on} → ${themeSchedule.off}${themeSchedule.city?' · '+themeSchedule.city:''}`;
-  } else { el.style.display = 'none'; }
 }
 
 function startThemeScheduler() {
   if (themeCheckInterval) clearInterval(themeCheckInterval);
-  themeCheckInterval = setInterval(checkThemeSchedule, 60000);
-  checkThemeSchedule();
+  themeCheckInterval = setInterval(checkThemeSchedules, 30000);
+  checkThemeSchedules();
 }
 
-function checkThemeSchedule() {
-  if (!themeSchedule) return;
-  const now = new Date();
-  const [onH, onM]   = themeSchedule.on.split(':').map(Number);
-  const [offH, offM] = themeSchedule.off.split(':').map(Number);
-  const nowMins = now.getHours()*60 + now.getMinutes();
-  const onMins  = onH*60 + onM;
-  const offMins = offH*60 + offM;
-  let active;
-  if (onMins > offMins) active = nowMins >= onMins || nowMins < offMins; // overnight
-  else active = nowMins >= onMins && nowMins < offMins;
-  const target = (themeSchedule.theme === 'dark') === active ? 'dark' : 'light';
-  if (target !== currentTheme) applyTheme(target);
+function timeInRange(nowMins, onMins, offMins) {
+  if (onMins > offMins) return nowMins >= onMins || nowMins < offMins;
+  return nowMins >= onMins && nowMins < offMins;
 }
 
-// Apply saved theme on load
+function checkThemeSchedules() {
+  const nowMins = new Date().getHours()*60 + new Date().getMinutes();
+  const ds = themeSchedules.dark;
+  const ls = themeSchedules.light;
+  if (ds) {
+    const [onH,onM] = ds.on.split(':').map(Number);
+    const [offH,offM] = ds.off.split(':').map(Number);
+    if (timeInRange(nowMins, onH*60+onM, offH*60+offM)) {
+      if (currentTheme !== 'dark') applyTheme('dark'); return;
+    }
+  }
+  if (ls) {
+    const [onH,onM] = ls.on.split(':').map(Number);
+    const [offH,offM] = ls.off.split(':').map(Number);
+    if (timeInRange(nowMins, onH*60+onM, offH*60+offM)) {
+      if (currentTheme !== 'light') applyTheme('light'); return;
+    }
+  }
+}
+
 applyTheme(currentTheme);
-if (themeSchedule) startThemeScheduler();
+if (themeSchedules.dark || themeSchedules.light) startThemeScheduler();
 
 function showTabBar() {
   if (editMode) return; // в режиме редактирования не показываем
@@ -6369,7 +6522,6 @@ connect();
 </script>
 <!-- Floating tab bar — at body level, always above fullpages -->
 <div class="bottom-tabbar" id="mainTabBar">
-  <!-- Animated sliding indicator -->
   <div id="tabIndicator" style="position:absolute;border-radius:22px;background:rgba(26,188,156,.12);transition:left .3s cubic-bezier(.34,1.56,.64,1),width .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;top:5px;bottom:5px;left:5px;width:64px"></div>
   <button class="tab-btn" id="tabBtnCalls" onclick="switchTab2('calls')">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.6 3.38 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.08 6.08l1.14-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
@@ -6383,6 +6535,30 @@ connect();
     <div class="tab-my-av" id="tabMyAv">?</div>
     <span>Настройки</span>
   </button>
+</div>
+
+<!-- Search bubble — separate circle next to tabbar -->
+<button id="searchBubble" onclick="openGlobalSearch()" style="position:fixed;bottom:calc(14px + env(safe-area-inset-bottom));right:16px;z-index:500;width:50px;height:50px;border-radius:50%;background:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 24px rgba(0,0,0,.15),0 1px 4px rgba(0,0,0,.08)">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+</button>
+
+<!-- Global search overlay -->
+<div id="globalSearchPage" style="position:fixed;inset:0;z-index:510;display:none;flex-direction:column;background:var(--sb)">
+  <!-- Search input -->
+  <div style="padding:12px 16px 8px;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:10px;background:var(--inp-bg,#f2f2f7);border-radius:14px;padding:10px 14px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input id="globalSearchInp" placeholder="Поиск по чатам..." oninput="doGlobalSearch(this.value)"
+        style="flex:1;border:none;background:none;font-family:var(--font);font-size:16px;color:var(--txt);outline:none">
+      <button onclick="closeGlobalSearch()" style="border:none;background:none;color:var(--ac);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;padding:0;flex-shrink:0">Отмена</button>
+    </div>
+  </div>
+  <!-- Results -->
+  <div id="globalSearchResults" style="flex:1;overflow-y:auto">
+    <div style="padding:16px;color:var(--txt2);font-size:14px;text-align:center;margin-top:40px">
+      Начни вводить имя или текст сообщения
+    </div>
+  </div>
 </div>
 
 <!-- Edit mode bottom action bar -->
