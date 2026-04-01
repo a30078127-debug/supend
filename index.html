@@ -588,47 +588,204 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 
 <!-- Settings fullscreen page -->
 <div class="fullpage" id="settingsPage">
-  <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--brd);flex-shrink:0">
-    <div style="flex:1;font-size:20px;font-weight:800">Настройки</div>
-    <button onclick="closeFullPage('settingsPage')" style="border:none;background:var(--ac-l);color:var(--ac);padding:7px 16px;border-radius:20px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">Готово</button>
+  <!-- Header -->
+  <div style="display:flex;align-items:center;padding:12px 16px;flex-shrink:0;position:relative">
+    <button onclick="openMyQR()" style="width:38px;height:38px;border:none;background:#f2f2f7;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="4" height="4"/></svg>
+    </button>
+    <div style="flex:1"></div>
+    <button onclick="openSettingsEdit()" style="border:none;background:#f2f2f7;color:#333;padding:8px 18px;border-radius:20px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer">Изм.</button>
   </div>
-  <div style="flex:1;overflow-y:auto;padding:16px">
-    <!-- Avatar -->
-    <div style="text-align:center;margin-bottom:24px">
-      <div id="settingsAv" onclick="document.getElementById('avInp2').click()" style="width:88px;height:88px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;color:#fff;margin:0 auto 12px;overflow:hidden;cursor:pointer;box-shadow:0 4px 16px rgba(26,188,156,.3)">?</div>
+
+  <div style="flex:1;overflow-y:auto;background:#f2f2f7;padding-bottom:16px">
+    <!-- Profile card -->
+    <div style="background:#fff;margin:0 0 16px;padding:20px 16px 24px;text-align:center">
+      <div id="settingsAv" onclick="document.getElementById('avInp2').click()" style="width:80px;height:80px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#fff;margin:0 auto 12px;overflow:hidden;cursor:pointer;box-shadow:0 2px 12px rgba(26,188,156,.25)">?</div>
       <input type="file" id="avInp2" accept="image/*" style="display:none" onchange="onAvChange2(this)">
-      <div style="font-size:18px;font-weight:800" id="settingsName">@user</div>
-      <div style="font-size:13px;color:var(--ac);margin-top:2px" id="settingsStatus">● онлайн</div>
+      <div style="font-size:20px;font-weight:800;margin-bottom:2px" id="settingsName">@user</div>
+      <div style="font-size:13px;color:var(--txt2)" id="settingsStatusLabel">В сети</div>
     </div>
-    <!-- Status selector -->
-    <div style="background:#f8f8f8;border-radius:16px;padding:16px;margin-bottom:14px">
-      <div style="font-size:12px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Статус</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="status-btn active" data-status="online" onclick="selectMyStatus(this,'online')">🟢 В сети</button>
-        <button class="status-btn" data-status="away" onclick="selectMyStatus(this,'away')">🟡 Отошёл</button>
-        <button class="status-btn" data-status="dnd" onclick="selectMyStatus(this,'dnd')">🔴 Не беспокоить</button>
+
+    <!-- Section: Account -->
+    <div style="margin:0 16px 8px;font-size:13px;font-weight:600;color:#8e8e93;text-transform:uppercase;letter-spacing:.4px">Аккаунт</div>
+    <div style="background:#fff;border-radius:14px;margin:0 16px 20px;overflow:hidden">
+      <div onclick="openSettingsEdit()" style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
+        <div style="width:32px;height:32px;border-radius:8px;background:var(--ac);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div style="flex:1;font-size:16px">Профиль</div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div onclick="openMyQR()" style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
+        <div style="width:32px;height:32px;border-radius:8px;background:#007aff;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="4" height="4"/></svg>
+        </div>
+        <div style="flex:1;font-size:16px">Мой QR-код</div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div onclick="openWallet();closeFullPage('settingsPage')" style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
+        <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#1ABC9C,#16a085);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M16 12a1 1 0 1 0 2 0 1 1 0 0 0-2 0z" fill="white" stroke="none"/><path d="M2 10h20"/></svg>
+        </div>
+        <div style="flex:1;font-size:16px">Кошелёк</div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div onclick="openExchange();closeFullPage('settingsPage')" style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
+        <div style="width:32px;height:32px;border-radius:8px;background:#f0b90b;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        </div>
+        <div style="flex:1;font-size:16px">P2P Обменник</div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+
+    <!-- Section: App -->
+    <div style="margin:0 16px 8px;font-size:13px;font-weight:600;color:#8e8e93;text-transform:uppercase;letter-spacing:.4px">Приложение</div>
+    <div style="background:#fff;border-radius:14px;margin:0 16px 20px;overflow:hidden">
+      <div onclick="openSettingsFolders()" style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
+        <div style="width:32px;height:32px;border-radius:8px;background:#5856d6;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div style="flex:1;font-size:16px">Папки с чатами</div>
+        <span style="font-size:14px;color:#8e8e93;margin-right:6px" id="settingsFolderCount"></span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div onclick="openSettingsNotifs()" style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
+        <div style="width:32px;height:32px;border-radius:8px;background:#ff3b30;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </div>
+        <div style="flex:1;font-size:16px">Уведомления и звуки</div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div onclick="toast('Скоро!')" style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
+        <div style="width:32px;height:32px;border-radius:8px;background:#34aadc;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div style="flex:1;font-size:16px">Конфиденциальность</div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+
+    <!-- Ref code -->
+    <div style="background:#fff;border-radius:14px;margin:0 16px 20px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid #f0f0f0">
+        <div style="width:32px;height:32px;border-radius:8px;background:#ff9500;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:16px">Код приглашения</div>
+          <div style="font-size:13px;color:var(--ac);font-weight:700;margin-top:2px" id="settingsRefCode"></div>
+        </div>
+        <button onclick="copyRefCode()" style="border:none;background:#f2f2f7;color:var(--ac);padding:6px 12px;border-radius:10px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Копировать</button>
+      </div>
+    </div>
+
+    <!-- Logout -->
+    <div style="background:#fff;border-radius:14px;margin:0 16px 20px;overflow:hidden">
+      <div onclick="doLogout()" style="display:flex;align-items:center;justify-content:center;padding:14px 16px;cursor:pointer;color:#e74c3c;font-size:16px;font-weight:600" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
+        Выйти из аккаунта
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Edit Modal -->
+<div class="modal-overlay" id="settingsEditModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;margin-bottom:16px">
+      <div style="flex:1;font-size:17px;font-weight:800">Редактировать профиль</div>
+      <button onclick="closeModal('settingsEditModal')" style="border:none;background:none;font-size:22px;cursor:pointer;color:var(--txt2)">×</button>
+    </div>
+    <!-- Avatar -->
+    <div style="text-align:center;margin-bottom:16px">
+      <div id="editModalAv" onclick="document.getElementById('avInp2').click()" style="width:72px;height:72px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff;margin:0 auto 8px;overflow:hidden;cursor:pointer">?</div>
+      <div style="font-size:13px;color:var(--ac);cursor:pointer" onclick="document.getElementById('avInp2').click()">Изменить фото</div>
+    </div>
+    <!-- Status -->
+    <div class="modal-field">
+      <div class="modal-label">Статус</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:10px;cursor:pointer;background:#f8f8f8">
+          <span style="font-size:15px">В сети</span>
+          <input type="radio" name="editStatus" value="online" style="accent-color:var(--ac);width:18px;height:18px">
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:10px;cursor:pointer;background:#f8f8f8">
+          <span style="font-size:15px">Отошёл</span>
+          <input type="radio" name="editStatus" value="away" style="accent-color:var(--ac);width:18px;height:18px">
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:10px;cursor:pointer;background:#f8f8f8">
+          <span style="font-size:15px">Не беспокоить</span>
+          <input type="radio" name="editStatus" value="dnd" style="accent-color:var(--ac);width:18px;height:18px">
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:10px;cursor:pointer;background:#f8f8f8">
+          <span style="font-size:15px">Невидимый</span>
+          <input type="radio" name="editStatus" value="invisible" style="accent-color:var(--ac);width:18px;height:18px">
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:10px;cursor:pointer;background:#f8f8f8">
+          <span style="font-size:15px">Недавно был(а)</span>
+          <input type="radio" name="editStatus" value="recently" style="accent-color:var(--ac);width:18px;height:18px">
+        </label>
       </div>
     </div>
     <!-- Bio -->
-    <div style="background:#f8f8f8;border-radius:16px;padding:16px;margin-bottom:14px">
-      <div style="font-size:12px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">О себе</div>
-      <textarea id="settingsBio" placeholder="Расскажи о себе..." style="width:100%;border:none;background:none;font-family:var(--font);font-size:15px;resize:none;outline:none;min-height:60px;color:var(--txt)"></textarea>
+    <div class="modal-field" style="margin-top:12px">
+      <div class="modal-label">О себе</div>
+      <textarea id="editModalBio" placeholder="Расскажи о себе..." class="modal-textarea"></textarea>
     </div>
-    <!-- Ref code -->
-    <div style="background:#f8f8f8;border-radius:16px;padding:16px;margin-bottom:14px">
-      <div style="font-size:12px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Код приглашения</div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <div style="flex:1;font-size:15px;font-weight:700;color:var(--ac)" id="settingsRefCode"></div>
-        <button onclick="copyRefCode()" style="padding:8px 14px;border:none;border-radius:10px;background:var(--ac-l);color:var(--ac);font-weight:700;cursor:pointer;font-family:var(--font)">Скопировать</button>
-      </div>
+    <!-- Email -->
+    <div class="modal-field">
+      <div class="modal-label">Email (необязательно)</div>
+      <input id="editModalEmail" class="modal-inp" type="email" placeholder="example@mail.com">
     </div>
-    <!-- QR -->
-    <button onclick="openMyQR()" style="width:100%;padding:14px;border:1.5px solid var(--ac);border-radius:16px;background:var(--ac-l);color:var(--ac);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="4" height="4"/></svg>
-      Мой QR-код
-    </button>
-    <button class="btn-save" onclick="saveSettings()">Сохранить</button>
-    <button onclick="doLogout()" style="width:100%;padding:13px;border:none;border-radius:14px;background:none;color:var(--danger);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">Выйти</button>
+    <button class="btn-save" onclick="saveSettingsEdit()" style="margin-top:8px">Сохранить</button>
+  </div>
+</div>
+
+<!-- Settings Folders page -->
+<div class="fullpage" id="settingsFoldersPage" style="z-index:97">
+  <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--brd);flex-shrink:0;background:#fff">
+    <button onclick="closeFullPage('settingsFoldersPage')" style="border:none;background:none;font-size:22px;cursor:pointer;color:var(--ac);padding:0;margin-right:8px">‹</button>
+    <div style="flex:1;font-size:17px;font-weight:700">Папки с чатами</div>
+    <button onclick="showCreateFolderModal()" style="border:none;background:none;color:var(--ac);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font)">+ Новая</button>
+  </div>
+  <div id="settingsFoldersList" style="flex:1;overflow-y:auto;background:#f2f2f7;padding:16px"></div>
+</div>
+
+<!-- Settings Notifications page -->
+<div class="fullpage" id="settingsNotifsPage" style="z-index:97">
+  <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--brd);flex-shrink:0;background:#fff">
+    <button onclick="closeFullPage('settingsNotifsPage')" style="border:none;background:none;font-size:22px;cursor:pointer;color:var(--ac);padding:0;margin-right:8px">‹</button>
+    <div style="flex:1;font-size:17px;font-weight:700">Уведомления и звуки</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;background:#f2f2f7;padding:16px">
+    <div style="background:#fff;border-radius:14px;overflow:hidden;margin-bottom:16px">
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #f0f0f0">
+        <span style="font-size:16px">Сообщения</span>
+        <input type="checkbox" id="notifMessages" checked onchange="saveNotifSettings()" style="width:44px;height:26px;accent-color:var(--ac)">
+      </label>
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #f0f0f0">
+        <span style="font-size:16px">Звонки</span>
+        <input type="checkbox" id="notifCalls" checked onchange="saveNotifSettings()" style="width:44px;height:26px;accent-color:var(--ac)">
+      </label>
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #f0f0f0">
+        <span style="font-size:16px">Групповые чаты</span>
+        <input type="checkbox" id="notifGroups" checked onchange="saveNotifSettings()" style="width:44px;height:26px;accent-color:var(--ac)">
+      </label>
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px">
+        <span style="font-size:16px">Сделки P2P</span>
+        <input type="checkbox" id="notifDeals" checked onchange="saveNotifSettings()" style="width:44px;height:26px;accent-color:var(--ac)">
+      </label>
+    </div>
+    <div style="background:#fff;border-radius:14px;overflow:hidden">
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px">
+        <div>
+          <div style="font-size:16px">Показывать текст в уведомлении</div>
+          <div style="font-size:13px;color:#8e8e93;margin-top:2px">Если выключено — только «Новое сообщение»</div>
+        </div>
+        <input type="checkbox" id="notifShowText" checked onchange="saveNotifSettings()" style="width:44px;height:26px;accent-color:var(--ac)">
+      </label>
+    </div>
   </div>
 </div>
 
@@ -4595,34 +4752,121 @@ function renderCallLog2() {
 }
 
 function fillSettingsPage() {
+  // Avatar
   const av = document.getElementById('settingsAv');
-  if (myAvatar) av.innerHTML = `<img src="${myAvatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-  else { av.textContent = me?me[0].toUpperCase():'?'; av.style.background = getAvatarColor(me); }
-  document.getElementById('settingsName').textContent = '@' + (me||'');
-  document.getElementById('settingsBio').value = myBio;
-  document.getElementById('settingsRefCode').textContent = myRefCode;
-  document.querySelectorAll('.status-btn').forEach(b => b.classList.toggle('active', b.dataset.status === myStatus));
+  const editAv = document.getElementById('editModalAv');
+  [av, editAv].forEach(el => {
+    if (!el) return;
+    if (myAvatar) el.innerHTML = `<img src="${myAvatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    else { el.textContent = me?me[0].toUpperCase():'?'; el.style.background = getAvatarColor(me); }
+  });
+
+  // Name & status
+  const nm = document.getElementById('settingsName');
+  if (nm) nm.textContent = me ? '@' + me : '';
+  const stLbl = document.getElementById('settingsStatusLabel');
+  const statusLabels = {online:'В сети', away:'Отошёл', dnd:'Не беспокоить', invisible:'Невидимый', recently:'Недавно был(а)'};
+  if (stLbl) stLbl.textContent = statusLabels[myStatus] || 'В сети';
+
+  // Ref code
+  const ref = document.getElementById('settingsRefCode');
+  if (ref) ref.textContent = myRefCode;
+
+  // Folder count
+  const fc = document.getElementById('settingsFolderCount');
+  if (fc) { const n = Object.keys(folders).length; fc.textContent = n > 0 ? n : ''; }
+
+  // Notif settings from localStorage
+  const ns = JSON.parse(localStorage.getItem('sup_notif_settings') || '{}');
+  ['Messages','Calls','Groups','Deals','ShowText'].forEach(k => {
+    const el = document.getElementById('notif' + k);
+    if (el) el.checked = ns[k] !== false;
+  });
 }
+
+function openSettingsEdit() {
+  // Fill edit modal
+  const editAv = document.getElementById('editModalAv');
+  if (myAvatar) editAv.innerHTML = `<img src="${myAvatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  else { editAv.textContent = me?me[0].toUpperCase():'?'; editAv.style.background = getAvatarColor(me); }
+  document.getElementById('editModalBio').value = myBio;
+  document.getElementById('editModalEmail').value = '';
+  // Set radio
+  document.querySelectorAll('input[name="editStatus"]').forEach(r => { r.checked = r.value === myStatus; });
+  document.getElementById('settingsEditModal').classList.add('show');
+}
+
+function saveSettingsEdit() {
+  myBio = document.getElementById('editModalBio').value.trim();
+  if (newAvatarData) myAvatar = newAvatarData;
+  const radio = document.querySelector('input[name="editStatus"]:checked');
+  if (radio) { myStatus = radio.value; localStorage.setItem('sup_status', myStatus); }
+  cmd({ cmd:'save_profile', bio:myBio, avatar:myAvatar, status:myStatus });
+  updateMyUI();
+  closeModal('settingsEditModal');
+  fillSettingsPage();
+  toast('Профиль сохранён');
+  newAvatarData = null;
+}
+
+function openSettingsFolders() {
+  const list = document.getElementById('settingsFoldersList');
+  const names = Object.keys(folders);
+  if (!names.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:#8e8e93">Папок пока нет.<br>Зажми чат чтобы добавить в папку.</div>';
+  } else {
+    list.innerHTML = '<div style="background:#fff;border-radius:14px;overflow:hidden">' +
+      names.map((n, i) => `
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;${i < names.length-1?'border-bottom:1px solid #f0f0f0':''}">
+          <div style="width:32px;height:32px;border-radius:8px;background:#5856d6;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:16px;font-weight:600">${n}</div>
+            <div style="font-size:13px;color:#8e8e93">${(folders[n]||[]).length} чат(ов)</div>
+          </div>
+          <button onclick="deleteFolderFromSettings('${n}')" style="border:none;background:#f2f2f7;color:#e74c3c;padding:6px 12px;border-radius:10px;font-family:var(--font);font-size:13px;cursor:pointer">Удалить</button>
+        </div>`).join('') + '</div>';
+  }
+  openFullPage('settingsFoldersPage');
+}
+
+function deleteFolderFromSettings(name) {
+  if (!confirm(`Удалить папку «${name}»?`)) return;
+  delete folders[name];
+  saveFolders();
+  if (activeFolderKey === name) activeFolderKey = 'all';
+  renderFoldersBar();
+  openSettingsFolders(); // refresh
+  fillSettingsPage();
+  toast(`Папка «${name}» удалена`);
+}
+
+function openSettingsNotifs() {
+  openFullPage('settingsNotifsPage');
+}
+
+function saveNotifSettings() {
+  const ns = {};
+  ['Messages','Calls','Groups','Deals','ShowText'].forEach(k => {
+    const el = document.getElementById('notif' + k);
+    if (el) ns[k] = el.checked;
+  });
+  localStorage.setItem('sup_notif_settings', JSON.stringify(ns));
+}
+
+function saveSettings() { saveSettingsEdit(); }
 
 function onAvChange2(inp) {
   const f = inp.files[0]; if (!f) return;
   const r = new FileReader();
   r.onload = () => {
     newAvatarData = r.result;
-    const av = document.getElementById('settingsAv');
-    av.innerHTML = `<img src="${r.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    [document.getElementById('settingsAv'), document.getElementById('editModalAv')].forEach(el => {
+      if (el) el.innerHTML = `<img src="${r.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    });
   };
   r.readAsDataURL(f);
-}
-
-function saveSettings() {
-  myBio = document.getElementById('settingsBio').value.trim();
-  if (newAvatarData) myAvatar = newAvatarData;
-  cmd({ cmd:'save_profile', bio:myBio, avatar:myAvatar, status:myStatus });
-  updateMyUI();
-  closeFullPage('settingsPage');
-  toast('Профиль сохранён');
-  newAvatarData = null;
 }
 
 // ── Chat item long-press: add "Add to folder" ─────────────────────────────────
