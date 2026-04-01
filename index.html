@@ -1256,8 +1256,12 @@ function connect() {
     console.log('WS connected');
     const st = document.getElementById('wsStatus');
     if (st) { st.textContent = '🟢 Соединение установлено'; st.style.color = '#1ABC9C'; }
-    document.getElementById('authBtn').disabled = false;
-    if (me && myPassword) cmd({ cmd:'login', username:me, password:myPassword });
+    const btn = document.getElementById('authBtn');
+    if (btn) btn.disabled = false;
+    // Автовход если есть сохранённая сессия
+    if (me && myPassword) {
+      cmd({ cmd:'login', username:me, password:myPassword });
+    }
   };
   ws.onclose = () => {
     const st = document.getElementById('wsStatus');
@@ -1440,8 +1444,8 @@ function onAuthOk(d) {
   updateSup(mySup);
   cmd({ cmd:'get_chats' });
   applyStoredCustom();
-  // Запрашиваем разрешение и подписываемся на Web Push
-  setTimeout(subscribePush, 2000);
+  // Запрашиваем разрешение на уведомления — явный модал
+  setTimeout(askNotifPermission, 1500);
   if (d.inv_bonus && d.inv_bonus > 0) {
     addTx('Бонус за код приглашения', +d.inv_bonus, '🎁');
     toast(`+${d.inv_bonus} SUP за код приглашения! 🎁`);
@@ -4475,6 +4479,50 @@ function sendPushNotif(title, body, tag) {
 // Регистрируем SW при загрузке
 registerSW();
 
+// ── Notification permission modal ────────────────────────────────────────────
+function askNotifPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'granted') { subscribePush(); return; }
+  if (Notification.permission === 'denied')  return;
+  if (localStorage.getItem('sup_notif_asked')) { subscribePush(); return; }
+
+  // Показываем красивый модал с объяснением
+  const m = document.createElement('div');
+  m.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center';
+  m.innerHTML = `
+    <div style="background:#fff;border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:480px;animation:slideUp .25s ease-out">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+        <div style="width:52px;height:52px;border-radius:16px;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">🔔</div>
+        <div>
+          <div style="font-size:17px;font-weight:800">Включи уведомления</div>
+          <div style="font-size:13px;color:#888;margin-top:2px">Supend · не пропусти сообщения</div>
+        </div>
+      </div>
+      <div style="font-size:14px;color:#555;line-height:1.6;margin-bottom:20px;background:#f8f8f8;border-radius:14px;padding:14px">
+        Получай уведомления о новых сообщениях, звонках и сделках — даже когда приложение закрыто.
+      </div>
+      <div style="display:flex;gap:10px">
+        <button id="notifDeclineBtn" style="flex:1;padding:13px;border:1.5px solid #eee;border-radius:14px;background:none;font-family:var(--font);font-size:14px;cursor:pointer;color:#888">
+          Не сейчас
+        </button>
+        <button id="notifAllowBtn" style="flex:2;padding:13px;border:none;border-radius:14px;background:var(--ac);color:#fff;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(26,188,156,.35)">
+          🔔 Разрешить
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(m);
+
+  document.getElementById('notifAllowBtn').onclick = async () => {
+    m.remove();
+    localStorage.setItem('sup_notif_asked', '1');
+    await subscribePush();
+  };
+  document.getElementById('notifDeclineBtn').onclick = () => {
+    m.remove();
+    localStorage.setItem('sup_notif_asked', '1');
+  };
+}
+
 // ── PWA Install ─────────────────────────────────────────────────────────────
 let pwaPrompt = null;
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -4596,7 +4644,6 @@ function showIosInstallModal() {
 }
 
 // ── Init ────────────────────────────────────────────────────────────────────
-// Автовход: восстанавливаем сохранённые данные
 (function autoLogin() {
   const saved = localStorage.getItem('sup_session');
   if (saved) {
@@ -4608,12 +4655,28 @@ function showIosInstallModal() {
         // Показываем экран загрузки вместо auth
         const auth = document.getElementById('authScreen');
         if (auth) {
-          auth.innerHTML = `<div class="auth-logo" style="background:none;box-shadow:none;overflow:hidden;border-radius:24px"><img src="/logo" style="width:80px;height:80px;object-fit:cover;border-radius:24px" onerror="this.parentElement.innerHTML='💬'"></div><div class="auth-title">Supend</div><div style="margin-top:20px;color:var(--txt2);font-size:14px">⏳ Входим...</div>`;
+          auth.innerHTML = `
+            <div class="auth-logo" style="background:none;box-shadow:none;overflow:hidden;border-radius:24px">
+              <img src="/logo" style="width:80px;height:80px;object-fit:cover;border-radius:24px" onerror="this.parentElement.innerHTML='💬'">
+            </div>
+            <div class="auth-title">Supend</div>
+            <div style="margin-top:20px;color:var(--txt2);font-size:14px">⏳ Входим...</div>`;
         }
       }
     } catch(e) {}
   }
 })();
+
+// Переподключаемся когда PWA возвращается на экран
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    // Если WS отвалился пока приложение было свёрнуто — переподключаемся
+    if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+      connect();
+    }
+  }
+});
+
 connect();
 </script>
 </body>
