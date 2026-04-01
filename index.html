@@ -82,7 +82,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .story-plus{position:absolute;bottom:0;right:0;width:18px;height:18px;border-radius:50%;background:var(--ac);border:2px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:900;line-height:1}
 .story-name{font-size:11px;color:var(--txt2);font-weight:500;text-align:center;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* ── Bottom tab bar ────────────────────────────── */
+/* ── Folder tabs ───────────────────────────────── */
+.folder-tab{padding:7px 16px;border:none;border-radius:20px;background:#f2f2f7;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;color:var(--txt2);white-space:nowrap;transition:.15s;flex-shrink:0}
+.folder-tab.active{background:var(--ac);color:#fff}
+#foldersBar::-webkit-scrollbar{display:none}
+/* ── Edit mode ─────────────────────────────────── */
+.chat-item.edit-mode{padding-left:44px}
+.chat-delete-btn{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:#e74c3c;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:900;line-height:1}
+/* ── Calls/Settings fullscreen page ───────────── */
+.fullpage{position:fixed;inset:0;z-index:95;background:#fff;display:none;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.fullpage.show{display:flex;transform:translateX(0)}
 .bottom-tabbar{display:flex;border-top:1px solid var(--brd);background:#fff;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom)}
 .tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 6px;border:none;background:none;cursor:pointer;color:var(--txt2);font-family:var(--font);font-size:11px;font-weight:600;transition:.15s}
 .tab-btn.active{color:var(--ac)}
@@ -464,34 +473,29 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
   <!-- Sidebar -->
   <div class="sidebar">
 
-    <!-- Top bar: just actions -->
+    <!-- Top bar -->
     <div class="sb-topbar">
-      <!-- Download/Install button (arrow) -->
-      <button id="installPwaBtn" onclick="installPwa(event)" title="Установить" style="display:none;width:36px;height:36px;border:none;background:none;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ac);transition:.15s" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background='none'">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 3v12M8 11l4 4 4-4"/><path d="M3 19h18"/>
-        </svg>
-      </button>
+      <!-- Изм. button (left) -->
+      <button id="editModeBtn" onclick="toggleEditMode()" style="padding:6px 14px;border:none;border-radius:20px;background:var(--ac-l);color:var(--ac);font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;transition:.15s">Изм.</button>
       <div style="flex:1"></div>
-      <!-- New chat / group / wallet button -->
+      <!-- Download arrow + action button (right, grouped) -->
+      <button id="installPwaBtn" onclick="installPwa(event)" title="Установить" style="width:34px;height:34px;border:none;background:none;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ac)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M3 19h18"/></svg>
+      </button>
       <div style="position:relative">
-        <button id="topActBtn" onclick="toggleTopMenu()" style="width:36px;height:36px;border:none;background:none;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ac);transition:.15s" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background='none'" title="Действия">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
+        <button onclick="toggleTopMenu()" style="width:34px;height:34px;border:none;background:none;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ac)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
-        <!-- Top dropdown menu -->
-        <div id="topActMenu" style="display:none;position:absolute;top:44px;right:0;z-index:300;background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:8px;min-width:200px;animation:ctxFadeIn .15s ease-out">
-          <div onclick="closeTopMenu();openCreateGroup()" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;cursor:pointer;font-size:15px;font-weight:500;transition:.12s" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
+        <div id="topActMenu" style="display:none;position:absolute;top:40px;right:0;z-index:300;background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:8px;min-width:200px;animation:ctxFadeIn .15s ease-out">
+          <div onclick="closeTopMenu();openCreateGroup()" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;cursor:pointer;font-size:15px;font-weight:500" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             Создать группу
           </div>
-          <div onclick="closeTopMenu();openWallet()" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;cursor:pointer;font-size:15px;font-weight:500;transition:.12s" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
+          <div onclick="closeTopMenu();openWallet()" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;cursor:pointer;font-size:15px;font-weight:500" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M16 12a1 1 0 1 0 2 0 1 1 0 0 0-2 0z" fill="var(--ac)" stroke="none"/><path d="M2 10h20"/></svg>
             Кошелёк
           </div>
-          <div onclick="closeTopMenu();openExchange()" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;cursor:pointer;font-size:15px;font-weight:500;transition:.12s" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
+          <div onclick="closeTopMenu();openExchange()" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;cursor:pointer;font-size:15px;font-weight:500" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2" stroke-linecap="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
             P2P Обменник
           </div>
@@ -500,9 +504,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
       </div>
     </div>
 
-    <!-- Stories bar (pull-to-reveal or always shown) -->
+    <!-- Stories bar -->
     <div class="stories-bar" id="storiesBar">
-      <!-- My story -->
       <div class="story-item" onclick="openMyStory()">
         <div class="story-av-wrap my-story-wrap">
           <div class="story-av" id="myStoryAv" style="background:var(--ac)">?</div>
@@ -510,42 +513,38 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
         </div>
         <div class="story-name">Моя история</div>
       </div>
-      <!-- Other users stories -->
       <div id="storiesContainer" style="display:contents"></div>
     </div>
 
-    <!-- Search -->
-    <div class="search-wrap" style="padding:8px 12px">
-      <div class="search-inp-wrap">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input class="search-inp" id="srchInp" placeholder="Найти пользователя..." onkeydown="if(event.key==='Enter')doSearch()">
-      </div>
-      <button class="search-btn" onclick="doSearch()">Найти</button>
-    </div>
-    <div id="searchResult" style="display:none;background:var(--ac-l);border:1.5px solid var(--ac);border-radius:14px;margin:0 12px 8px;padding:12px">
-      <div class="sr-row">
-        <div class="sr-av" id="srAv">?</div>
-        <div style="flex:1">
-          <div class="sr-name" id="srName">@user</div>
-          <div class="sr-status" id="srStatus">● онлайн</div>
-        </div>
-        <button class="btn-connect" onclick="startChat()">Написать</button>
+    <!-- Search (live, no button) -->
+    <div style="padding:6px 12px 0">
+      <div style="display:flex;align-items:center;gap:8px;background:#f2f2f7;border-radius:14px;padding:9px 14px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input id="srchInp" placeholder="Поиск" oninput="liveSearch(this.value)" onfocus="showLiveResults()" style="flex:1;border:none;background:none;font-family:var(--font);font-size:15px;color:var(--txt);outline:none">
+        <button id="srchClear" onclick="clearSearch()" style="display:none;border:none;background:none;cursor:pointer;padding:0;color:#8e8e93">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#8e8e93"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
       </div>
     </div>
 
-    <!-- Tab content: Chats -->
+    <!-- Live search results -->
+    <div id="liveSearchRes" style="display:none;margin:6px 12px 0;background:#fff;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.1);overflow:hidden;max-height:240px;overflow-y:auto"></div>
+
+    <!-- Folders tabs -->
+    <div id="foldersBar" style="display:flex;gap:8px;padding:8px 12px 4px;overflow-x:auto;scrollbar-width:none;flex-shrink:0">
+      <button class="folder-tab active" data-folder="all" onclick="selectFolder(this,'all')">Все</button>
+    </div>
+
+    <!-- Chats list -->
     <div id="tabChats" class="tab-content">
-      <div class="chats-label">ЧАТЫ</div>
       <div class="chats-list" id="chatsList"></div>
     </div>
 
-    <!-- Tab content: Calls -->
+    <!-- Calls tab (hidden, full-screen overlay) -->
     <div id="tabCalls" class="tab-content" style="display:none">
       <div class="chats-label">ЗВОНКИ</div>
       <div id="callsList" style="flex:1;overflow-y:auto"></div>
     </div>
-
-    <!-- Old FAB removed, actions moved to top menu -->
 
     <!-- Bottom tab bar -->
     <div class="bottom-tabbar">
@@ -563,6 +562,83 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
       </button>
     </div>
   </div>
+
+<!-- Calls fullscreen page -->
+<div class="fullpage" id="callsPage">
+  <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--brd);flex-shrink:0">
+    <div style="flex:1;font-size:20px;font-weight:800">Звонки</div>
+    <button onclick="closeFullPage('callsPage')" style="border:none;background:var(--ac-l);color:var(--ac);padding:7px 16px;border-radius:20px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">Готово</button>
+  </div>
+  <div id="callsPageList" style="flex:1;overflow-y:auto"></div>
+</div>
+
+<!-- Settings fullscreen page -->
+<div class="fullpage" id="settingsPage">
+  <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--brd);flex-shrink:0">
+    <div style="flex:1;font-size:20px;font-weight:800">Настройки</div>
+    <button onclick="closeFullPage('settingsPage')" style="border:none;background:var(--ac-l);color:var(--ac);padding:7px 16px;border-radius:20px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">Готово</button>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:16px">
+    <!-- Avatar -->
+    <div style="text-align:center;margin-bottom:24px">
+      <div id="settingsAv" onclick="document.getElementById('avInp2').click()" style="width:88px;height:88px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;color:#fff;margin:0 auto 12px;overflow:hidden;cursor:pointer;box-shadow:0 4px 16px rgba(26,188,156,.3)">?</div>
+      <input type="file" id="avInp2" accept="image/*" style="display:none" onchange="onAvChange2(this)">
+      <div style="font-size:18px;font-weight:800" id="settingsName">@user</div>
+      <div style="font-size:13px;color:var(--ac);margin-top:2px" id="settingsStatus">● онлайн</div>
+    </div>
+    <!-- Status selector -->
+    <div style="background:#f8f8f8;border-radius:16px;padding:16px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Статус</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="status-btn active" data-status="online" onclick="selectMyStatus(this,'online')">🟢 В сети</button>
+        <button class="status-btn" data-status="away" onclick="selectMyStatus(this,'away')">🟡 Отошёл</button>
+        <button class="status-btn" data-status="dnd" onclick="selectMyStatus(this,'dnd')">🔴 Не беспокоить</button>
+      </div>
+    </div>
+    <!-- Bio -->
+    <div style="background:#f8f8f8;border-radius:16px;padding:16px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">О себе</div>
+      <textarea id="settingsBio" placeholder="Расскажи о себе..." style="width:100%;border:none;background:none;font-family:var(--font);font-size:15px;resize:none;outline:none;min-height:60px;color:var(--txt)"></textarea>
+    </div>
+    <!-- Ref code -->
+    <div style="background:#f8f8f8;border-radius:16px;padding:16px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Код приглашения</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="flex:1;font-size:15px;font-weight:700;color:var(--ac)" id="settingsRefCode"></div>
+        <button onclick="copyRefCode()" style="padding:8px 14px;border:none;border-radius:10px;background:var(--ac-l);color:var(--ac);font-weight:700;cursor:pointer;font-family:var(--font)">Скопировать</button>
+      </div>
+    </div>
+    <!-- QR -->
+    <button onclick="openMyQR()" style="width:100%;padding:14px;border:1.5px solid var(--ac);border-radius:16px;background:var(--ac-l);color:var(--ac);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="4" height="4"/></svg>
+      Мой QR-код
+    </button>
+    <button class="btn-save" onclick="saveSettings()">Сохранить</button>
+    <button onclick="doLogout()" style="width:100%;padding:13px;border:none;border-radius:14px;background:none;color:var(--danger);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">Выйти</button>
+  </div>
+</div>
+
+<!-- Add to folder modal -->
+<div class="modal-overlay" id="addToFolderModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Добавить в папку</div>
+    <div id="folderList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+    <button onclick="showCreateFolderModal()" style="width:100%;padding:13px;border:1.5px dashed var(--ac);border-radius:14px;background:var(--ac-l);color:var(--ac);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer">+ Создать папку</button>
+    <button onclick="closeModal('addToFolderModal')" style="width:100%;padding:13px;border:1.5px solid var(--brd);border-radius:14px;background:none;font-family:var(--font);font-size:14px;cursor:pointer;margin-top:8px;color:var(--txt2)">Отмена</button>
+  </div>
+</div>
+
+<!-- Create folder modal -->
+<div class="modal-overlay" id="createFolderModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Новая папка</div>
+    <input class="modal-inp" id="folderNameInp" placeholder="Название папки" style="margin-bottom:14px">
+    <button onclick="doCreateFolder()" class="btn-save">Создать</button>
+    <button onclick="closeModal('createFolderModal')" style="width:100%;padding:13px;border:1.5px solid var(--brd);border-radius:14px;background:none;font-family:var(--font);font-size:14px;cursor:pointer;margin-top:8px;color:var(--txt2)">Отмена</button>
+  </div>
+</div>
 
   <!-- Chat view -->
   <div class="chat-view" id="chatView">
@@ -694,16 +770,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
   </div>
 </div>
 
-<!-- Chat item long-press menu (3 actions) -->
+<!-- Chat item long-press menu -->
 <div class="ctx-menu" id="chatItemCtxMenu">
   <div class="ctx-item" onclick="ctxChatPin()">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/></svg>
     Закрепить чат
   </div>
   <div class="ctx-item" onclick="ctxChatMute()">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
     <span id="chatCtxMuteLabel">Откл. звук</span>
   </div>
+  <div class="ctx-item" onclick="openAddToFolder(ctxChatKey)">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+    Добавить в папку
+  </div>
+  <div class="ctx-sep"></div>
   <div class="ctx-item" onclick="ctxChatBlock()">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
     <span id="chatCtxBlockLabel">Добавить в ЧС</span>
@@ -2307,6 +2388,7 @@ function renderChatList(chats) {
     list.appendChild(wrap);
     addSwipe(wrap, el, key);
   });
+  renderFoldersBar();
 }
 
 // Long-press context menu for chat items
@@ -4137,30 +4219,287 @@ function handleCallStatus(d) {
 }
 
 // ── Wallet ─────────────────────────────────────────────────────────────────
-// ── Tab bar ──────────────────────────────────────────────────────────────────
-function switchTab2(tab) {
-  // Скрываем все вкладки
-  document.getElementById('tabChats').style.display = 'none';
-  document.getElementById('tabCalls').style.display = 'none';
+// ── Edit mode ────────────────────────────────────────────────────────────────
+let editMode = false;
+function toggleEditMode() {
+  editMode = !editMode;
+  const btn = document.getElementById('editModeBtn');
+  btn.textContent = editMode ? 'Готово' : 'Изм.';
+  btn.style.background = editMode ? 'var(--ac)' : 'var(--ac-l)';
+  btn.style.color = editMode ? '#fff' : 'var(--ac)';
+  document.querySelectorAll('.chat-item').forEach(el => {
+    el.classList.toggle('edit-mode', editMode);
+    let delBtn = el.querySelector('.chat-delete-btn');
+    if (editMode && !delBtn) {
+      delBtn = document.createElement('button');
+      delBtn.className = 'chat-delete-btn';
+      delBtn.innerHTML = '−';
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        const key = el.id.replace('ci_','');
+        el.closest('.chat-swipe-wrap')?.classList.add('removing');
+        setTimeout(() => { cmd({cmd:'get_chats'}); }, 350);
+      };
+      el.appendChild(delBtn);
+    } else if (!editMode && delBtn) {
+      delBtn.remove();
+    }
+  });
+}
 
-  // Сбрасываем активные кнопки
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+// ── Live search ──────────────────────────────────────────────────────────────
+let liveSearchTimer = null;
+function liveSearch(q) {
+  const clearBtn = document.getElementById('srchClear');
+  const res = document.getElementById('liveSearchRes');
+  clearBtn.style.display = q ? 'block' : 'none';
+  if (!q.trim()) { res.style.display = 'none'; return; }
 
-  if (tab === 'chats') {
-    document.getElementById('tabChats').style.display = 'flex';
-    document.getElementById('tabBtnChats').classList.add('active');
-  } else if (tab === 'calls') {
-    document.getElementById('tabCalls').style.display = 'flex';
-    document.getElementById('tabBtnCalls').classList.add('active');
-    renderCallLog();
-  } else if (tab === 'settings') {
-    document.getElementById('tabBtnSettings').classList.add('active');
-    // Открываем профиль поверх
-    openProfile();
-    // Возвращаемся на чаты когда профиль закроют
-    setTimeout(() => switchTab2('chats'), 100);
+  clearTimeout(liveSearchTimer);
+  liveSearchTimer = setTimeout(() => {
+    // Ищем по chatsData
+    const lower = q.toLowerCase();
+    const local = Object.values(chatsData).filter(c => {
+      const name = (c.username || c.name || '').toLowerCase();
+      const dispName = c.username ? getDisplayName(c.username).toLowerCase() : '';
+      return name.includes(lower) || dispName.includes(lower);
+    });
+
+    if (local.length) {
+      res.style.display = 'block';
+      res.innerHTML = local.slice(0,8).map(c => {
+        const key  = c.gid || c.username;
+        const name = c.gid ? c.name : getDisplayName(c.username);
+        const avBg = getAvatarColor(key);
+        const avHtml = c.avatar ? `<img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : (c.username||c.name||'?')[0].toUpperCase();
+        return `<div onclick="selectLiveResult('${key}','${c.gid?'group':'peer'}')" style="display:flex;align-items:center;gap:12px;padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--brd)" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
+          <div style="width:40px;height:40px;border-radius:50%;background:${avBg};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden">${avHtml}</div>
+          <div>
+            <div style="font-size:15px;font-weight:600">${name}</div>
+            <div style="font-size:12px;color:var(--txt2)">${c.gid ? 'Группа' : '@'+c.username}</div>
+          </div>
+        </div>`;
+      }).join('');
+    } else {
+      // Ищем на сервере
+      cmd({cmd:'search', username: q.trim().toLowerCase()});
+      res.style.display = 'block';
+      res.innerHTML = '<div style="padding:14px;text-align:center;color:var(--txt2);font-size:14px">Ищем...</div>';
+    }
+  }, 200);
+}
+
+function selectLiveResult(key, type) {
+  clearSearch();
+  if (type === 'group') {
+    const g = chatsData[key];
+    if (g) openGroupChat(g.gid, g.name, g.avatar);
+  } else {
+    const c = chatsData[key] || {};
+    openChatWith(key, c.avatar, c.online);
   }
 }
+
+function showLiveResults() {
+  const q = document.getElementById('srchInp').value;
+  if (q) liveSearch(q);
+}
+
+function clearSearch() {
+  document.getElementById('srchInp').value = '';
+  document.getElementById('srchClear').style.display = 'none';
+  document.getElementById('liveSearchRes').style.display = 'none';
+}
+
+// Перехватываем search_result для live search
+const _origOnSearchResult = window.onSearchResult;
+function onSearchResult(d) {
+  if (window._qrSearchHandler) { window._qrSearchHandler(d); return; }
+  const res = document.getElementById('liveSearchRes');
+  if (res && res.style.display !== 'none' && d.found) {
+    const avBg = getAvatarColor(d.username);
+    res.innerHTML = `<div onclick="selectLiveResult('${d.username}','peer')" style="display:flex;align-items:center;gap:12px;padding:11px 14px;cursor:pointer" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
+      <div style="width:40px;height:40px;border-radius:50%;background:${avBg};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden">${d.avatar?`<img src="${d.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:d.username[0].toUpperCase()}</div>
+      <div>
+        <div style="font-size:15px;font-weight:600">@${d.username}</div>
+        <div style="font-size:12px;color:${d.online?'var(--ac)':'var(--txt2)'}">${d.online?'● онлайн':'○ не в сети'}</div>
+      </div>
+    </div>`;
+  } else if (res && res.style.display !== 'none' && !d.found) {
+    res.innerHTML = '<div style="padding:14px;text-align:center;color:var(--txt2);font-size:14px">Не найдено</div>';
+  }
+}
+
+// ── Folders ──────────────────────────────────────────────────────────────────
+let folders = JSON.parse(localStorage.getItem('sup_folders') || '{}'); // {name: [chatKey,...]}
+let activeFolderKey = 'all';
+let folderTargetChat = null;
+
+function saveFolders() { localStorage.setItem('sup_folders', JSON.stringify(folders)); }
+
+function renderFoldersBar() {
+  const bar = document.getElementById('foldersBar');
+  const names = Object.keys(folders);
+  if (names.length === 0) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  bar.innerHTML = `<button class="folder-tab ${activeFolderKey==='all'?'active':''}" onclick="selectFolder(this,'all')">Все</button>` +
+    names.slice(0,4).map(n =>
+      `<button class="folder-tab ${activeFolderKey===n?'active':''}" onclick="selectFolder(this,'${n}')">${n}</button>`
+    ).join('');
+}
+
+function selectFolder(btn, name) {
+  activeFolderKey = name;
+  document.querySelectorAll('.folder-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // Фильтруем список чатов
+  const keys = name === 'all' ? null : (folders[name] || []);
+  document.querySelectorAll('.chat-swipe-wrap').forEach(wrap => {
+    if (!keys) { wrap.style.display = ''; return; }
+    const key = wrap.id.replace('sw_','');
+    wrap.style.display = keys.includes(key) ? '' : 'none';
+  });
+}
+
+function openAddToFolder(chatKey) {
+  folderTargetChat = chatKey;
+  hideAllMenus();
+  const list = document.getElementById('folderList');
+  const names = Object.keys(folders);
+  if (!names.length) {
+    list.innerHTML = '<div style="text-align:center;color:var(--txt2);padding:10px">Папок пока нет</div>';
+  } else {
+    list.innerHTML = names.map(n => {
+      const inFolder = (folders[n]||[]).includes(chatKey);
+      return `<button onclick="toggleChatInFolder('${n}')" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:13px 16px;border:1.5px solid ${inFolder?'var(--ac)':'var(--brd)'};border-radius:14px;background:${inFolder?'var(--ac-l)':'none'};font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;color:${inFolder?'var(--ac)':'var(--txt)'}">
+        ${n}
+        ${inFolder?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>':''}
+      </button>`;
+    }).join('');
+  }
+  document.getElementById('addToFolderModal').classList.add('show');
+}
+
+function toggleChatInFolder(folderName) {
+  if (!folderTargetChat) return;
+  if (!folders[folderName]) folders[folderName] = [];
+  const idx = folders[folderName].indexOf(folderTargetChat);
+  if (idx >= 0) folders[folderName].splice(idx, 1);
+  else folders[folderName].push(folderTargetChat);
+  saveFolders();
+  closeModal('addToFolderModal');
+  toast(`✅ Добавлено в «${folderName}»`);
+  renderFoldersBar();
+}
+
+function showCreateFolderModal() {
+  closeModal('addToFolderModal');
+  document.getElementById('folderNameInp').value = '';
+  document.getElementById('createFolderModal').classList.add('show');
+}
+
+function doCreateFolder() {
+  const name = document.getElementById('folderNameInp').value.trim();
+  if (!name) { toast('Введи название'); return; }
+  if (Object.keys(folders).length >= 4) { toast('Максимум 4 папки'); return; }
+  folders[name] = folderTargetChat ? [folderTargetChat] : [];
+  saveFolders();
+  closeModal('createFolderModal');
+  toast(`📁 Папка «${name}» создана`);
+  renderFoldersBar();
+}
+
+// ── Fullscreen pages (Calls, Settings) ───────────────────────────────────────
+function openFullPage(id) {
+  const p = document.getElementById(id);
+  p.style.display = 'flex';
+  requestAnimationFrame(() => p.style.transform = 'translateX(0)');
+}
+function closeFullPage(id) {
+  const p = document.getElementById(id);
+  p.style.transform = 'translateX(100%)';
+  setTimeout(() => { p.style.display = 'none'; }, 300);
+  // Возвращаем активной кнопкой Чаты
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tabBtnChats').classList.add('active');
+}
+
+// ── switchTab2 updated ────────────────────────────────────────────────────────
+function switchTab2(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  if (tab === 'calls') {
+    document.getElementById('tabBtnCalls').classList.add('active');
+    renderCallLog2();
+    openFullPage('callsPage');
+  } else if (tab === 'settings') {
+    document.getElementById('tabBtnSettings').classList.add('active');
+    fillSettingsPage();
+    openFullPage('settingsPage');
+  } else {
+    document.getElementById('tabBtnChats').classList.add('active');
+  }
+}
+
+function renderCallLog2() {
+  const el = document.getElementById('callsPageList');
+  if (!el) return;
+  if (!callLog.length) {
+    el.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--txt2)"><div style="font-size:48px;margin-bottom:12px">📞</div><div>Звонков пока нет</div></div>';
+    return;
+  }
+  el.innerHTML = callLog.map(c => {
+    const isMissed = c.type === 'missed';
+    const isVideo  = c.type === 'video';
+    const name = getDisplayName(c.user) || '@' + c.user;
+    const avBg = getAvatarColor(c.user);
+    const cd = chatsData[c.user] || {};
+    const avHtml = cd.avatar ? `<img src="${cd.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : (c.user||'?')[0].toUpperCase();
+    const arrow = isMissed
+      ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="3"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>`
+      : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="3"><path d="M17 7L7 17M7 17h10M7 17V7"/></svg>`;
+    return `<div onclick="openChatWith('${c.user}','${cd.avatar||''}',${!!cd.online})" style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid var(--brd);cursor:pointer" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
+      <div style="width:50px;height:50px;border-radius:50%;background:${avBg};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden">${avHtml}</div>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:700;color:${isMissed?'#e74c3c':'var(--txt)'}">${name}</div>
+        <div style="font-size:13px;color:var(--txt2);display:flex;align-items:center;gap:5px;margin-top:2px">${arrow} ${isVideo?'Видеозвонок':isMissed?'Пропущенный':'Входящий'}</div>
+      </div>
+      <div style="font-size:12px;color:var(--txt2)">${formatLastSeen(c.time)}</div>
+    </div>`;
+  }).join('');
+}
+
+function fillSettingsPage() {
+  const av = document.getElementById('settingsAv');
+  if (myAvatar) av.innerHTML = `<img src="${myAvatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  else { av.textContent = me?me[0].toUpperCase():'?'; av.style.background = getAvatarColor(me); }
+  document.getElementById('settingsName').textContent = '@' + (me||'');
+  document.getElementById('settingsBio').value = myBio;
+  document.getElementById('settingsRefCode').textContent = myRefCode;
+  document.querySelectorAll('.status-btn').forEach(b => b.classList.toggle('active', b.dataset.status === myStatus));
+}
+
+function onAvChange2(inp) {
+  const f = inp.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    newAvatarData = r.result;
+    const av = document.getElementById('settingsAv');
+    av.innerHTML = `<img src="${r.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  };
+  r.readAsDataURL(f);
+}
+
+function saveSettings() {
+  myBio = document.getElementById('settingsBio').value.trim();
+  if (newAvatarData) myAvatar = newAvatarData;
+  cmd({ cmd:'save_profile', bio:myBio, avatar:myAvatar, status:myStatus });
+  updateMyUI();
+  closeFullPage('settingsPage');
+  toast('Профиль сохранён');
+  newAvatarData = null;
+}
+
+// ── Chat item long-press: add "Add to folder" ─────────────────────────────────
 
 // ── Top action menu ──────────────────────────────────────────────────────────
 function toggleTopMenu() {
