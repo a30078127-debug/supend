@@ -1440,8 +1440,8 @@ function onAuthOk(d) {
   updateSup(mySup);
   cmd({ cmd:'get_chats' });
   applyStoredCustom();
-  // Запрашиваем разрешение на уведомления
-  setTimeout(requestNotifPermission, 1500);
+  // Запрашиваем разрешение и подписываемся на Web Push
+  setTimeout(subscribePush, 2000);
   if (d.inv_bonus && d.inv_bonus > 0) {
     addTx('Бонус за код приглашения', +d.inv_bonus, '🎁');
     toast(`+${d.inv_bonus} SUP за код приглашения! 🎁`);
@@ -4408,7 +4408,7 @@ function makeAvatar(username, size = 'md') {
   const letter = username ? username[0].toUpperCase() : '?';
   return { color, letter };
 }
-// ── Service Worker + Push ────────────────────────────────────────────────────
+// ── Service Worker + Web Push ────────────────────────────────────────────────
 let swReg = null;
 
 async function registerSW() {
@@ -4427,19 +4427,48 @@ async function requestNotifPermission() {
   return perm === 'granted';
 }
 
-function sendPushNotif(title, body, tag) {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  // Если приложение не в фокусе — показываем уведомление
-  if (document.visibilityState !== 'hidden') return; // не показывать когда открыто
-  if (swReg) {
-    swReg.showNotification(title, {
-      body, icon: '/logo', badge: '/logo',
-      tag: tag || 'supend',
-      renotify: true,
-      vibrate: [200, 100, 200],
+async function subscribePush() {
+  if (!swReg) return;
+  try {
+    const granted = await requestNotifPermission();
+    if (!granted) return;
+
+    // Получаем VAPID public key с сервера
+    const resp = await fetch('/vapid-key');
+    const { publicKey } = await resp.json();
+
+    // Конвертируем Base64Url → Uint8Array
+    const raw = Uint8Array.from(
+      atob(publicKey.replace(/-/g,'+').replace(/_/g,'/')),
+      c => c.charCodeAt(0)
+    );
+
+    // Подписываемся
+    const sub = await swReg.pushManager.subscribe({
+      userVisibleOnly:      true,
+      applicationServerKey: raw
     });
+
+    // Отправляем подписку на сервер через WS
+    cmd({ cmd:'push_subscribe', subscription: sub.toJSON() });
+    console.log('[Push] subscribed');
+  } catch(e) {
+    console.error('[Push] subscribe failed:', e);
+  }
+}
+
+function sendPushNotif(title, body, tag) {
+  // Локальное уведомление (когда приложение открыто/свёрнуто, но не закрыто)
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const opts = {
+    body, icon: '/logo', badge: '/logo',
+    tag: tag || 'supend', renotify: true,
+    vibrate: [200, 100, 200], silent: false,
+  };
+  if (swReg && swReg.active) {
+    swReg.showNotification(title, opts);
   } else {
-    new Notification(title, { body, icon: '/logo' });
+    try { new Notification(title, opts); } catch(e) {}
   }
 }
 
@@ -4465,48 +4494,105 @@ window.addEventListener('appinstalled', () => {
 function installPwa(e) {
   e.stopPropagation();
   if (isStandalone) { toast('✅ Уже установлен как приложение'); return; }
+
   if (pwaPrompt) {
-    pwaPrompt.prompt();
-    pwaPrompt.userChoice.then(r => {
-      if (r.outcome === 'accepted') {
-        const btn = document.getElementById('installPwaBtn');
-        if (btn) btn.style.display = 'none';
-      }
-      pwaPrompt = null;
-    });
+    // Android/Chrome — показываем красивый модал с полем имени
+    showAndroidInstallModal();
   } else if (isIOS) {
-    // iOS — показываем инструкцию
-    let m = document.getElementById('iosInstallModal');
-    if (!m) {
-      m = document.createElement('div');
-      m.id = 'iosInstallModal';
-      m.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center';
-      m.innerHTML = `<div style="background:#fff;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;animation:slideUp .25s ease-out">
-        <div style="text-align:center;margin-bottom:16px">
-          <div style="font-size:40px;margin-bottom:8px">📱</div>
-          <div style="font-size:18px;font-weight:800;margin-bottom:12px">Установить Supend</div>
-          <div style="font-size:14px;color:#888;line-height:1.8;text-align:left;background:#f5f5f5;border-radius:12px;padding:14px">
-            1. Нажми <strong>⎙ Поделиться</strong> внизу Safari<br>
-            2. Выбери <strong>«На экран «Домой»»</strong><br>
-            3. Нажми <strong>«Добавить»</strong>
-          </div>
-        </div>
-        <button onclick="document.getElementById('iosInstallModal').remove()" style="width:100%;padding:14px;border:none;border-radius:14px;background:var(--ac);color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--font)">Понятно</button>
-      </div>`;
-      m.onclick = ev => { if (ev.target === m) m.remove(); };
-      document.body.appendChild(m);
-    }
+    showIosInstallModal();
   } else {
+    // Другие браузеры — инструкция
     toast('Открой в Chrome → меню ⋮ → «Добавить на главный экран»');
   }
 }
 
-// Скрываем кнопку если уже в standalone режиме
-if (isStandalone) {
-  document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('installPwaBtn');
-    if (btn) btn.style.display = 'none';
+function showAndroidInstallModal() {
+  let m = document.getElementById('androidInstallModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'androidInstallModal';
+    m.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center';
+    document.body.appendChild(m);
+  }
+  m.innerHTML = `
+    <div style="background:#fff;border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:480px;animation:slideUp .25s ease-out">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+        <img src="/logo" style="width:56px;height:56px;border-radius:16px;object-fit:cover" onerror="this.style.display='none'">
+        <div>
+          <div style="font-size:18px;font-weight:800">Добавить Supend</div>
+          <div style="font-size:13px;color:#888;margin-top:2px">на экран «Домой»</div>
+        </div>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Название ярлыка</div>
+        <input id="pwaNameInp" value="Supend"
+          style="width:100%;padding:12px 16px;border:1.5px solid var(--brd);border-radius:14px;font-family:var(--font);font-size:16px;color:var(--txt);outline:none;box-sizing:border-box"
+          onfocus="this.style.borderColor='var(--ac)'" onblur="this.style.borderColor='var(--brd)'">
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onclick="document.getElementById('androidInstallModal').remove()"
+          style="flex:1;padding:14px;border:1.5px solid var(--brd);border-radius:14px;background:none;font-family:var(--font);font-size:15px;cursor:pointer;color:var(--txt2)">
+          Отмена
+        </button>
+        <button onclick="confirmAndroidInstall()"
+          style="flex:2;padding:14px;border:none;border-radius:14px;background:var(--ac);color:#fff;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(26,188,156,.35)">
+          Добавить на экран
+        </button>
+      </div>
+    </div>`;
+  m.onclick = ev => { if (ev.target === m) m.remove(); };
+}
+
+function confirmAndroidInstall() {
+  document.getElementById('androidInstallModal')?.remove();
+  if (!pwaPrompt) return;
+  pwaPrompt.prompt();
+  pwaPrompt.userChoice.then(r => {
+    if (r.outcome === 'accepted') {
+      const btn = document.getElementById('installPwaBtn');
+      if (btn) btn.style.display = 'none';
+    }
+    pwaPrompt = null;
   });
+}
+
+function showIosInstallModal() {
+  let m = document.getElementById('iosInstallModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'iosInstallModal';
+    m.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center';
+    document.body.appendChild(m);
+  }
+  m.innerHTML = `
+    <div style="background:#fff;border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:480px;animation:slideUp .25s ease-out">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+        <img src="/logo" style="width:56px;height:56px;border-radius:16px;object-fit:cover" onerror="this.style.display='none'">
+        <div>
+          <div style="font-size:18px;font-weight:800">Установить Supend</div>
+          <div style="font-size:13px;color:#888;margin-top:2px">на экран «Домой»</div>
+        </div>
+      </div>
+      <div style="background:#f5f5f5;border-radius:16px;padding:16px;margin-bottom:20px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:32px;height:32px;background:var(--ac);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex-shrink:0">1</div>
+          <div style="font-size:14px">Нажми <strong>⎙ Поделиться</strong> внизу Safari</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:32px;height:32px;background:var(--ac);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex-shrink:0">2</div>
+          <div style="font-size:14px">Выбери <strong>«На экран "Домой"»</strong></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:32px;height:32px;background:var(--ac);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex-shrink:0">3</div>
+          <div style="font-size:14px">Нажми <strong>«Добавить»</strong> — готово!</div>
+        </div>
+      </div>
+      <button onclick="document.getElementById('iosInstallModal').remove()"
+        style="width:100%;padding:14px;border:none;border-radius:14px;background:var(--ac);color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--font)">
+        Понятно
+      </button>
+    </div>`;
+  m.onclick = ev => { if (ev.target === m) m.remove(); };
 }
 
 // ── Init ────────────────────────────────────────────────────────────────────

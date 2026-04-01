@@ -1,19 +1,146 @@
 """Supend PWA Server — чистый переписанный бэкенд."""
-import asyncio, json, os, hashlib, time, uuid, mimetypes
-import urllib.request, urllib.error
+import asyncio, json, os, hashlib, time, uuid, mimetypes, base64, struct
+import urllib.request, urllib.error, urllib.parse
 from aiohttp import web
 
-users          = {}   # username -> {password, bio, avatar, created_at, sup_balance, ref_code}
-online         = {}   # username -> ws
-messages       = {}   # chat_id  -> [msg, ...]
-groups         = {}   # gid      -> {name, avatar, owner, members:{uid->role}, messages:[]}
-media          = {}   # fid      -> (bytes, mime)
-exchange_orders = {}  # oid      -> order
+users           = {}   # username -> {password, bio, avatar, ...}
+online          = {}   # username -> ws
+messages        = {}   # chat_id  -> [msg, ...]
+groups          = {}   # gid      -> {name, avatar, owner, members, messages}
+media           = {}   # fid      -> (bytes, mime)
+exchange_orders = {}   # oid      -> order
+push_subs       = {}   # username -> [subscription, ...]  (Web Push subscriptions)
+
+# VAPID ключи — генерируются один раз при старте
+VAPID_PUBLIC  = 'BEROCON9Z0x27j4XwIZeBv2dtUxFpM9sy5HGPlPu6VYaqb_BhjFJzA37MmmpCr0LiHf6SZ_wrE82SsTOBW1Nc_o'
+VAPID_PRIVATE = 'Os9S2QtWUy3LeVMGGzFjOnpbJqOz5AEqqy2dI_3tdm8'
+VAPID_SUBJECT = 'mailto:supend@supend.app'
 
 def h(p):     return hashlib.sha256(p.encode()).hexdigest()
 def cid(a,b): return '_'.join(sorted([a, b]))
 def ts():     return int(time.time() * 1000)
 def tstr():   return time.strftime('%H:%M')
+
+def b64url_decode(s):
+    s += '=' * (-len(s) % 4)
+    return base64.urlsafe_b64decode(s)
+
+def b64url_encode(b):
+    return base64.urlsafe_b64encode(b).rstrip(b'=').decode()
+
+def make_vapid_jwt(audience):
+    """Создаём VAPID JWT для авторизации push."""
+    try:
+        from cryptography.hazmat.primitives.asymmetric import ec
+        from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
+        from cryptography.hazmat.backends import default_backend
+        import hashlib as _hl
+
+        header  = b64url_encode(json.dumps({'typ':'JWT','alg':'ES256'}).encode())
+        payload = b64url_encode(json.dumps({
+            'aud': audience,
+            'exp': int(time.time()) + 86400,
+            'sub': VAPID_SUBJECT
+        }).encode())
+        signing_input = f'{header}.{payload}'.encode()
+
+        priv_int = int.from_bytes(b64url_decode(VAPID_PRIVATE), 'big')
+        key = ec.derive_private_key(priv_int, ec.SECP256R1(), default_backend())
+        from cryptography.hazmat.primitives import hashes
+        sig_der = key.sign(signing_input, ec.ECDSA(hashes.SHA256()))
+        r, s = decode_dss_signature(sig_der)
+        sig = r.to_bytes(32,'big') + s.to_bytes(32,'big')
+        return f'{header}.{payload}.{b64url_encode(sig)}'
+    except Exception as ex:
+        print(f'[VAPID JWT] {ex}')
+        return None
+
+async def send_web_push(subscription, payload_dict):
+    """Отправляем Web Push уведомление через протокол RFC 8291."""
+    try:
+        from cryptography.hazmat.primitives.asymmetric import ec
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        from cryptography.hazmat.backends import default_backend
+
+        endpoint   = subscription['endpoint']
+        p256dh_raw = b64url_decode(subscription['keys']['p256dh'])
+        auth_raw   = b64url_decode(subscription['keys']['auth'])
+
+        # Получаем origin для VAPID
+        parsed   = urllib.parse.urlparse(endpoint)
+        audience = f'{parsed.scheme}://{parsed.netloc}'
+        jwt      = make_vapid_jwt(audience)
+        if not jwt: return
+
+        # Шифрование payload (RFC 8291 / ECDH + AES-GCM)
+        payload_bytes = json.dumps(payload_dict).encode('utf-8')
+
+        # Генерируем ephemeral ключ
+        eph_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        eph_pub = eph_key.public_key().public_bytes(
+            __import__('cryptography').hazmat.primitives.serialization.Encoding.X962,
+            __import__('cryptography').hazmat.primitives.serialization.PublicFormat.UncompressedPoint
+        )
+
+        # Восстанавливаем ключ получателя
+        from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+        receiver_key = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), p256dh_raw)
+        shared = eph_key.exchange(ec.ECDH(), receiver_key)
+
+        # HKDF для ключа и нонса
+        import hmac as _hmac
+        salt = os.urandom(16)
+
+        def hkdf(salt, ikm, info, length):
+            prk = _hmac.new(salt, ikm, 'sha256').digest()
+            t = b''
+            okm = b''
+            for i in range(1, (length + 31) // 32 + 1):
+                t = _hmac.new(prk, t + info + bytes([i]), 'sha256').digest()
+                okm += t
+            return okm[:length]
+
+        prk_key  = hkdf(auth_raw, shared + eph_pub + p256dh_raw,
+                       b'WebPush: info\x00' + p256dh_raw + eph_pub, 32)
+        cek      = hkdf(salt, prk_key, b'Content-Encoding: aes128gcm\x00', 16)
+        nonce    = hkdf(salt, prk_key, b'Content-Encoding: nonce\x00', 12)
+
+        # Шифруем
+        padded   = payload_bytes + b'\x02'  # record delimiter
+        cipher   = AESGCM(cek)
+        ciphertext = cipher.encrypt(nonce, padded, None)
+
+        # RFC 8291 header: salt(16) + rs(4) + idlen(1) + keyid(65)
+        rs = len(ciphertext).to_bytes(4, 'big')
+        body = salt + rs + bytes([len(eph_pub)]) + eph_pub + ciphertext
+
+        vapid_pub_raw = b64url_decode(VAPID_PUBLIC)
+        headers = {
+            'Content-Type':     'application/octet-stream',
+            'Content-Encoding': 'aes128gcm',
+            'Authorization':    f'vapid t={jwt},k={VAPID_PUBLIC}',
+            'TTL':              '86400',
+            'Urgency':          'high',
+        }
+        req = urllib.request.Request(endpoint, data=body, headers=headers, method='POST')
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            print(f'[Push] sent to {endpoint[:40]}... status={resp.status}')
+    except Exception as ex:
+        print(f'[Push] error: {ex}')
+
+async def push_notif(username, title, body, tag='supend'):
+    """Отправляем push всем подпискам пользователя."""
+    subs = push_subs.get(username, [])
+    if not subs: return
+    payload = {'title': title, 'body': body, 'tag': tag, 'icon': '/logo', 'badge': '/logo'}
+    dead = []
+    for sub in subs:
+        try:
+            await send_web_push(sub, payload)
+        except Exception:
+            dead.append(sub)
+    for d in dead:
+        subs.remove(d)
 
 async def ws_handler(request):
     ws = web.WebSocketResponse(max_msg_size=50*1024*1024, heartbeat=25)
@@ -218,6 +345,11 @@ async def ws_handler(request):
                         await push(to, payload)
                         await push(to, {'type':'new_chat','from':me,
                             'avatar':users[me].get('avatar',''),'bio':users[me].get('bio','')})
+                    else:
+                        # Пользователь офлайн — Web Push уведомление
+                        sender_name = '@' + me
+                        body_text = text if mtype == 'text' else ('🎤 Голосовое' if mtype=='voice' else '📷 Фото' if mtype=='image' else '📎 Файл')
+                        asyncio.create_task(push_notif(to, sender_name, body_text[:80], f'msg-{me}'))
                     await send(payload)
                     if mtype == 'text' and text:
                         users[me]['sup_balance'] = users[me].get('sup_balance',0) + max(1, len(text)//50)
@@ -251,7 +383,18 @@ async def ws_handler(request):
                     p2 = {'type':'msg_edit','msg_id':mid,'text':text,'from':me}
                     await push(to, p2); await send(p2)
 
-            # ── Delete message ────────────────────────────────────────────────
+            # ── Push subscription ─────────────────────────────────────────────
+            elif c == 'push_subscribe':
+                sub = d.get('subscription')
+                if sub and sub.get('endpoint') and sub.get('keys'):
+                    subs = push_subs.setdefault(me, [])
+                    # Не дублируем
+                    endpoints = [s['endpoint'] for s in subs]
+                    if sub['endpoint'] not in endpoints:
+                        subs.append(sub)
+                    await send({'type':'push_subscribed'})
+
+
             elif c == 'delete_msg':
                 mid = d.get('msg_id','')
                 gid = d.get('gid','')
@@ -614,6 +757,12 @@ async def manifest_handler(request):
                   {"src":"/logo","sizes":"512x512","type":"image/jpeg"}]}
     return web.Response(text=json.dumps(m), content_type='application/json')
 
+async def vapid_handler(request):
+    return web.Response(
+        text=json.dumps({'publicKey': VAPID_PUBLIC}),
+        content_type='application/json'
+    )
+
 async def sw_handler(request):
     try:
         with open('sw.js', 'r', encoding='utf-8') as f:
@@ -668,6 +817,7 @@ async def main():
     app.router.add_post('/upload',       upload_handler)
     app.router.add_get('/media/{fid}',   media_handler)
     app.router.add_get('/manifest.json', manifest_handler)
+    app.router.add_get('/vapid-key',      vapid_handler)
     app.router.add_get('/sw.js',          sw_handler)
     app.router.add_get('/logo',           logo_handler)
     app.router.add_post('/translate',    translate_handler)
