@@ -47,7 +47,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 /* ── App layout ───────────────────────────────── */
 #app{display:none;height:100dvh;position:relative}
 #app.visible{display:flex}
-.sidebar{width:100%;max-width:360px;background:var(--sb);border-right:1px solid var(--brd);display:flex;flex-direction:column;height:100dvh;position:absolute;left:0;top:0;z-index:10;transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.sidebar{width:100%;max-width:360px;background:var(--sb);border-right:1px solid var(--brd);display:flex;flex-direction:column;height:100dvh;position:absolute;left:0;top:0;z-index:10;transition:transform .25s cubic-bezier(.4,0,.2,1);overflow:hidden}
 .chat-view{flex:1;display:flex;flex-direction:column;height:100dvh;background:var(--chat-bg)}
 @media(max-width:768px){
   .sidebar{width:100%;max-width:100%}
@@ -90,12 +90,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .tab-btn span{font-size:10px}
 .tab-my-av{width:24px;height:24px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;overflow:hidden}
 .tab-my-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.tab-content{flex:1;overflow-y:auto;display:flex;flex-direction:column}
-
+.tab-content{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-height:0}
+.chats-list{flex:1;overflow-y:auto;overflow-x:hidden}
 /* ── Chats list stays same ─────────────────────── */
 .sb-search{padding:10px 16px 12px;border-bottom:1px solid var(--brd)}
 
-/* ── Chat list ─────────────────────────────────── */
+.search-wrap{display:flex;gap:8px;align-items:center}
+.search-inp-wrap{flex:1;display:flex;align-items:center;gap:8px;background:#f5f5f5;border-radius:12px;padding:10px 14px}
+.search-inp{flex:1;border:none;background:none;font-family:var(--font);font-size:14px;color:var(--txt);outline:none}
+.search-inp::placeholder{color:var(--txt2)}
+.search-btn{padding:10px 16px;border:none;border-radius:12px;background:var(--ac);color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer}
+.sr-row{display:flex;align-items:center;gap:12px}
+.sr-av{width:42px;height:42px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden}
+.sr-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.sr-name{font-size:15px;font-weight:700}
+.sr-status{font-size:12px;font-weight:600}
+.sr-status.on{color:var(--ac)}.sr-status.off{color:var(--txt2)}
+.btn-connect{padding:8px 16px;border:none;border-radius:10px;background:var(--ac);color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer}
 .chats-label{padding:10px 16px 6px;font-size:12px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px}
 .chats-list{flex:1;overflow-y:auto;overflow-x:hidden}
 
@@ -511,10 +522,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
       </div>
       <button class="search-btn" onclick="doSearch()">Найти</button>
     </div>
-    <div id="searchResult">
-      <div class="sr-row" style="padding:0 16px 10px">
+    <div id="searchResult" style="display:none;background:var(--ac-l);border:1.5px solid var(--ac);border-radius:14px;margin:0 12px 8px;padding:12px">
+      <div class="sr-row">
         <div class="sr-av" id="srAv">?</div>
-        <div>
+        <div style="flex:1">
           <div class="sr-name" id="srName">@user</div>
           <div class="sr-status" id="srStatus">● онлайн</div>
         </div>
@@ -523,7 +534,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
     </div>
 
     <!-- Tab content: Chats -->
-    <div id="tabChats" class="tab-content active">
+    <div id="tabChats" class="tab-content">
       <div class="chats-label">ЧАТЫ</div>
       <div class="chats-list" id="chatsList"></div>
     </div>
@@ -4128,14 +4139,27 @@ function handleCallStatus(d) {
 // ── Wallet ─────────────────────────────────────────────────────────────────
 // ── Tab bar ──────────────────────────────────────────────────────────────────
 function switchTab2(tab) {
-  ['calls','chats','settings'].forEach(t => {
-    const content = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
-    const btn     = document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1));
-    if (content) content.style.display = t === tab ? 'flex' : 'none';
-    if (btn) btn.classList.toggle('active', t === tab);
-  });
-  if (tab === 'settings') openProfile();
-  if (tab === 'calls') renderCallLog();
+  // Скрываем все вкладки
+  document.getElementById('tabChats').style.display = 'none';
+  document.getElementById('tabCalls').style.display = 'none';
+
+  // Сбрасываем активные кнопки
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+  if (tab === 'chats') {
+    document.getElementById('tabChats').style.display = 'flex';
+    document.getElementById('tabBtnChats').classList.add('active');
+  } else if (tab === 'calls') {
+    document.getElementById('tabCalls').style.display = 'flex';
+    document.getElementById('tabBtnCalls').classList.add('active');
+    renderCallLog();
+  } else if (tab === 'settings') {
+    document.getElementById('tabBtnSettings').classList.add('active');
+    // Открываем профиль поверх
+    openProfile();
+    // Возвращаемся на чаты когда профиль закроют
+    setTimeout(() => switchTab2('chats'), 100);
+  }
 }
 
 // ── Top action menu ──────────────────────────────────────────────────────────
