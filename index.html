@@ -790,26 +790,123 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
       <div id="profDate" style="font-size:14px;color:var(--txt2);padding:4px 0"></div>
     </div>
     <button class="btn-save" onclick="saveProfile()">Сохранить</button>
+    <button onclick="openMyQR()" style="width:100%;padding:13px;border:1.5px solid var(--ac);border-radius:14px;background:var(--ac-l);color:var(--ac);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="4" height="4"/></svg>
+      Мой QR-код
+    </button>
     <button class="btn-logout" onclick="doLogout()">Выйти</button>
   </div>
 </div>
 
 <!-- Peer profile modal -->
-<div class="modal-overlay" id="peerProfModal">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="prof-av-wrap"><div class="prof-av" id="peerProfAv">?</div></div>
-    <div style="text-align:center;margin-bottom:16px">
-      <div style="font-size:20px;font-weight:800" id="peerProfName">@user</div>
-      <div style="font-size:13px;color:var(--txt2);margin-top:4px" id="peerProfStatus"></div>
-      <div style="font-size:13px;color:var(--txt2);margin-top:4px" id="peerProfBio"></div>
-      <div style="font-size:12px;color:var(--txt2);margin-top:4px" id="peerProfDate"></div>
-    </div>
-    <button class="btn-save" onclick="writeToPeer()" style="margin-bottom:10px">Написать</button>
-    <button id="addFriendBtn" onclick="openAddFriendModal()" style="width:100%;padding:13px;border:1.5px solid var(--ac);border-radius:14px;background:var(--ac-l);color:var(--ac);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">+ Добавить в друзья</button>
-    <button id="blockUserBtn" onclick="toggleBlockUser()" style="width:100%;padding:13px;border:none;border-radius:14px;background:none;color:var(--danger);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;margin-bottom:6px">Заблокировать</button>
-    <button onclick="closeModal('peerProfModal')" style="width:100%;padding:13px;border:1.5px solid var(--brd);border-radius:14px;background:none;font-family:var(--font);font-size:15px;cursor:pointer;color:var(--txt2)">Закрыть</button>
+<!-- Peer profile page (full-screen slide-in) -->
+<div id="peerProfilePage" style="position:fixed;inset:0;z-index:90;background:#fff;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden">
+  <!-- Header -->
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--brd);flex-shrink:0;background:#fff">
+    <button onclick="closePeerProfile()" style="border:none;background:none;font-size:22px;cursor:pointer;color:var(--ac);padding:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center">‹</button>
+    <div style="flex:1;font-size:17px;font-weight:700" id="peerProfTitle">Профиль</div>
+    <!-- QR кнопка -->
+    <button onclick="openPeerQR()" style="border:none;background:var(--ac-l);border-radius:10px;padding:7px 11px;cursor:pointer;display:flex;align-items:center;gap:5px;color:var(--ac);font-weight:700;font-size:12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="4" height="4"/></svg>
+      QR
+    </button>
   </div>
+
+  <!-- Profile content -->
+  <div style="flex:1;overflow-y:auto">
+    <!-- Avatar + name block -->
+    <div style="background:linear-gradient(180deg,var(--ac-l) 0%,#fff 100%);padding:32px 20px 24px;text-align:center">
+      <div id="peerProfAv" style="width:96px;height:96px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:700;color:#fff;margin:0 auto 16px;overflow:hidden;box-shadow:0 8px 24px rgba(26,188,156,.3)">?</div>
+      <div style="font-size:22px;font-weight:800;margin-bottom:4px" id="peerProfName">@user</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px" id="peerProfStatus"></div>
+      <div style="font-size:14px;color:var(--txt2)" id="peerProfBio"></div>
+    </div>
+
+    <!-- 4 action buttons -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 16px;margin-top:-8px;margin-bottom:16px">
+      <button onclick="openChatSearch()" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 6px;border:none;background:#f5f5f5;border-radius:16px;cursor:pointer;transition:.15s" ontouchstart="this.style.background='var(--ac-l)'" ontouchend="this.style.background='#f5f5f5'">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <span style="font-size:11px;font-weight:600;color:var(--txt2);text-align:center;line-height:1.2">Поиск</span>
+      </button>
+      <button onclick="closePeerProfile();startCall('voice')" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 6px;border:none;background:#f5f5f5;border-radius:16px;cursor:pointer;transition:.15s" ontouchstart="this.style.background='var(--ac-l)'" ontouchend="this.style.background='#f5f5f5'">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.6 3.38 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.08 6.08l1.14-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        <span style="font-size:11px;font-weight:600;color:var(--txt2);text-align:center;line-height:1.2">Звонок</span>
+      </button>
+      <button onclick="closePeerProfile();startCall('video')" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 6px;border:none;background:#f5f5f5;border-radius:16px;cursor:pointer;transition:.15s" ontouchstart="this.style.background='var(--ac-l)'" ontouchend="this.style.background='#f5f5f5'">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        <span style="font-size:11px;font-weight:600;color:var(--txt2);text-align:center;line-height:1.2">Видео</span>
+      </button>
+      <button id="peerMuteBtn" onclick="togglePeerMute()" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 6px;border:none;background:#f5f5f5;border-radius:16px;cursor:pointer;transition:.15s" ontouchstart="this.style.background='var(--ac-l)'" ontouchend="this.style.background='#f5f5f5'">
+        <svg id="peerMuteIcon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.2" stroke-linecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+        <span id="peerMuteLabel" style="font-size:11px;font-weight:600;color:var(--txt2);text-align:center;line-height:1.2">Звук вкл.</span>
+      </button>
+    </div>
+
+    <!-- Info block -->
+    <div style="margin:0 16px 12px;background:#f8f8f8;border-radius:16px;overflow:hidden">
+      <div style="padding:14px 16px;border-bottom:1px solid #eee">
+        <div style="font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Логин</div>
+        <div style="font-size:15px;color:var(--ac);font-weight:600" id="peerProfLogin">@user</div>
+      </div>
+      <div style="padding:14px 16px" id="peerProfBioBlock" style="display:none">
+        <div style="font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">О себе</div>
+        <div style="font-size:15px;color:var(--txt)" id="peerProfBioText"></div>
+      </div>
+    </div>
+
+    <!-- Friend / block actions -->
+    <div style="margin:0 16px;display:flex;flex-direction:column;gap:10px;padding-bottom:32px">
+      <button id="peerAddFriendBtn" onclick="openAddFriendModal()" style="width:100%;padding:15px;border:1.5px solid var(--ac);border-radius:16px;background:var(--ac-l);color:var(--ac);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer">+ Добавить в друзья</button>
+      <button id="peerBlockBtn" onclick="toggleBlockUser()" style="width:100%;padding:15px;border:none;border-radius:16px;background:#fff0f0;color:var(--danger);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer">Заблокировать</button>
+    </div>
+  </div>
+</div>
+
+<!-- Chat search overlay -->
+<div id="chatSearchPage" style="position:fixed;inset:0;z-index:91;background:#fff;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--brd);flex-shrink:0">
+    <button onclick="closeChatSearch()" style="border:none;background:none;font-size:22px;cursor:pointer;color:var(--ac);padding:0">‹</button>
+    <div style="flex:1;font-size:15px;font-weight:700">Поиск по чату</div>
+  </div>
+  <div style="padding:12px 16px;flex-shrink:0">
+    <input id="chatSearchInp" placeholder="Введи слово или фразу..." oninput="doChatSearch(this.value)"
+      style="width:100%;padding:12px 16px;border:1.5px solid var(--brd);border-radius:14px;font-family:var(--font);font-size:15px;outline:none;background:#fafafa"
+      onfocus="this.style.borderColor='var(--ac)'" onblur="this.style.borderColor='var(--brd)'">
+  </div>
+  <div id="chatSearchResults" style="flex:1;overflow-y:auto;padding:0 16px"></div>
+</div>
+
+<!-- QR code fullscreen -->
+<div id="qrPage" style="position:fixed;inset:0;z-index:92;background:#fff;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;align-items:center">
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--brd);width:100%;flex-shrink:0">
+    <button onclick="closeQrPage()" style="border:none;background:none;font-size:22px;cursor:pointer;color:var(--ac);padding:0">‹</button>
+    <div style="flex:1;font-size:17px;font-weight:700" id="qrPageTitle">QR-код</div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:24px;width:100%">
+    <div id="qrCodeCanvas" style="padding:20px;background:#fff;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,.12)"></div>
+    <div style="font-size:18px;font-weight:800;color:var(--txt)" id="qrUsername">@user</div>
+    <div style="font-size:13px;color:var(--txt2);text-align:center">Отсканируй этот QR чтобы открыть профиль</div>
+  </div>
+  <div style="padding:16px 24px 32px;width:100%">
+    <button onclick="openQrScanner()" style="width:100%;padding:15px;border:none;border-radius:16px;background:var(--ac);color:#fff;font-family:var(--font);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 16px rgba(26,188,156,.3)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="4" height="4"/></svg>
+      Сканировать QR-код
+    </button>
+  </div>
+</div>
+
+<!-- QR Scanner -->
+<div id="qrScannerPage" style="position:fixed;inset:0;z-index:93;background:#000;display:none;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(0,0,0,.5);position:absolute;top:0;left:0;right:0;z-index:2">
+    <button onclick="closeQrScanner()" style="border:none;background:none;font-size:22px;cursor:pointer;color:#fff;padding:0">‹</button>
+    <div style="font-size:17px;font-weight:700;color:#fff">Сканировать QR</div>
+  </div>
+  <video id="qrVideo" style="width:100%;height:100%;object-fit:cover" playsinline autoplay></video>
+  <canvas id="qrCanvas" style="display:none"></canvas>
+  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+    <div style="width:220px;height:220px;border:3px solid var(--ac);border-radius:20px;box-shadow:0 0 0 9999px rgba(0,0,0,.5)"></div>
+  </div>
+  <div style="position:absolute;bottom:60px;left:0;right:0;text-align:center;color:#fff;font-size:14px">Наведи камеру на QR-код</div>
 </div>
 
 <!-- Add friend modal -->
@@ -1536,7 +1633,7 @@ function openAddFriendModal() {
   document.getElementById('friendFirstName').value = '';
   document.getElementById('friendLastName').value  = '';
   document.getElementById('addFriendErr').textContent = '';
-  closeModal('peerProfModal');
+  closePeerProfile();
   document.getElementById('addFriendModal').classList.add('show');
 }
 
@@ -1564,7 +1661,7 @@ function toggleBlockUser() {
     toast('🔒 Пользователь заблокирован');
   }
   localStorage.setItem('sup_bl', JSON.stringify([...blacklist]));
-  closeModal('peerProfModal');
+  closePeerProfile();
   cmd({ cmd:'get_chats' });
   // Обновляем поле ввода если открыт чат с этим пользователем
   if (activeChat === viewingPeer) updateBlockedInputUI();
@@ -1589,55 +1686,256 @@ function updateBlockedInputUI() {
   }
 }
 
-// ── openViewProfile — полная версия ─────────────────────────────────────────
+// ── Peer profile (full-screen slide-in) ─────────────────────────────────────
+function openPeerProfile() { viewingPeer = activeChat; openViewProfile(activeChat); }
+
 function openViewProfile(username) {
   viewingPeer = username;
   const cd = chatsData[username] || {};
+
+  // Аватарка
   const av = document.getElementById('peerProfAv');
-  if (cd.avatar) av.innerHTML = `<img src="${cd.avatar}">`;
-  else { av.innerHTML=''; av.textContent = username[0].toUpperCase(); }
+  if (cd.avatar) av.innerHTML = `<img src="${cd.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  else { av.innerHTML = ''; av.style.background = getAvatarColor(username); av.textContent = username[0].toUpperCase(); }
 
-  // Имя: друг или логин
+  // Имя (из friends или логин)
   const dispName = getDisplayName(username);
+  document.getElementById('peerProfTitle').textContent = dispName !== '@'+username ? dispName : 'Профиль';
   document.getElementById('peerProfName').textContent = dispName;
-
-  // Логин (если есть кастомное имя — показываем логин отдельно)
-  const bio = document.getElementById('peerProfBio');
-  bio.innerHTML = '';
-  if (friends[username]) {
-    const loginEl = document.createElement('div');
-    loginEl.style.cssText = 'font-size:12px;color:var(--txt2);margin-bottom:4px';
-    loginEl.textContent = '@' + username;
-    bio.appendChild(loginEl);
-  }
-  if (cd.bio) {
-    const bioEl = document.createElement('div');
-    bioEl.textContent = cd.bio;
-    bio.appendChild(bioEl);
-  }
+  document.getElementById('peerProfLogin').textContent = '@' + username;
 
   // Статус
   const statusEl = document.getElementById('peerProfStatus');
   if (cd.online) {
     statusEl.textContent = getStatusLabel(cd.status, true);
     statusEl.style.color = cd.status === 'dnd' ? '#e74c3c' : cd.status === 'away' ? '#f39c12' : 'var(--ac)';
+    statusEl.style.fontWeight = '600';
   } else {
     statusEl.textContent = cd.last_seen ? formatLastSeen(cd.last_seen) : '○ не в сети';
     statusEl.style.color = 'var(--txt2)';
+    statusEl.style.fontWeight = '';
   }
 
-  document.getElementById('peerProfDate').textContent = cd.created_at ? `Зарегистрирован: ${cd.created_at}` : '';
+  // Bio
+  document.getElementById('peerProfBio').textContent = cd.bio || '';
+  const bioText = document.getElementById('peerProfBioText');
+  const bioBlock = document.getElementById('peerProfBioBlock');
+  if (bioText) bioText.textContent = cd.bio || '';
+  if (bioBlock) bioBlock.style.display = cd.bio ? '' : 'none';
 
-  // Кнопки
-  const addBtn   = document.getElementById('addFriendBtn');
-  const blockBtn = document.getElementById('blockUserBtn');
-  addBtn.textContent   = friends[username] ? '✅ В друзьях' : '+ Добавить в друзья';
-  addBtn.style.opacity = friends[username] ? '0.6' : '1';
-  blockBtn.textContent = blacklist.has(username) ? 'Разблокировать' : 'Заблокировать';
-  blockBtn.style.color = blacklist.has(username) ? 'var(--ac)' : 'var(--danger)';
+  // Кнопки друг/блок
+  const addBtn   = document.getElementById('peerAddFriendBtn');
+  const blockBtn = document.getElementById('peerBlockBtn');
+  if (addBtn) {
+    addBtn.textContent = friends[username] ? `✅ ${friends[username].first} ${friends[username].last||''}`.trim() : '+ Добавить в друзья';
+    addBtn.style.opacity = friends[username] ? '0.7' : '1';
+  }
+  if (blockBtn) {
+    blockBtn.textContent = blacklist.has(username) ? '🔓 Разблокировать' : 'Заблокировать';
+    blockBtn.style.background = blacklist.has(username) ? '#f0fff4' : '#fff0f0';
+    blockBtn.style.color = blacklist.has(username) ? 'var(--ac)' : 'var(--danger)';
+  }
 
-  document.getElementById('peerProfModal').classList.add('show');
+  // Звук кнопка
+  const isMuted = mutedChats.has(username);
+  const muteLabel = document.getElementById('peerMuteLabel');
+  const muteIcon  = document.getElementById('peerMuteIcon');
+  if (muteLabel) muteLabel.textContent = isMuted ? 'Звук выкл.' : 'Звук вкл.';
+  if (muteIcon)  muteIcon.setAttribute('stroke', isMuted ? '#999' : 'var(--ac)');
+
+  // Открываем
+  const page = document.getElementById('peerProfilePage');
+  page.style.display = 'flex';
+  requestAnimationFrame(() => page.style.transform = 'translateX(0)');
 }
+
+function closePeerProfile() {
+  const page = document.getElementById('peerProfilePage');
+  page.style.transform = 'translateX(100%)';
+  setTimeout(() => page.style.display = '', 300);
+}
+
+function togglePeerMute() {
+  if (!viewingPeer) return;
+  swipeMute(viewingPeer);
+  const isMuted = mutedChats.has(viewingPeer);
+  const muteLabel = document.getElementById('peerMuteLabel');
+  const muteIcon  = document.getElementById('peerMuteIcon');
+  if (muteLabel) muteLabel.textContent = isMuted ? 'Звук выкл.' : 'Звук вкл.';
+  if (muteIcon)  muteIcon.setAttribute('stroke', isMuted ? '#999' : 'var(--ac)');
+}
+
+// openAddFriendModal и toggleBlockUser уже используют viewingPeer
+
+// ── Chat search ──────────────────────────────────────────────────────────────
+function openChatSearch() {
+  closePeerProfile();
+  const page = document.getElementById('chatSearchPage');
+  page.style.display = 'flex';
+  requestAnimationFrame(() => page.style.transform = 'translateX(0)');
+  document.getElementById('chatSearchInp').value = '';
+  document.getElementById('chatSearchResults').innerHTML = '<div style="text-align:center;padding:40px;color:var(--txt2)">Введи запрос для поиска</div>';
+  setTimeout(() => document.getElementById('chatSearchInp').focus(), 350);
+}
+
+function closeChatSearch() {
+  const page = document.getElementById('chatSearchPage');
+  page.style.transform = 'translateX(100%)';
+  setTimeout(() => page.style.display = '', 300);
+}
+
+function doChatSearch(query) {
+  const el = document.getElementById('chatSearchResults');
+  if (!query.trim()) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--txt2)">Введи запрос для поиска</div>'; return; }
+  const msgs = document.getElementById('messages');
+  if (!msgs) return;
+  const all = [...msgs.querySelectorAll('.msg-wrap')];
+  const q = query.toLowerCase();
+  const found = all.filter(wrap => {
+    const t = wrap.querySelector('.bubble-text')?.textContent || '';
+    return t.toLowerCase().includes(q);
+  });
+  if (!found.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--txt2)">Ничего не найдено</div>'; return; }
+  el.innerHTML = found.map((wrap, i) => {
+    const text = wrap.querySelector('.bubble-text')?.textContent || '';
+    const time = wrap.querySelector('.msg-time')?.textContent || '';
+    const isOut = wrap.classList.contains('out');
+    const highlighted = text.replace(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi'), m => `<mark style="background:var(--ac-l);color:var(--ac);border-radius:3px;padding:0 2px">${m}</mark>`);
+    return `<div onclick="jumpToSearchResult('${wrap.id}')" style="padding:12px 0;border-bottom:1px solid var(--brd);cursor:pointer;display:flex;gap:12px;align-items:flex-start">
+      <div style="width:8px;height:8px;border-radius:50%;background:${isOut?'var(--ac)':'#ddd'};margin-top:6px;flex-shrink:0"></div>
+      <div style="flex:1">
+        <div style="font-size:14px;line-height:1.4">${highlighted}</div>
+        <div style="font-size:11px;color:var(--txt2);margin-top:3px">${time}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function jumpToSearchResult(msgId) {
+  closeChatSearch();
+  setTimeout(() => {
+    const el = document.getElementById(msgId);
+    if (el) { el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.background='var(--ac-l)'; setTimeout(() => el.style.background='', 1500); }
+  }, 350);
+}
+
+// ── QR Code ──────────────────────────────────────────────────────────────────
+function generateQRUrl(username) {
+  return `${location.origin}/?qr=${encodeURIComponent(username)}`;
+}
+
+async function renderQR(username, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const url = generateQRUrl(username);
+
+  // Используем QR генератор через Canvas
+  container.innerHTML = '';
+  const size = 220;
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  container.appendChild(canvas);
+
+  // Простой QR через API
+  const img = document.createElement('img');
+  img.style.cssText = `width:${size}px;height:${size}px;display:block;border-radius:12px`;
+  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&color=1ABC9C&bgcolor=ffffff&margin=10`;
+  img.alt = 'QR';
+  container.innerHTML = '';
+  container.appendChild(img);
+}
+
+function openPeerQR() {
+  if (!viewingPeer) return;
+  const page = document.getElementById('qrPage');
+  document.getElementById('qrUsername').textContent = '@' + viewingPeer;
+  document.getElementById('qrPageTitle').textContent = 'QR: @' + viewingPeer;
+  renderQR(viewingPeer, 'qrCodeCanvas');
+  page.style.display = 'flex';
+  requestAnimationFrame(() => page.style.transform = 'translateX(0)');
+}
+
+function openMyQR() {
+  closeModal('profileModal');
+  const page = document.getElementById('qrPage');
+  document.getElementById('qrUsername').textContent = '@' + me;
+  document.getElementById('qrPageTitle').textContent = 'Мой QR-код';
+  renderQR(me, 'qrCodeCanvas');
+  page.style.display = 'flex';
+  requestAnimationFrame(() => page.style.transform = 'translateX(0)');
+}
+
+function closeQrPage() {
+  const page = document.getElementById('qrPage');
+  page.style.transform = 'translateX(100%)';
+  setTimeout(() => page.style.display = '', 300);
+}
+
+// QR Scanner
+let qrScanInterval = null;
+async function openQrScanner() {
+  const page = document.getElementById('qrScannerPage');
+  page.style.display = 'flex';
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    const video = document.getElementById('qrVideo');
+    video.srcObject = stream;
+    // Сканируем через BarcodeDetector если доступен
+    if ('BarcodeDetector' in window) {
+      const detector = new BarcodeDetector({formats:['qr_code']});
+      qrScanInterval = setInterval(async () => {
+        try {
+          const codes = await detector.detect(video);
+          if (codes.length > 0) {
+            clearInterval(qrScanInterval);
+            const raw = codes[0].rawValue;
+            closeQrScanner();
+            handleQrResult(raw);
+          }
+        } catch(e) {}
+      }, 300);
+    } else {
+      toast('QR сканер не поддерживается в этом браузере');
+    }
+  } catch(e) {
+    toast('Нет доступа к камере');
+    page.style.display = 'none';
+  }
+}
+
+function closeQrScanner() {
+  clearInterval(qrScanInterval);
+  const video = document.getElementById('qrVideo');
+  if (video.srcObject) { video.srcObject.getTracks().forEach(t=>t.stop()); video.srcObject=null; }
+  document.getElementById('qrScannerPage').style.display = 'none';
+}
+
+function handleQrResult(raw) {
+  try {
+    const u = new URL(raw);
+    const username = u.searchParams.get('qr');
+    if (username) {
+      toast(`Найден профиль @${username}`);
+      // Ищем пользователя
+      cmd({cmd:'search', username});
+      setTimeout(() => {
+        const cd = chatsData[username];
+        if (cd || username) openViewProfile(username);
+      }, 800);
+    }
+  } catch(e) {
+    toast('Неверный QR-код');
+  }
+}
+
+// Проверяем QR при открытии страницы
+(function checkQrParam() {
+  const u = new URL(location.href);
+  const qrUser = u.searchParams.get('qr');
+  if (qrUser) {
+    window._qrOpenUser = qrUser;
+  }
+})();
 
 // ── Quick react ──────────────────────────────────────────────────────────────
 function quickReact(emoji) {
@@ -3106,10 +3404,8 @@ function openChatInfo() {
   else { viewingPeer = activeChat; openViewProfile(activeChat); }
 }
 
-function openPeerProfile() { viewingPeer = activeChat; openViewProfile(activeChat); }
-
 function writeToPeer() {
-  closeModal('peerProfModal');
+  closePeerProfile();
   if (viewingPeer) openChatWith(viewingPeer, chatsData[viewingPeer]?.avatar, chatsData[viewingPeer]?.online);
 }
 
