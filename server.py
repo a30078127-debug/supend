@@ -614,6 +614,15 @@ async def manifest_handler(request):
                   {"src":"/logo","sizes":"512x512","type":"image/jpeg"}]}
     return web.Response(text=json.dumps(m), content_type='application/json')
 
+async def sw_handler(request):
+    try:
+        with open('sw.js', 'r', encoding='utf-8') as f:
+            content = f.read()
+        return web.Response(text=content, content_type='application/javascript',
+                          headers={'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/'})
+    except FileNotFoundError:
+        return web.Response(text='// SW not found', content_type='application/javascript')
+
 async def logo_handler(request):
     # Отдаём логотип из файла logo.jpg если он есть
     logo_path = 'logo.jpg'
@@ -659,7 +668,8 @@ async def main():
     app.router.add_post('/upload',       upload_handler)
     app.router.add_get('/media/{fid}',   media_handler)
     app.router.add_get('/manifest.json', manifest_handler)
-    app.router.add_get('/logo',          logo_handler)
+    app.router.add_get('/sw.js',          sw_handler)
+    app.router.add_get('/logo',           logo_handler)
     app.router.add_post('/translate',    translate_handler)
     runner = web.AppRunner(app)
     await runner.setup()

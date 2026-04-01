@@ -448,7 +448,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
           <div class="my-name" id="myName">@username</div>
           <div class="my-status">● онлайн</div>
         </div>
-        <button id="installPwaBtn" onclick="installPwa(event)" title="Добавить на экран" style="display:none;padding:8px 14px;border:none;border-radius:12px;background:var(--ac);color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(26,188,156,.3);flex-shrink:0">
+        <button id="installPwaBtn" onclick="installPwa(event)" title="Добавить на экран" style="padding:8px 14px;border:none;border-radius:12px;background:var(--ac);color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(26,188,156,.3);flex-shrink:0">
           ⬇ Скачать
         </button>
       </div>
@@ -1433,13 +1433,15 @@ function onAuthOk(d) {
   mySup = d.sup||0; myRefCode = d.ref_code||'';
   // Сохраняем сессию для автовхода
   localStorage.setItem('sup_session', JSON.stringify({u: me, p: myPassword}));
-  document.getElementById('authBtn').disabled = false;
+  document.getElementById('authBtn') && (document.getElementById('authBtn').disabled = false);
   document.getElementById('authScreen').classList.add('hidden');
   document.getElementById('app').classList.add('visible');
   updateMyUI();
   updateSup(mySup);
   cmd({ cmd:'get_chats' });
   applyStoredCustom();
+  // Запрашиваем разрешение на уведомления
+  setTimeout(requestNotifPermission, 1500);
   if (d.inv_bonus && d.inv_bonus > 0) {
     addTx('Бонус за код приглашения', +d.inv_bonus, '🎁');
     toast(`+${d.inv_bonus} SUP за код приглашения! 🎁`);
@@ -2161,6 +2163,10 @@ function onMessage(d) {
     if (d.from !== me) cmd({ cmd:'mark_read', with:d.from });
   } else if (d.from !== me) {
     toast(`💬 @${d.from}: ${(d.text||'Медиа').slice(0,40)}`);
+    // Push уведомление если приложение свёрнуто
+    const name = getDisplayName ? getDisplayName(d.from) : '@' + d.from;
+    const body = d.mtype === 'voice' ? '🎤 Голосовое сообщение' : d.mtype === 'image' ? '📷 Фото' : (d.text||'').slice(0,60);
+    sendPushNotif(name, body, 'msg-' + d.from);
   }
   updateChatListItem(other, d, false);
 }
@@ -3608,6 +3614,11 @@ async function handleCallSignal(d) {
     document.getElementById('incName').textContent = '@' + d.from;
     document.getElementById('incType').textContent = callIsVideo ? '📹 Видеозвонок' : '📞 Голосовой звонок';
     document.getElementById('incomingCall').classList.add('show');
+    sendPushNotif(
+      callIsVideo ? '📹 Видеозвонок' : '📞 Голосовой звонок',
+      'от @' + d.from,
+      'call'
+    );
   } else if (sig.type === 'answer') {
     if (peerConn) await peerConn.setRemoteDescription({type:'answer', sdp:sig.sdp});
     document.getElementById('callStatus').textContent = isVideoCall ? '📹 Видео соединено' : '📞 Соединено';
@@ -4222,6 +4233,7 @@ function onOrderDeal(d) {
   const o = allOrders.find(o => o.id === d.order.id);
   if (o) { o.status = 'pending'; o.buyer = d.buyer; o.deal_status = 'waiting_payment'; }
   toast(`💱 @${d.buyer} хочет купить ${d.order.amount} SUP`);
+  sendPushNotif('💱 Новая сделка', `@${d.buyer} хочет купить ${d.order.amount} SUP`, 'deal');
   if (document.getElementById('exchangePage').classList.contains('show')) {
     renderOrders(); renderDeals();
   }
@@ -4396,28 +4408,105 @@ function makeAvatar(username, size = 'md') {
   const letter = username ? username[0].toUpperCase() : '?';
   return { color, letter };
 }
+// ── Service Worker + Push ────────────────────────────────────────────────────
+let swReg = null;
+
+async function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    swReg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    console.log('[SW] registered');
+  } catch(e) { console.error('[SW] failed:', e); }
+}
+
+async function requestNotifPermission() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied')  return false;
+  const perm = await Notification.requestPermission();
+  return perm === 'granted';
+}
+
+function sendPushNotif(title, body, tag) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  // Если приложение не в фокусе — показываем уведомление
+  if (document.visibilityState !== 'hidden') return; // не показывать когда открыто
+  if (swReg) {
+    swReg.showNotification(title, {
+      body, icon: '/logo', badge: '/logo',
+      tag: tag || 'supend',
+      renotify: true,
+      vibrate: [200, 100, 200],
+    });
+  } else {
+    new Notification(title, { body, icon: '/logo' });
+  }
+}
+
+// Регистрируем SW при загрузке
+registerSW();
+
+// ── PWA Install ─────────────────────────────────────────────────────────────
 let pwaPrompt = null;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   pwaPrompt = e;
-  const btn = document.getElementById('installPwaBtn');
-  if (btn) btn.style.display = '';
 });
 window.addEventListener('appinstalled', () => {
   pwaPrompt = null;
   const btn = document.getElementById('installPwaBtn');
   if (btn) btn.style.display = 'none';
-  toast('✅ Supend установлен на экран!');
+  toast('✅ Supend установлен!');
 });
+
 function installPwa(e) {
   e.stopPropagation();
+  if (isStandalone) { toast('✅ Уже установлен как приложение'); return; }
   if (pwaPrompt) {
     pwaPrompt.prompt();
-    pwaPrompt.userChoice.then(() => { pwaPrompt = null; });
+    pwaPrompt.userChoice.then(r => {
+      if (r.outcome === 'accepted') {
+        const btn = document.getElementById('installPwaBtn');
+        if (btn) btn.style.display = 'none';
+      }
+      pwaPrompt = null;
+    });
+  } else if (isIOS) {
+    // iOS — показываем инструкцию
+    let m = document.getElementById('iosInstallModal');
+    if (!m) {
+      m = document.createElement('div');
+      m.id = 'iosInstallModal';
+      m.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center';
+      m.innerHTML = `<div style="background:#fff;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;animation:slideUp .25s ease-out">
+        <div style="text-align:center;margin-bottom:16px">
+          <div style="font-size:40px;margin-bottom:8px">📱</div>
+          <div style="font-size:18px;font-weight:800;margin-bottom:12px">Установить Supend</div>
+          <div style="font-size:14px;color:#888;line-height:1.8;text-align:left;background:#f5f5f5;border-radius:12px;padding:14px">
+            1. Нажми <strong>⎙ Поделиться</strong> внизу Safari<br>
+            2. Выбери <strong>«На экран «Домой»»</strong><br>
+            3. Нажми <strong>«Добавить»</strong>
+          </div>
+        </div>
+        <button onclick="document.getElementById('iosInstallModal').remove()" style="width:100%;padding:14px;border:none;border-radius:14px;background:var(--ac);color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--font)">Понятно</button>
+      </div>`;
+      m.onclick = ev => { if (ev.target === m) m.remove(); };
+      document.body.appendChild(m);
+    }
   } else {
-    // iOS Safari — нет beforeinstallprompt, показываем инструкцию
-    toast('На iOS: нажми «Поделиться» → «На экран Домой»');
+    toast('Открой в Chrome → меню ⋮ → «Добавить на главный экран»');
   }
+}
+
+// Скрываем кнопку если уже в standalone режиме
+if (isStandalone) {
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('installPwaBtn');
+    if (btn) btn.style.display = 'none';
+  });
 }
 
 // ── Init ────────────────────────────────────────────────────────────────────
@@ -4427,7 +4516,15 @@ function installPwa(e) {
   if (saved) {
     try {
       const s = JSON.parse(saved);
-      if (s.u && s.p) { me = s.u; myPassword = s.p; }
+      if (s.u && s.p) {
+        me = s.u;
+        myPassword = s.p;
+        // Показываем экран загрузки вместо auth
+        const auth = document.getElementById('authScreen');
+        if (auth) {
+          auth.innerHTML = `<div class="auth-logo" style="background:none;box-shadow:none;overflow:hidden;border-radius:24px"><img src="/logo" style="width:80px;height:80px;object-fit:cover;border-radius:24px" onerror="this.parentElement.innerHTML='💬'"></div><div class="auth-title">Supend</div><div style="margin-top:20px;color:var(--txt2);font-size:14px">⏳ Входим...</div>`;
+        }
+      }
     } catch(e) {}
   }
 })();
