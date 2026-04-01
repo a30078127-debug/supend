@@ -790,6 +790,14 @@ body.dark #themeScheduleModal input#scheduleCity::placeholder{color:#636366}
         <span style="font-size:14px;color:#8e8e93;margin-right:6px" id="settingsFolderCount"></span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
+      <div onclick="openMyStoriesSettings()" style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
+        <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#ff6b6b,#ffa07a);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        </div>
+        <div style="flex:1;font-size:16px">Мои истории</div>
+        <span style="font-size:14px;color:#8e8e93;margin-right:6px" id="myStoriesCount"></span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
       <div onclick="openSettingsNotifs()" style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
         <div style="width:32px;height:32px;border-radius:8px;background:#ff3b30;display:flex;align-items:center;justify-content:center;flex-shrink:0">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -1974,6 +1982,12 @@ function handle(d) {
     case 'deal_status':   onDealStatusUpdate(d); break;
     case 'deal_chat_msg': onDealChatMsg(d);   break;
     case 'deal_confirmed': onDealConfirmed(d); break;
+    // Stories
+    case 'stories_list':   onStoriesList(d);  break;
+    case 'story_posted':   onStoryPosted(d);  break;
+    case 'story_new':      onStoryNew(d);     break;
+    case 'story_media':    onStoryMedia(d);   break;
+    case 'story_views':    onStoryViews(d);   break;
   }
 }
 
@@ -5124,7 +5138,9 @@ function fillSettingsPage() {
   const fc = document.getElementById('settingsFolderCount');
   if (fc) { const n = Object.keys(folders).length; fc.textContent = n > 0 ? n : ''; }
 
-  // Notif settings from localStorage
+  // Story count
+  const sc = document.getElementById('myStoriesCount');
+  if (sc) sc.textContent = myServerStories.length > 0 ? myServerStories.length : '';
   const ns = JSON.parse(localStorage.getItem('sup_notif_settings') || '{}');
   ['Messages','Calls','Groups','Deals','ShowText'].forEach(k => {
     const el = document.getElementById('notif' + k);
@@ -5278,7 +5294,13 @@ function renderCallLog() {
 }
 
 // ── Stories ──────────────────────────────────────────────────────────────────
-const myStories = JSON.parse(localStorage.getItem('sup_my_stories') || '[]');
+// ── Stories ───────────────────────────────────────────────────────────────────
+let serverStories = {};   // username -> [{id, type, ts}]
+let myServerStories = []; // [{id, media, type, ts, views}]
+let storyViewerData = []; // [{username, stories:[{id,media,type,ts,views}], avatarBg, avatar, displayName}]
+let storyViewerPeerIdx = 0;
+let storyViewerStoryIdx = 0;
+let storyProgressTimer = null;
 
 function renderStoriesBar() {
   const myAv = document.getElementById('myStoryAv');
@@ -5286,67 +5308,346 @@ function renderStoriesBar() {
     if (myAvatar) myAv.innerHTML = `<img src="${myAvatar}">`;
     else { myAv.textContent = me ? me[0].toUpperCase() : '?'; myAv.style.background = getAvatarColor(me); }
   }
-  // Показываем аватарки пользователей из чатов
+  // Запрашиваем истории с сервера
+  cmd({ cmd: 'get_stories' });
+}
+
+function onStoriesList(d) {
+  serverStories = {};
+  d.peers.forEach(p => { serverStories[p.username] = p; });
+  myServerStories = d.my || [];
+
   const container = document.getElementById('storiesContainer');
   if (!container) return;
-  const peers = Object.values(chatsData).filter(c => c.username && !c.gid);
-  container.innerHTML = peers.slice(0, 10).map(c => {
-    const name = getDisplayName(c.username);
-    const color = getAvatarColor(c.username);
-    const avHtml = c.avatar ? `<img src="${c.avatar}">` : c.username[0].toUpperCase();
-    return `<div class="story-item" onclick="openUserStory('${c.username}')">
-      <div class="story-av-wrap has-story">
+
+  // Обновляем обводку своей аватарки
+  const myWrap = document.querySelector('.my-story-wrap');
+  if (myWrap) {
+    myWrap.classList.toggle('has-story', myServerStories.length > 0);
+    myWrap.classList.toggle('my-story-has', myServerStories.length > 0);
+  }
+
+  // Аватарки пользователей с историями
+  const peersWithStories = d.peers;
+  container.innerHTML = peersWithStories.map(p => {
+    const name = getDisplayName(p.username);
+    const color = getAvatarColor(p.username);
+    const avHtml = p.avatar ? `<img src="${p.avatar}">` : p.username[0].toUpperCase();
+    // Кол-во историй = кол-во пробелов в обводке
+    const count = p.stories.length;
+    return `<div class="story-item" onclick="openUserStory('${p.username}')">
+      <div class="story-av-wrap has-story" data-count="${count}">
         <div class="story-av" style="background:${color}">${avHtml}</div>
+        ${count > 1 ? `<div style="position:absolute;inset:0;border-radius:50%;border:2.5px solid var(--ac);clip-path:none"></div>` : ''}
       </div>
       <div class="story-name">${name}</div>
     </div>`;
   }).join('');
 }
 
+function onStoryNew(d) {
+  // Кто-то опубликовал историю — обновляем бар
+  cmd({ cmd: 'get_stories' });
+}
+
+// ── Открыть "Моя история" — выбор фото/видео ──────────────────────────────
 function openMyStory() {
-  // Создаём input для выбора фото/видео
+  if (myServerStories.length > 0) {
+    // Есть истории — показываем их или предлагаем добавить
+    showMyStoriesViewer();
+    return;
+  }
+  addNewStory();
+}
+
+function addNewStory() {
   const inp = document.createElement('input');
   inp.type = 'file';
   inp.accept = 'image/*,video/*';
-  inp.onchange = async () => {
+  inp.onchange = () => {
     const f = inp.files[0];
     if (!f) return;
+    toast('Загружаем историю...');
     const r = new FileReader();
     r.onload = () => {
-      const story = { url: r.result, type: f.type.startsWith('video') ? 'video' : 'image', time: Date.now() };
-      myStories.unshift(story);
-      if (myStories.length > 20) myStories.pop();
-      localStorage.setItem('sup_my_stories', JSON.stringify(myStories));
-      toast('История добавлена! 🎉');
-      showStoryViewer([story], me);
+      const mtype = f.type.startsWith('video') ? 'video' : 'image';
+      cmd({ cmd: 'post_story', media: r.result, mtype });
     };
     r.readAsDataURL(f);
   };
   inp.click();
 }
 
-function openUserStory(username) {
-  toast(`Истории @${username} — скоро!`);
+function onStoryPosted(d) {
+  toast('История опубликована! 🎉');
+  cmd({ cmd: 'get_stories' });
 }
 
-function showStoryViewer(stories, username) {
-  const v = document.createElement('div');
-  v.style.cssText = 'position:fixed;inset:0;z-index:500;background:#000;display:flex;flex-direction:column';
-  const s = stories[0];
-  const media = s.type === 'video'
-    ? `<video src="${s.url}" style="width:100%;height:100%;object-fit:contain" autoplay playsinline controls></video>`
-    : `<img src="${s.url}" style="width:100%;height:100%;object-fit:contain">`;
-  v.innerHTML = `
-    <div style="position:absolute;top:0;left:0;right:0;padding:16px;display:flex;align-items:center;gap:12px;z-index:2;background:linear-gradient(#000a,transparent)">
-      <div style="font-size:15px;font-weight:700;color:#fff">@${username}</div>
-      <div style="flex:1;height:3px;background:rgba(255,255,255,.3);border-radius:3px"><div style="height:100%;background:#fff;border-radius:3px;animation:storyProgress 5s linear forwards"></div></div>
-      <button onclick="this.closest('div[style*=fixed]').remove()" style="border:none;background:none;color:#fff;font-size:24px;cursor:pointer">×</button>
-    </div>
-    <style>@keyframes storyProgress{from{width:0}to{width:100%}}</style>
-    ${media}`;
-  v.onclick = e => { if (e.target === v) v.remove(); };
-  document.body.appendChild(v);
-  setTimeout(() => v.remove(), 5500);
+// ── Просмотр историй пользователя ─────────────────────────────────────────
+function openUserStory(username) {
+  const peer = serverStories[username];
+  if (!peer || !peer.stories.length) { toast('Нет активных историй'); return; }
+  // Строим данные просмотрщика — все пиры с историями
+  const allPeers = Object.values(serverStories);
+  storyViewerData = allPeers.map(p => ({
+    username: p.username,
+    avatar: p.avatar,
+    displayName: getDisplayName(p.username),
+    stories: p.stories.map(s => ({ ...s, media: null })) // media грузим по запросу
+  }));
+  storyViewerPeerIdx = storyViewerData.findIndex(p => p.username === username);
+  if (storyViewerPeerIdx < 0) storyViewerPeerIdx = 0;
+  storyViewerStoryIdx = 0;
+  openStoryViewer(false);
+}
+
+function showMyStoriesViewer() {
+  storyViewerData = [{
+    username: me,
+    avatar: myAvatar,
+    displayName: '@' + me,
+    stories: myServerStories.map(s => ({ ...s, media: null })),
+    isMine: true
+  }];
+  storyViewerPeerIdx = 0;
+  storyViewerStoryIdx = 0;
+  openStoryViewer(true);
+}
+
+function openStoryViewer(isMine) {
+  hideTabBar();
+  const viewer = document.getElementById('storyViewer');
+  viewer.style.display = 'flex';
+  loadAndShowStory();
+}
+
+function closeStoryViewer() {
+  clearTimeout(storyProgressTimer);
+  document.getElementById('storyViewer').style.display = 'none';
+  showTabBar();
+}
+
+function loadAndShowStory() {
+  clearTimeout(storyProgressTimer);
+  const peer = storyViewerData[storyViewerPeerIdx];
+  if (!peer) { closeStoryViewer(); return; }
+  const story = peer.stories[storyViewerStoryIdx];
+  if (!story) { closeStoryViewer(); return; }
+
+  // Показываем скелет
+  updateStoryUI(peer, story, null);
+
+  if (story.media) {
+    updateStoryUI(peer, story, story.media);
+    startStoryProgress(story);
+    return;
+  }
+
+  // Грузим медиа
+  cmd({ cmd: 'get_story_media', username: peer.username, story_id: story.id });
+}
+
+function onStoryMedia(d) {
+  if (d.error) { nextStory(); return; }
+  // Находим нужный story и обновляем
+  const peer = storyViewerData[storyViewerPeerIdx];
+  if (!peer || peer.username !== d.username) return;
+  const s = peer.stories.find(x => x.id === d.story_id);
+  if (s) {
+    s.media = d.media;
+    s.views = d.views || [];
+  }
+  updateStoryUI(peer, s, d.media);
+  startStoryProgress(s);
+}
+
+function updateStoryUI(peer, story, mediaData) {
+  const isMine = peer.username === me;
+
+  // Аватарка
+  const avEl = document.getElementById('svAvatar');
+  if (avEl) {
+    if (peer.avatar) avEl.innerHTML = `<img src="${peer.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    else { avEl.textContent = peer.username[0].toUpperCase(); avEl.style.background = getAvatarColor(peer.username); }
+  }
+
+  // Имя и время
+  const nameEl = document.getElementById('svName');
+  if (nameEl) nameEl.textContent = peer.displayName || ('@' + peer.username);
+  const timeEl = document.getElementById('svTime');
+  if (timeEl && story.ts) {
+    const ago = Math.floor((Date.now()/1000 - story.ts) / 60);
+    timeEl.textContent = ago < 60 ? `${ago} мин. назад` : `${Math.floor(ago/60)} ч. назад`;
+  }
+
+  // Прогресс-бары
+  const barsEl = document.getElementById('svBars');
+  if (barsEl) {
+    const total = peer.stories.length;
+    barsEl.innerHTML = Array.from({length: total}, (_, i) =>
+      `<div style="flex:1;height:2.5px;background:rgba(255,255,255,${i < storyViewerStoryIdx ? '1' : i === storyViewerStoryIdx ? '.6' : '.3'});border-radius:2px;overflow:hidden">
+        ${i === storyViewerStoryIdx ? `<div id="svProgressBar" style="height:100%;background:#fff;border-radius:2px;width:0%"></div>` : ''}
+      </div>`
+    ).join('');
+  }
+
+  // Медиа
+  const mediaEl = document.getElementById('svMedia');
+  if (mediaEl) {
+    if (!mediaData) {
+      mediaEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,.5)"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>';
+    } else if (story.type === 'video') {
+      mediaEl.innerHTML = `<video src="${mediaData}" style="width:100%;height:100%;object-fit:cover" autoplay playsinline loop muted></video>`;
+    } else {
+      mediaEl.innerHTML = `<img src="${mediaData}" style="width:100%;height:100%;object-fit:cover">`;
+    }
+  }
+
+  // Кнопка просмотров (только для своих)
+  const viewsBtn = document.getElementById('svViewsBtn');
+  if (viewsBtn) viewsBtn.style.display = isMine ? 'flex' : 'none';
+  const replyArea = document.getElementById('svReplyArea');
+  if (replyArea) replyArea.style.display = isMine ? 'none' : 'flex';
+}
+
+function startStoryProgress(story) {
+  const bar = document.getElementById('svProgressBar');
+  if (!bar) return;
+  const duration = story.type === 'video' ? 15000 : 5000;
+  let start = null;
+  function step(ts) {
+    if (!start) start = ts;
+    const pct = Math.min(100, ((ts - start) / duration) * 100);
+    bar.style.width = pct + '%';
+    if (pct < 100) {
+      storyProgressTimer = requestAnimationFrame(step);
+    } else {
+      nextStory();
+    }
+  }
+  storyProgressTimer = requestAnimationFrame(step);
+}
+
+function nextStory() {
+  const peer = storyViewerData[storyViewerPeerIdx];
+  if (peer && storyViewerStoryIdx < peer.stories.length - 1) {
+    storyViewerStoryIdx++;
+    loadAndShowStory();
+  } else {
+    // Следующий пользователь
+    if (storyViewerPeerIdx < storyViewerData.length - 1) {
+      storyViewerPeerIdx++;
+      storyViewerStoryIdx = 0;
+      loadAndShowStory();
+    } else {
+      closeStoryViewer();
+    }
+  }
+}
+
+function prevStory() {
+  if (storyViewerStoryIdx > 0) {
+    storyViewerStoryIdx--;
+    loadAndShowStory();
+  } else if (storyViewerPeerIdx > 0) {
+    storyViewerPeerIdx--;
+    const peer = storyViewerData[storyViewerPeerIdx];
+    storyViewerStoryIdx = peer.stories.length - 1;
+    loadAndShowStory();
+  }
+}
+
+function swipeNextPeer() {
+  if (storyViewerPeerIdx < storyViewerData.length - 1) {
+    storyViewerPeerIdx++;
+    storyViewerStoryIdx = 0;
+    loadAndShowStory();
+  } else {
+    closeStoryViewer();
+  }
+}
+
+function swipePrevPeer() {
+  if (storyViewerPeerIdx > 0) {
+    storyViewerPeerIdx--;
+    storyViewerStoryIdx = 0;
+    loadAndShowStory();
+  }
+}
+
+function showStoryViews() {
+  const peer = storyViewerData[storyViewerPeerIdx];
+  const story = peer?.stories[storyViewerStoryIdx];
+  if (!story) return;
+  cmd({ cmd: 'get_my_story_views', story_id: story.id });
+}
+
+function onStoryViews(d) {
+  const views = d.views || [];
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.7);display:flex;align-items:flex-end';
+  modal.innerHTML = `
+    <div style="width:100%;background:#1c1c1e;border-radius:20px 20px 0 0;max-height:60vh;overflow-y:auto;padding:16px">
+      <div style="width:36px;height:4px;background:#555;border-radius:2px;margin:0 auto 16px"></div>
+      <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:12px">👁 Просмотры: ${d.count}</div>
+      ${views.length === 0 ? '<div style="color:#8d8e93;padding:20px;text-align:center">Пока никто не смотрел</div>' :
+        views.map(v => {
+          const bg = getAvatarColor(v.username);
+          const avHtml = v.avatar ? `<img src="${v.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : v.username[0].toUpperCase();
+          return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #2c2c2e">
+            <div style="width:40px;height:40px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden">${avHtml}</div>
+            <div style="font-size:15px;color:#fff;font-weight:500">${getDisplayName(v.username)}</div>
+          </div>`;
+        }).join('')}
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="width:100%;padding:14px;border:none;background:#2c2c2e;border-radius:14px;color:#fff;font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;margin-top:12px">Закрыть</button>
+    </div>`;
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
+// Свайп в просмотрщике историй
+(function initStorySwipe() {
+  let touchStartX = 0, touchStartY = 0;
+  document.addEventListener('touchstart', e => {
+    const viewer = document.getElementById('storyViewer');
+    if (!viewer || viewer.style.display === 'none') return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, {passive: true});
+  document.addEventListener('touchend', e => {
+    const viewer = document.getElementById('storyViewer');
+    if (!viewer || viewer.style.display === 'none') return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+      if (dx < 0) swipeNextPeer();
+      else swipePrevPeer();
+    }
+  }, {passive: true});
+})();
+
+function sendStoryReply() {
+  const inp = document.getElementById('svReplyInp');
+  const text = inp?.value.trim();
+  if (!text) return;
+  const peer = storyViewerData[storyViewerPeerIdx];
+  if (!peer) return;
+  cmd({ cmd: 'send_msg', to: peer.username, text: `📖 ${text}` });
+  inp.value = '';
+  toast('Ответ отправлен');
+  closeStoryViewer();
+  openChatWith(peer.username, peer.avatar, false);
+}
+
+// Кнопка «Мои истории» в настройках — открывает просмотрщик своих историй
+function openMyStoriesSettings() {
+  hideTabBar();
+  if (myServerStories.length === 0) {
+    toast('У тебя нет активных историй');
+    showTabBar();
+    return;
+  }
+  showMyStoriesViewer();
 }
 
 // ── updateMyUI — update tabbar avatar too ────────────────────────────────────
@@ -6627,6 +6928,51 @@ connect();
   <div style="width:1px;height:18px;background:#ddd;flex-shrink:0"></div>
   <button onclick="toggleEditMode()" style="border:none;background:none;font-family:var(--font);font-size:13px;color:var(--ac);font-weight:600;cursor:pointer;padding:8px 16px;border-radius:22px">Готово</button>
 </div>
+
+<!-- Story Viewer -->
+<div id="storyViewer" style="display:none;position:fixed;inset:0;z-index:1000;background:#000;flex-direction:column">
+  <!-- Progress bars -->
+  <div id="svBars" style="display:flex;gap:3px;padding:12px 12px 0;position:relative;z-index:3"></div>
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;position:relative;z-index:3">
+    <div id="svAvatar" style="width:36px;height:36px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden"></div>
+    <div>
+      <div id="svName" style="font-size:14px;font-weight:700;color:#fff"></div>
+      <div id="svTime" style="font-size:12px;color:rgba(255,255,255,.6)"></div>
+    </div>
+    <div style="flex:1"></div>
+    <!-- Views button (only for own stories) -->
+    <button id="svViewsBtn" onclick="showStoryViews()" style="display:none;border:none;background:rgba(255,255,255,.15);border-radius:50%;width:36px;height:36px;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(4px)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+    <!-- Add story button (own) -->
+    <button onclick="closeStoryViewer();addNewStory()" style="border:none;background:rgba(255,255,255,.15);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(4px)" id="svAddBtn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <!-- Close -->
+    <button onclick="closeStoryViewer()" style="border:none;background:rgba(255,255,255,.15);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(4px)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <!-- Media -->
+  <div id="svMedia" style="flex:1;position:relative;overflow:hidden"></div>
+
+  <!-- Tap zones -->
+  <div onclick="prevStory()" style="position:absolute;left:0;top:0;bottom:0;width:33%;z-index:4;cursor:pointer"></div>
+  <div onclick="nextStory()" style="position:absolute;right:0;top:0;bottom:0;width:33%;z-index:4;cursor:pointer"></div>
+
+  <!-- Reply area (for others' stories) -->
+  <div id="svReplyArea" style="display:flex;align-items:center;gap:10px;padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));position:relative;z-index:3">
+    <input placeholder="Ответить на историю..." style="flex:1;padding:10px 16px;border:1.5px solid rgba(255,255,255,.3);border-radius:22px;background:transparent;color:#fff;font-family:var(--font);font-size:14px;outline:none" id="svReplyInp">
+    <button onclick="sendStoryReply()" style="width:38px;height:38px;border-radius:50%;background:var(--ac);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 19-7z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- Settings: My Stories button added separately in fillSettingsPage -->
 
 </body>
 </html>

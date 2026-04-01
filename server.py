@@ -10,6 +10,7 @@ groups          = {}   # gid      -> {name, avatar, owner, members, messages}
 media           = {}   # fid      -> (bytes, mime)
 exchange_orders = {}   # oid      -> order
 push_subs       = {}   # username -> [subscription, ...]  (Web Push subscriptions)
+stories         = {}   # username -> [{id, media, type, ts, views:[username,...]}]
 
 # VAPID ключи — генерируются один раз при старте
 VAPID_PUBLIC  = 'BEROCON9Z0x27j4XwIZeBv2dtUxFpM9sy5HGPlPu6VYaqb_BhjFJzA37MmmpCr0LiHf6SZ_wrE82SsTOBW1Nc_o'
@@ -330,6 +331,84 @@ async def ws_handler(request):
                             m['text'] = text; m['edited'] = True; break
                     p2 = {'type':'msg_edit','msg_id':mid,'text':text,'from':me}
                     await push(to, p2); await send(p2)
+
+
+            # ── Stories ───────────────────────────────────────────────────────
+            elif c == 'post_story':
+                media_data = d.get('media', '')
+                mtype = d.get('mtype', 'image')  # 'image' or 'video'
+                now = int(time.time())
+                sid = str(uuid.uuid4())[:8]
+                if me not in stories:
+                    stories[me] = []
+                # Удаляем истории старше 24 часов
+                stories[me] = [s for s in stories[me] if now - s['ts'] < 86400]
+                stories[me].append({'id': sid, 'media': media_data, 'type': mtype, 'ts': now, 'views': []})
+                await send({'type': 'story_posted', 'story_id': sid})
+                # Уведомляем тех кто онлайн и переписывался с нами
+                for u, w in list(online.items()):
+                    if u == me: continue
+                    ch = messages.get(cid(me, u))
+                    if ch:  # есть переписка
+                        try:
+                            await w.send_str(json.dumps({
+                                'type': 'story_new',
+                                'username': me,
+                                'avatar': users[me].get('avatar',''),
+                                'story_id': sid
+                            }))
+                        except: pass
+
+            elif c == 'get_stories':
+                # Получаем истории всех пользователей с которыми есть переписка
+                now = int(time.time())
+                result = []
+                for u in list(users.keys()):
+                    if u == me: continue
+                    ch = messages.get(cid(me, u))
+                    if not ch: continue
+                    user_stories = [s for s in stories.get(u, []) if now - s['ts'] < 86400]
+                    if user_stories:
+                        result.append({
+                            'username': u,
+                            'avatar': users[u].get('avatar',''),
+                            'stories': [{'id': s['id'], 'type': s['type'], 'ts': s['ts']} for s in user_stories]
+                        })
+                # Добавляем свои истории
+                my_stories = [s for s in stories.get(me, []) if now - s['ts'] < 86400]
+                await send({'type': 'stories_list', 'peers': result, 'my': my_stories})
+
+            elif c == 'get_story_media':
+                # Получить медиа конкретной истории
+                username = d.get('username', me)
+                sid = d.get('story_id')
+                now = int(time.time())
+                user_stories = [s for s in stories.get(username, []) if now - s['ts'] < 86400]
+                story = next((s for s in user_stories if s['id'] == sid), None)
+                if story:
+                    # Отмечаем просмотр
+                    if me not in story['views'] and me != username:
+                        story['views'].append(me)
+                    await send({'type': 'story_media', 'story_id': sid, 'username': username,
+                                'media': story['media'], 'mtype': story['type'],
+                                'ts': story['ts'], 'views': story['views']})
+                else:
+                    await send({'type': 'story_media', 'story_id': sid, 'error': True})
+
+            elif c == 'get_my_story_views':
+                sid = d.get('story_id')
+                my_s = next((s for s in stories.get(me, []) if s['id'] == sid), None)
+                if my_s:
+                    viewers = []
+                    for v in my_s['views']:
+                        viewers.append({'username': v, 'avatar': users.get(v,{}).get('avatar','')})
+                    await send({'type': 'story_views', 'story_id': sid, 'views': viewers, 'count': len(viewers)})
+
+            elif c == 'delete_story':
+                sid = d.get('story_id')
+                if me in stories:
+                    stories[me] = [s for s in stories[me] if s['id'] != sid]
+                await send({'type': 'story_deleted', 'story_id': sid})
 
             # ── Push subscription ─────────────────────────────────────────────
             elif c == 'push_subscribe':
