@@ -70,7 +70,32 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .head-btn{width:38px;height:38px;border-radius:50%;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);transition:.15s;font-size:18px}
 .head-btn:hover{background:var(--hov)}
 
-/* ── Stories bar ───────────────────────────────── */
+/* ── Dark theme ────────────────────────────────── */
+body.dark{
+  --txt:#f2f2f2;--txt2:#8e8e93;--brd:#38383a;--hov:rgba(255,255,255,.06);
+  --sb:#1c1c1e;--ac:#1ABC9C;--ac-l:rgba(26,188,156,.15);--danger:#ff453a;
+  --chat-bg:#000;--inp-bg:#2c2c2e;
+}
+body.dark .chat-item{background:#1c1c1e}
+body.dark .chat-item.active{background:rgba(26,188,156,.15)}
+body.dark .inp-area{background:#1c1c1e;border-color:#38383a}
+body.dark .msg-textarea{background:#2c2c2e;color:#f2f2f2}
+body.dark .chat-head{background:#1c1c1e;border-color:#38383a}
+body.dark .modal-sheet{background:#1c1c1e}
+body.dark .modal-inp,.dark .modal-textarea{background:#2c2c2e;border-color:#38383a;color:#f2f2f2}
+body.dark .search-inp-wrap{background:#2c2c2e}
+body.dark .search-inp{color:#f2f2f2}
+body.dark .ctx-menu{background:#2c2c2e;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+body.dark .ctx-item:active{background:#3a3a3c}
+body.dark .bottom-tabbar{background:#1c1c1e;box-shadow:0 4px 24px rgba(0,0,0,.4)}
+body.dark #editActionBar{background:#1c1c1e;box-shadow:0 4px 24px rgba(0,0,0,.4)}
+body.dark .fullpage{background:#000}
+body.dark .folder-tab{color:#8e8e93}
+body.dark .folders-pill{background:#2c2c2e}
+body.dark .folder-pill-indicator{background:#3a3a3c}
+body.dark .chat-swipe-wrap{border-color:#38383a}
+body.dark .inp{background:#2c2c2e;border-color:#38383a;color:#f2f2f2}
+body.dark #mainTabBar{background:#1c1c1e}
 .stories-bar{display:flex;gap:4px;padding:8px 12px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
 .stories-bar::-webkit-scrollbar{display:none}
 .story-item{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;flex-shrink:0;min-width:60px}
@@ -650,6 +675,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
         <div style="flex:1;font-size:16px">Уведомления и звуки</div>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
+      <div onclick="openSettingsThemes()" style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
+        <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </div>
+        <div style="flex:1;font-size:16px">Оформление и темы</div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
       <div onclick="toast('Скоро!')" style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
         <div style="width:32px;height:32px;border-radius:8px;background:#34aadc;display:flex;align-items:center;justify-content:center;flex-shrink:0">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -801,6 +833,92 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
     <input class="modal-inp" id="folderNameInp" placeholder="Название папки" style="margin-bottom:14px">
     <button onclick="doCreateFolder()" class="btn-save">Создать</button>
     <button onclick="closeModal('createFolderModal')" style="width:100%;padding:13px;border:1.5px solid var(--brd);border-radius:14px;background:none;font-family:var(--font);font-size:14px;cursor:pointer;margin-top:8px;color:var(--txt2)">Отмена</button>
+  </div>
+</div>
+
+<!-- Themes fullscreen page -->
+<div class="fullpage" id="themesPage" style="z-index:97">
+  <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--brd);flex-shrink:0;background:var(--sb)">
+    <button onclick="closeFullPage('themesPage');showTabBar()" style="border:none;background:none;font-size:26px;font-weight:700;cursor:pointer;color:var(--ac);padding:0;margin-right:8px;line-height:1">‹</button>
+    <div style="flex:1;font-size:17px;font-weight:700;color:var(--txt)">Оформление и темы</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;background:#f2f2f7;padding:16px" id="themesContent">
+
+    <!-- Theme selector -->
+    <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:#8e8e93;text-transform:uppercase;letter-spacing:.4px">Тема</div>
+    <div style="background:var(--sb);border-radius:14px;overflow:hidden;margin-bottom:20px">
+      <!-- Light -->
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--brd);cursor:pointer" onclick="setTheme('light')" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
+        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#fff,#f2f2f7);border:1.5px solid #ddd;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px">☀️</div>
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:600;color:var(--txt)">Светлая тема</div>
+          <div style="font-size:13px;color:#8e8e93;margin-top:2px">Всегда светлая</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="event.stopPropagation();openThemeSchedule('light')" style="width:28px;height:28px;border:none;background:#f2f2f7;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer" title="Расписание">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+          </button>
+          <div id="themeCheckLight" style="width:22px;height:22px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+        </div>
+      </div>
+      <!-- Dark -->
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer" onclick="setTheme('dark')" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
+        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#1c1c1e,#2c2c2e);border:1.5px solid #444;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px">🌙</div>
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:600;color:var(--txt)">Тёмная тема</div>
+          <div style="font-size:13px;color:#8e8e93;margin-top:2px">Всегда тёмная</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="event.stopPropagation();openThemeSchedule('dark')" style="width:28px;height:28px;border:none;background:#f2f2f7;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer" title="Расписание">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+          </button>
+          <div id="themeCheckDark" style="width:22px;height:22px;border-radius:50%;background:#ddd;display:flex;align-items:center;justify-content:center;display:none">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Schedule info -->
+    <div id="themeScheduleInfo" style="display:none;background:var(--ac-l);border-radius:14px;padding:14px 16px;margin-bottom:20px">
+      <div style="font-size:14px;font-weight:600;color:var(--ac)" id="themeScheduleText"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Theme schedule modal -->
+<div class="modal-overlay" id="themeScheduleModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;margin-bottom:16px">
+      <div style="flex:1;font-size:17px;font-weight:800">Расписание тем</div>
+      <button onclick="closeModal('themeScheduleModal')" style="border:none;background:none;font-size:22px;cursor:pointer;color:var(--txt2)">×</button>
+    </div>
+    <div style="font-size:14px;color:var(--txt2);margin-bottom:16px">Укажи когда включать <span id="scheduleThemeName" style="font-weight:700;color:var(--txt)">тему</span></div>
+
+    <!-- Time inputs -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div style="background:#f8f8f8;border-radius:14px;padding:14px;text-align:center">
+        <div style="font-size:12px;font-weight:700;color:#8e8e93;margin-bottom:6px">ВКЛЮЧИТЬ В</div>
+        <input type="time" id="scheduleTimeOn" value="21:00" style="font-size:22px;font-weight:700;border:none;background:none;color:var(--ac);text-align:center;width:100%;outline:none;font-family:var(--font)">
+      </div>
+      <div style="background:#f8f8f8;border-radius:14px;padding:14px;text-align:center">
+        <div style="font-size:12px;font-weight:700;color:#8e8e93;margin-bottom:6px">ВЫКЛЮЧИТЬ В</div>
+        <input type="time" id="scheduleTimeOff" value="06:00" style="font-size:22px;font-weight:700;border:none;background:none;color:var(--txt2);text-align:center;width:100%;outline:none;font-family:var(--font)">
+      </div>
+    </div>
+
+    <!-- City -->
+    <div style="background:#f8f8f8;border-radius:14px;padding:14px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:#8e8e93;margin-bottom:8px">ГОРОД (для часового пояса)</div>
+      <input id="scheduleCity" placeholder="Например: Москва, Шяуляй, Минск..." style="width:100%;border:none;background:none;font-family:var(--font);font-size:15px;color:var(--txt);outline:none">
+    </div>
+
+    <button class="btn-save" onclick="saveThemeSchedule()">Сохранить расписание</button>
+    <button onclick="clearThemeSchedule()" style="width:100%;padding:13px;border:none;border-radius:14px;background:none;color:var(--danger);font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;margin-top:8px">Отключить расписание</button>
   </div>
 </div>
 
@@ -2157,28 +2275,35 @@ function openPeerQR() {
 }
 
 function openMyQR() {
-  closeModal('profileModal');
-  closeModal('settingsEditModal');
   hideTabBar();
+  // Закрываем любые модалы
+  ['profileModal','settingsEditModal'].forEach(id => {
+    document.getElementById(id)?.classList.remove('show');
+  });
   const page = document.getElementById('qrPage');
-  document.getElementById('qrUsername').textContent = '@' + me;
+  if (!page) return;
+  document.getElementById('qrUsername').textContent = '@' + (me || '');
   document.getElementById('qrPageTitle').textContent = 'Мой QR-код';
   renderQR(me, 'qrCodeCanvas');
+  // Открываем мгновенно поверх всего
+  page.style.transition = 'none';
   page.style.display = 'flex';
-  requestAnimationFrame(() => page.style.transform = 'translateX(0)');
+  page.style.transform = 'translateX(0)';
+  requestAnimationFrame(() => { page.style.transition = ''; });
 }
 
 function closeQrPage() {
   const page = document.getElementById('qrPage');
+  if (!page) return;
   page.style.transform = 'translateX(100%)';
-  setTimeout(() => { page.style.display = ''; }, 300);
-  // Если настройки открыты — показываем таббар (мы в настройках)
+  setTimeout(() => { page.style.display = ''; page.style.transform = ''; }, 300);
+  // Восстанавливаем таббар только если мы в главных вкладках
   const settingsOpen = document.getElementById('settingsPage');
-  if (settingsOpen && settingsOpen.style.display !== 'none' &&
-      settingsOpen.style.transform === 'translateX(0px)') {
+  const isSettingsVisible = settingsOpen &&
+    settingsOpen.style.display !== 'none' &&
+    settingsOpen.style.transform === 'translateX(0px)';
+  if (isSettingsVisible || currentTab === 'settings') {
     showTabBar();
-  } else {
-    // Иначе — не показываем (мы в чате или где-то ещё)
   }
 }
 
@@ -4894,13 +5019,12 @@ function fillSettingsPage() {
 }
 
 function openSettingsEdit() {
-  // Fill edit modal
+  hideTabBar();
   const editAv = document.getElementById('editModalAv');
   if (myAvatar) editAv.innerHTML = `<img src="${myAvatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
   else { editAv.textContent = me?me[0].toUpperCase():'?'; editAv.style.background = getAvatarColor(me); }
   document.getElementById('editModalBio').value = myBio;
   document.getElementById('editModalEmail').value = '';
-  // Set radio
   document.querySelectorAll('input[name="editStatus"]').forEach(r => { r.checked = r.value === myStatus; });
   document.getElementById('settingsEditModal').classList.add('show');
 }
@@ -5176,6 +5300,108 @@ function renderTx() {
       </div>
     </div>`).join('');
 }
+
+// ── Themes ───────────────────────────────────────────────────────────────────
+let currentTheme = localStorage.getItem('sup_theme') || 'light';
+let themeSchedule = JSON.parse(localStorage.getItem('sup_theme_schedule') || 'null');
+let themeCheckInterval = null;
+let scheduleTargetTheme = 'dark';
+
+function applyTheme(theme) {
+  currentTheme = theme;
+  document.body.classList.toggle('dark', theme === 'dark');
+  localStorage.setItem('sup_theme', theme);
+  updateThemeChecks();
+}
+
+function updateThemeChecks() {
+  const light = document.getElementById('themeCheckLight');
+  const dark  = document.getElementById('themeCheckDark');
+  if (light) light.style.display = currentTheme === 'light' ? 'flex' : 'none';
+  if (dark)  dark.style.display  = currentTheme === 'dark'  ? 'flex' : 'none';
+}
+
+function setTheme(theme) {
+  applyTheme(theme);
+  if (themeSchedule) { themeSchedule = null; localStorage.removeItem('sup_theme_schedule'); updateScheduleInfo(); }
+}
+
+function openSettingsThemes() {
+  hideTabBar();
+  updateThemeChecks();
+  updateScheduleInfo();
+  openFullPageAnimated('themesPage');
+}
+
+function openThemeSchedule(theme) {
+  scheduleTargetTheme = theme;
+  document.getElementById('scheduleThemeName').textContent = theme === 'dark' ? 'Тёмную тему' : 'Светлую тему';
+  if (themeSchedule) {
+    document.getElementById('scheduleTimeOn').value  = themeSchedule.on  || '21:00';
+    document.getElementById('scheduleTimeOff').value = themeSchedule.off || '06:00';
+    document.getElementById('scheduleCity').value    = themeSchedule.city || '';
+  }
+  hideTabBar();
+  document.getElementById('themeScheduleModal').classList.add('show');
+}
+
+function saveThemeSchedule() {
+  themeSchedule = {
+    theme: scheduleTargetTheme,
+    on:   document.getElementById('scheduleTimeOn').value  || '21:00',
+    off:  document.getElementById('scheduleTimeOff').value || '06:00',
+    city: document.getElementById('scheduleCity').value.trim()
+  };
+  localStorage.setItem('sup_theme_schedule', JSON.stringify(themeSchedule));
+  closeModal('themeScheduleModal');
+  startThemeScheduler();
+  updateScheduleInfo();
+  toast('✅ Расписание сохранено');
+}
+
+function clearThemeSchedule() {
+  themeSchedule = null;
+  localStorage.removeItem('sup_theme_schedule');
+  if (themeCheckInterval) clearInterval(themeCheckInterval);
+  closeModal('themeScheduleModal');
+  updateScheduleInfo();
+  toast('Расписание отключено');
+}
+
+function updateScheduleInfo() {
+  const el = document.getElementById('themeScheduleInfo');
+  const tx = document.getElementById('themeScheduleText');
+  if (!el || !tx) return;
+  if (themeSchedule) {
+    el.style.display = 'block';
+    tx.textContent = `${themeSchedule.theme==='dark'?'Тёмная':'Светлая'} тема: ${themeSchedule.on} → ${themeSchedule.off}${themeSchedule.city?' · '+themeSchedule.city:''}`;
+  } else { el.style.display = 'none'; }
+}
+
+function startThemeScheduler() {
+  if (themeCheckInterval) clearInterval(themeCheckInterval);
+  themeCheckInterval = setInterval(checkThemeSchedule, 60000);
+  checkThemeSchedule();
+}
+
+function checkThemeSchedule() {
+  if (!themeSchedule) return;
+  const now = new Date();
+  const [onH, onM]   = themeSchedule.on.split(':').map(Number);
+  const [offH, offM] = themeSchedule.off.split(':').map(Number);
+  const nowMins = now.getHours()*60 + now.getMinutes();
+  const onMins  = onH*60 + onM;
+  const offMins = offH*60 + offM;
+  let active;
+  if (onMins > offMins) active = nowMins >= onMins || nowMins < offMins; // overnight
+  else active = nowMins >= onMins && nowMins < offMins;
+  const target = (themeSchedule.theme === 'dark') === active ? 'dark' : 'light';
+  if (target !== currentTheme) applyTheme(target);
+}
+
+// Apply saved theme on load
+applyTheme(currentTheme);
+if (themeSchedule) startThemeScheduler();
 
 function showTabBar() {
   if (editMode) return; // в режиме редактирования не показываем
@@ -5786,9 +6012,15 @@ function applyStoredCustom() { /* Applied per chat on open */ }
 // ── Modals ─────────────────────────────────────────────────────────────────
 function closeModal(id) {
   document.getElementById(id)?.classList.remove('show');
-  // Показываем таббар при закрытии модалей из главного меню
-  const mainMenuModals = ['createGroupModal','addFriendModal','addToFolderModal','createFolderModal'];
-  if (mainMenuModals.includes(id)) showTabBar();
+  // Показываем таббар при закрытии модалей — только если мы в главных вкладках
+  const tabbarModals = ['createGroupModal','addFriendModal','addToFolderModal',
+    'createFolderModal','settingsEditModal','translateModal','deleteMsgModal'];
+  if (tabbarModals.includes(id)) {
+    // Показываем таббар только если нет других открытых fullpage поверх
+    const qrOpen = document.getElementById('qrPage');
+    const qrVisible = qrOpen && qrOpen.style.display !== 'none' && qrOpen.style.display !== '';
+    if (!qrVisible) showTabBar();
+  }
 }
 
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
