@@ -1953,49 +1953,46 @@ function handleQrResult(raw) {
   console.log('[QR] scanned:', raw);
   try {
     let username = null;
-
-    // Пробуем распарсить как URL с параметром ?qr=
-    try {
-      const u = new URL(raw);
-      username = u.searchParams.get('qr');
-    } catch(e) {}
-
-    // Если не URL — пробуем как чистый логин
-    if (!username && raw && !raw.includes(' ')) {
-      username = raw.replace('@', '').trim();
-    }
-
+    try { const u = new URL(raw); username = u.searchParams.get('qr'); } catch(e) {}
+    if (!username && raw && !raw.includes(' ')) username = raw.replace('@','').trim();
     if (!username) { toast('Не удалось распознать QR-код'); return; }
 
     toast(`🔍 Ищем @${username}...`);
 
-    // Закрываем все страницы QR
-    closeQrPage();
+    // Закрываем ВСЕ оверлеи и показываем чат
+    function showChatAfterQr(u, avatar, online) {
+      // Скрываем все fullscreen страницы
+      ['qrScannerPage'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+      ['qrPage','peerProfilePage','chatSearchPage'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.style.transform = 'translateX(100%)'; el.style.display = ''; }
+      });
+      // Открываем чат
+      openChatWith(u, avatar, online);
+    }
 
-    // Сначала ищем в уже известных чатах
     if (chatsData[username]) {
       const cd = chatsData[username];
-      openChatWith(username, cd.avatar, cd.online);
+      showChatAfterQr(username, cd.avatar, cd.online);
       return;
     }
 
-    // Запрашиваем с сервера и открываем чат
-    cmd({ cmd: 'search', username });
-
-    // Ждём ответа и открываем чат
-    const handler = (d) => {
-      if (d.type === 'search_result') {
-        if (d.found && d.username === username) {
-          openChatWith(d.username, d.avatar, d.online);
-        } else {
-          toast(`Пользователь @${username} не найден`);
-        }
+    window._qrSearchHandler = (d) => {
+      window._qrSearchHandler = null;
+      if (d.found && d.username === username) {
+        chatsData[username] = { username: d.username, avatar: d.avatar||'', online: d.online, bio: d.bio||'' };
+        showChatAfterQr(d.username, d.avatar, d.online);
+      } else {
+        // Показываем чат-экран даже если не нашли
+        ['qrScannerPage'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
+        ['qrPage','peerProfilePage'].forEach(id => { const el=document.getElementById(id); if(el){el.style.transform='translateX(100%)'; el.style.display='';} });
+        toast(`❌ Пользователь @${username} не найден`);
       }
     };
-
-    // Временно слушаем следующий search_result
-    const origHandle = window._qrSearchHandler;
-    window._qrSearchHandler = handler;
+    cmd({ cmd:'search', username });
     setTimeout(() => { window._qrSearchHandler = null; }, 5000);
 
   } catch(e) {
