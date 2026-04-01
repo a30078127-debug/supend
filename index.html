@@ -105,15 +105,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 /* ── Calls/Settings fullscreen page ───────────── */
 .fullpage{position:fixed;inset:0;z-index:95;background:#fff;display:none;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
 .fullpage.show{display:flex;transform:translateX(0)}
-.bottom-tabbar{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:150;display:flex;align-items:center;background:#fff;border-radius:30px;box-shadow:0 4px 24px rgba(0,0,0,.15),0 1px 4px rgba(0,0,0,.08);padding:5px 6px;gap:2px}
-.tab-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 18px;border:none;background:none;cursor:pointer;color:#8e8e93;font-family:var(--font);font-size:10px;font-weight:600;transition:.15s;border-radius:22px;min-width:64px}
-.tab-btn.active{color:var(--ac);background:rgba(26,188,156,.1)}
+.bottom-tabbar{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:500;display:flex;align-items:center;background:#fff;border-radius:30px;box-shadow:0 4px 24px rgba(0,0,0,.15),0 1px 4px rgba(0,0,0,.08);padding:5px 6px;gap:2px;position:fixed}
+.tab-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 18px;border:none;background:none;cursor:pointer;color:#8e8e93;font-family:var(--font);font-size:10px;font-weight:600;transition:color .2s;border-radius:22px;min-width:64px;position:relative;z-index:1}
+.tab-btn.active{color:var(--ac)}
 .tab-btn svg{stroke:currentColor}
 .tab-my-av{width:22px;height:22px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;overflow:hidden}
 .tab-my-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .tab-content{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-height:0}
-.sidebar{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
-.fullpage{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+.sidebar{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+.fullpage{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
 .chats-list{flex:1;overflow-y:auto;overflow-x:hidden}
 /* ── Chats list stays same ─────────────────────── */
 .sb-search{padding:10px 16px 12px;border-bottom:1px solid var(--brd)}
@@ -560,21 +560,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
       <div id="callsList" style="flex:1;overflow-y:auto"></div>
     </div>
 
-    <!-- Bottom tab bar — floating pill -->
-    <div class="bottom-tabbar" id="mainTabBar">
-      <button class="tab-btn" id="tabBtnCalls" onclick="switchTab2('calls')">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.6 3.38 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.08 6.08l1.14-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-        <span>Звонки</span>
-      </button>
-      <button class="tab-btn active" id="tabBtnChats" onclick="switchTab2('chats')">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span>Чаты</span>
-      </button>
-      <button class="tab-btn" id="tabBtnSettings" onclick="switchTab2('settings')">
-        <div class="tab-my-av" id="tabMyAv">?</div>
-        <span>Настройки</span>
-      </button>
-    </div>
   </div>
 
 <!-- Calls fullscreen page -->
@@ -4693,35 +4678,94 @@ function doCreateFolder() {
 }
 
 // ── Fullscreen pages (Calls, Settings) ───────────────────────────────────────
-function openFullPage(id) {
-  const p = document.getElementById(id);
-  p.style.display = 'flex';
-  requestAnimationFrame(() => p.style.transform = 'translateX(0)');
-}
-function closeFullPage(id) {
-  const p = document.getElementById(id);
-  p.style.transform = 'translateX(100%)';
-  setTimeout(() => { p.style.display = 'none'; }, 300);
-  // Возвращаем активной кнопкой Чаты
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tabBtnChats').classList.add('active');
-}
+// ── switchTab2 — tabbar always visible ───────────────────────────────────────
+let currentTab = 'chats';
 
-// ── switchTab2 updated ────────────────────────────────────────────────────────
 function switchTab2(tab) {
+  const prevTab = currentTab;
+  currentTab = tab;
+
+  // Update active state
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.getElementById(
+    tab === 'calls' ? 'tabBtnCalls' : tab === 'settings' ? 'tabBtnSettings' : 'tabBtnChats'
+  );
+  if (activeBtn) activeBtn.classList.add('active');
+
+  // Animate indicator
+  animateTabIndicator(tab);
+
+  // Page transitions
   if (tab === 'calls') {
-    document.getElementById('tabBtnCalls').classList.add('active');
     renderCallLog2();
-    openFullPage('callsPage');
+    if (prevTab === 'settings') {
+      closeFullPageInstant('settingsPage');
+      openFullPage('callsPage');
+    } else {
+      openFullPage('callsPage');
+    }
   } else if (tab === 'settings') {
-    document.getElementById('tabBtnSettings').classList.add('active');
     fillSettingsPage();
-    openFullPage('settingsPage');
+    if (prevTab === 'calls') {
+      closeFullPageInstant('callsPage');
+      openFullPage('settingsPage');
+    } else {
+      openFullPage('settingsPage');
+    }
   } else {
-    document.getElementById('tabBtnChats').classList.add('active');
+    // Back to chats — close all fullpages
+    closeFullPageSmooth('callsPage');
+    closeFullPageSmooth('settingsPage');
   }
 }
+
+function animateTabIndicator(tab) {
+  const bar = document.getElementById('mainTabBar');
+  const indicator = document.getElementById('tabIndicator');
+  if (!bar || !indicator) return;
+  const btnId = tab === 'calls' ? 'tabBtnCalls' : tab === 'settings' ? 'tabBtnSettings' : 'tabBtnChats';
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  const barRect = bar.getBoundingClientRect();
+  const btnRect = btn.getBoundingClientRect();
+  indicator.style.left = (btnRect.left - barRect.left) + 'px';
+  indicator.style.width = btnRect.width + 'px';
+}
+
+function openFullPage(id) {
+  const p = document.getElementById(id);
+  if (!p) return;
+  p.style.display = 'flex';
+  requestAnimationFrame(() => { requestAnimationFrame(() => { p.style.transform = 'translateX(0)'; }); });
+}
+
+function closeFullPageSmooth(id) {
+  const p = document.getElementById(id);
+  if (!p || p.style.display === 'none') return;
+  p.style.transform = 'translateX(100%)';
+  setTimeout(() => { p.style.display = 'none'; }, 300);
+}
+
+function closeFullPageInstant(id) {
+  const p = document.getElementById(id);
+  if (!p) return;
+  p.style.transition = 'none';
+  p.style.display = 'none';
+  p.style.transform = 'translateX(100%)';
+  requestAnimationFrame(() => { p.style.transition = ''; });
+}
+
+function closeFullPage(id) {
+  closeFullPageSmooth(id);
+  // Return to chats tab
+  currentTab = 'chats';
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tabBtnChats').classList.add('active');
+  animateTabIndicator('chats');
+}
+
+// Init indicator position after load
+setTimeout(() => animateTabIndicator('chats'), 100);
 
 function renderCallLog2() {
   const el = document.getElementById('callsPageList');
@@ -6002,8 +6046,26 @@ document.addEventListener('visibilitychange', () => {
 
 connect();
 </script>
-<!-- Edit mode bottom action bar — 3 buttons like Telegram -->
-<div id="editActionBar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;align-items:center;background:#fff;border-top:1px solid var(--brd);padding:10px 0 calc(10px + env(safe-area-inset-bottom))">
+<!-- Floating tab bar — at body level, always above fullpages -->
+<div class="bottom-tabbar" id="mainTabBar">
+  <!-- Animated sliding indicator -->
+  <div id="tabIndicator" style="position:absolute;border-radius:22px;background:rgba(26,188,156,.12);transition:left .3s cubic-bezier(.34,1.56,.64,1),width .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;top:5px;bottom:5px;left:5px;width:64px"></div>
+  <button class="tab-btn" id="tabBtnCalls" onclick="switchTab2('calls')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.6 3.38 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.08 6.08l1.14-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+    <span>Звонки</span>
+  </button>
+  <button class="tab-btn active" id="tabBtnChats" onclick="switchTab2('chats')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <span>Чаты</span>
+  </button>
+  <button class="tab-btn" id="tabBtnSettings" onclick="switchTab2('settings')">
+    <div class="tab-my-av" id="tabMyAv">?</div>
+    <span>Настройки</span>
+  </button>
+</div>
+
+<!-- Edit mode bottom action bar -->
+<div id="editActionBar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:300;align-items:center;background:#fff;border-top:1px solid var(--brd);padding:10px 0 calc(10px + env(safe-area-inset-bottom))">
   <button onclick="markSelectedRead()" style="flex:1;border:none;background:none;font-family:var(--font);font-size:14px;color:var(--ac);font-weight:600;cursor:pointer;padding:8px">Прочитать</button>
   <button onclick="deleteSelectedChats()" id="editDelBtn" style="flex:1;border:none;background:none;font-family:var(--font);font-size:14px;color:var(--danger);font-weight:600;cursor:pointer;padding:8px;border-left:1px solid var(--brd);border-right:1px solid var(--brd)">Удалить</button>
   <button onclick="toggleEditMode()" style="flex:1;border:none;background:none;font-family:var(--font);font-size:14px;color:var(--ac);font-weight:600;cursor:pointer;padding:8px">Готово</button>
