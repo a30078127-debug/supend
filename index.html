@@ -60,7 +60,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 }
 
 /* ── Sidebar header ───────────────────────────── */
-.sb-head{padding:14px 16px 10px;border-bottom:1px solid var(--brd);display:flex;flex-direction:column;gap:10px}
+.sb-topbar{display:flex;align-items:center;padding:10px 12px 6px;gap:4px}
 .profile-row{display:flex;align-items:center;gap:10px;cursor:pointer;padding:6px 8px;border-radius:12px;transition:.15s}
 .profile-row:hover{background:var(--hov)}
 .my-av{width:42px;height:42px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden}
@@ -69,20 +69,31 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .my-status{font-size:12px;color:var(--ac);font-weight:600}
 .head-btn{width:38px;height:38px;border-radius:50%;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);transition:.15s;font-size:18px}
 .head-btn:hover{background:var(--hov)}
+
+/* ── Stories bar ───────────────────────────────── */
+.stories-bar{display:flex;gap:4px;padding:8px 12px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+.stories-bar::-webkit-scrollbar{display:none}
+.story-item{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;flex-shrink:0;min-width:60px}
+.story-av-wrap{position:relative;width:56px;height:56px}
+.story-av{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;overflow:hidden;border:2px solid #fff}
+.story-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.story-av-wrap.has-story .story-av{box-shadow:0 0 0 2.5px var(--ac),0 0 0 4px #fff}
+.my-story-wrap .story-av{box-shadow:none;border:2px dashed var(--ac)}
+.story-plus{position:absolute;bottom:0;right:0;width:18px;height:18px;border-radius:50%;background:var(--ac);border:2px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:900;line-height:1}
+.story-name{font-size:11px;color:var(--txt2);font-weight:500;text-align:center;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── Bottom tab bar ────────────────────────────── */
+.bottom-tabbar{display:flex;border-top:1px solid var(--brd);background:#fff;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom)}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 6px;border:none;background:none;cursor:pointer;color:var(--txt2);font-family:var(--font);font-size:11px;font-weight:600;transition:.15s}
+.tab-btn.active{color:var(--ac)}
+.tab-btn svg{stroke:currentColor}
+.tab-btn span{font-size:10px}
+.tab-my-av{width:24px;height:24px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;overflow:hidden}
+.tab-my-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.tab-content{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+
+/* ── Chats list stays same ─────────────────────── */
 .sb-search{padding:10px 16px 12px;border-bottom:1px solid var(--brd)}
-.search-wrap{display:flex;gap:8px;align-items:center}
-.search-inp-wrap{flex:1;display:flex;align-items:center;gap:8px;background:#f5f5f5;border-radius:12px;padding:10px 14px}
-.search-inp{flex:1;border:none;background:none;font-family:var(--font);font-size:14px;color:var(--txt);outline:none}
-.search-inp::placeholder{color:var(--txt2)}
-.search-btn{padding:10px 16px;border:none;border-radius:12px;background:var(--ac);color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer}
-#searchResult{display:none;margin-top:10px;background:#fff;border:1.5px solid var(--ac-l);border-radius:14px;padding:12px 16px}
-.sr-row{display:flex;align-items:center;gap:12px}
-.sr-av{width:42px;height:42px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden}
-.sr-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.sr-name{font-size:15px;font-weight:700;flex:1}
-.sr-status{font-size:12px;font-weight:600}
-.sr-status.on{color:var(--ac)}.sr-status.off{color:var(--txt2)}
-.btn-connect{padding:8px 16px;border:none;border-radius:10px;background:var(--ac);color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer}
 
 /* ── Chat list ─────────────────────────────────── */
 .chats-label{padding:10px 16px 6px;font-size:12px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px}
@@ -441,73 +452,105 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 <div id="app">
   <!-- Sidebar -->
   <div class="sidebar">
-    <div class="sb-head">
-      <div class="profile-row" onclick="openProfile()">
-        <div class="my-av" id="myAv">?</div>
-        <div class="my-info">
-          <div class="my-name" id="myName">@username</div>
-          <div class="my-status">● онлайн</div>
-        </div>
-        <button id="installPwaBtn" onclick="installPwa(event)" title="Добавить на экран" style="padding:8px 14px;border:none;border-radius:12px;background:var(--ac);color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(26,188,156,.3);flex-shrink:0">
-          ⬇ Скачать
-        </button>
-      </div>
-      <div class="search-wrap">
-        <div class="search-inp-wrap">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-          <input class="search-inp" id="srchInp" placeholder="Найти пользователя..." onkeydown="if(event.key==='Enter')doSearch()">
-        </div>
-        <button class="search-btn" onclick="doSearch()">Найти</button>
-      </div>
-      <div id="searchResult">
-        <div class="sr-row">
-          <div class="sr-av" id="srAv">?</div>
-          <div>
-            <div class="sr-name" id="srName">@user</div>
-            <div class="sr-status" id="srStatus">● онлайн</div>
-          </div>
-          <button class="btn-connect" onclick="startChat()">Написать</button>
-        </div>
-      </div>
-    </div>
-    <div class="chats-label">Чаты</div>
-    <div class="chats-list" id="chatsList"></div>
-    <!-- FAB menu -->
-    <div id="fabWrap" style="position:absolute;right:16px;bottom:16px;z-index:11;display:flex;flex-direction:column;align-items:flex-end;gap:12px">
-      <!-- Sub buttons (hidden by default) -->
-      <div id="fabSub" style="display:none;flex-direction:column;align-items:flex-end;gap:10px">
-        <!-- Обменник -->
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="background:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;color:#111;box-shadow:0 2px 10px rgba(0,0,0,.12);white-space:nowrap">P2P Обменник</div>
-          <button onclick="closeFab();openExchange()" style="width:44px;height:44px;border-radius:50%;background:#f0b90b;border:none;cursor:pointer;box-shadow:0 3px 12px rgba(240,185,11,.4);display:flex;align-items:center;justify-content:center">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-          </button>
-        </div>
-        <!-- Кошелёк -->
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="background:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;color:#111;box-shadow:0 2px 10px rgba(0,0,0,.12);white-space:nowrap">Кошелёк <span id="fabSupBadge" style="color:var(--ac)">0 SUP</span></div>
-          <button onclick="closeFab();openWallet()" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#1ABC9C,#16a085);border:none;cursor:pointer;box-shadow:0 3px 12px rgba(26,188,156,.4);display:flex;align-items:center;justify-content:center">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M16 12a1 1 0 1 0 2 0 1 1 0 0 0-2 0z" fill="white" stroke="none"/><path d="M2 10h20"/></svg>
-          </button>
-        </div>
-        <!-- Создать группу -->
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="background:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;color:#111;box-shadow:0 2px 10px rgba(0,0,0,.12);white-space:nowrap">Создать группу</div>
-          <button onclick="closeFab();openCreateGroup()" style="width:44px;height:44px;border-radius:50%;background:var(--ac);border:none;cursor:pointer;box-shadow:0 3px 12px rgba(26,188,156,.4);display:flex;align-items:center;justify-content:center">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          </button>
-        </div>
-      </div>
-      <!-- Main FAB button -->
-      <button id="fabMain" onclick="toggleFab()" style="width:52px;height:52px;border-radius:50%;background:var(--ac);border:none;cursor:pointer;box-shadow:0 4px 16px rgba(26,188,156,.4);display:flex;align-items:center;justify-content:center;transition:transform .25s,background .2s">
-        <svg id="fabIcon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .3s">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+
+    <!-- Top bar: just actions -->
+    <div class="sb-topbar">
+      <!-- Download/Install button (arrow) -->
+      <button id="installPwaBtn" onclick="installPwa(event)" title="Установить" style="display:none;width:36px;height:36px;border:none;background:none;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ac);transition:.15s" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background='none'">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3v12M8 11l4 4 4-4"/><path d="M3 19h18"/>
         </svg>
       </button>
+      <div style="flex:1"></div>
+      <!-- New chat / group / wallet button -->
+      <div style="position:relative">
+        <button id="topActBtn" onclick="toggleTopMenu()" style="width:36px;height:36px;border:none;background:none;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ac);transition:.15s" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background='none'" title="Действия">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </button>
+        <!-- Top dropdown menu -->
+        <div id="topActMenu" style="display:none;position:absolute;top:44px;right:0;z-index:300;background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:8px;min-width:200px;animation:ctxFadeIn .15s ease-out">
+          <div onclick="closeTopMenu();openCreateGroup()" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;cursor:pointer;font-size:15px;font-weight:500;transition:.12s" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Создать группу
+          </div>
+          <div onclick="closeTopMenu();openWallet()" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;cursor:pointer;font-size:15px;font-weight:500;transition:.12s" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M16 12a1 1 0 1 0 2 0 1 1 0 0 0-2 0z" fill="var(--ac)" stroke="none"/><path d="M2 10h20"/></svg>
+            Кошелёк
+          </div>
+          <div onclick="closeTopMenu();openExchange()" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;cursor:pointer;font-size:15px;font-weight:500;transition:.12s" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2" stroke-linecap="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            P2P Обменник
+          </div>
+        </div>
+        <div id="topActOverlay" onclick="closeTopMenu()" style="display:none;position:fixed;inset:0;z-index:299"></div>
+      </div>
     </div>
-    <!-- FAB overlay to close -->
-    <div id="fabOverlay" onclick="closeFab()" style="display:none;position:fixed;inset:0;z-index:10"></div>
+
+    <!-- Stories bar (pull-to-reveal or always shown) -->
+    <div class="stories-bar" id="storiesBar">
+      <!-- My story -->
+      <div class="story-item" onclick="openMyStory()">
+        <div class="story-av-wrap my-story-wrap">
+          <div class="story-av" id="myStoryAv" style="background:var(--ac)">?</div>
+          <div class="story-plus">+</div>
+        </div>
+        <div class="story-name">Моя история</div>
+      </div>
+      <!-- Other users stories -->
+      <div id="storiesContainer" style="display:contents"></div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrap" style="padding:8px 12px">
+      <div class="search-inp-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input class="search-inp" id="srchInp" placeholder="Найти пользователя..." onkeydown="if(event.key==='Enter')doSearch()">
+      </div>
+      <button class="search-btn" onclick="doSearch()">Найти</button>
+    </div>
+    <div id="searchResult">
+      <div class="sr-row" style="padding:0 16px 10px">
+        <div class="sr-av" id="srAv">?</div>
+        <div>
+          <div class="sr-name" id="srName">@user</div>
+          <div class="sr-status" id="srStatus">● онлайн</div>
+        </div>
+        <button class="btn-connect" onclick="startChat()">Написать</button>
+      </div>
+    </div>
+
+    <!-- Tab content: Chats -->
+    <div id="tabChats" class="tab-content active">
+      <div class="chats-label">ЧАТЫ</div>
+      <div class="chats-list" id="chatsList"></div>
+    </div>
+
+    <!-- Tab content: Calls -->
+    <div id="tabCalls" class="tab-content" style="display:none">
+      <div class="chats-label">ЗВОНКИ</div>
+      <div id="callsList" style="flex:1;overflow-y:auto"></div>
+    </div>
+
+    <!-- Old FAB removed, actions moved to top menu -->
+
+    <!-- Bottom tab bar -->
+    <div class="bottom-tabbar">
+      <button class="tab-btn" id="tabBtnCalls" onclick="switchTab2('calls')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.6 3.38 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.08 6.08l1.14-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        <span>Звонки</span>
+      </button>
+      <button class="tab-btn active" id="tabBtnChats" onclick="switchTab2('chats')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Чаты</span>
+      </button>
+      <button class="tab-btn" id="tabBtnSettings" onclick="switchTab2('settings')">
+        <div class="tab-my-av" id="tabMyAv">?</div>
+        <span>Настройки</span>
+      </button>
+    </div>
   </div>
 
   <!-- Chat view -->
@@ -2095,10 +2138,29 @@ function onAuthErr(msg) {
 }
 
 function updateMyUI() {
+  // Main avatar (legacy, may not exist)
   const av = document.getElementById('myAv');
-  if (myAvatar) av.innerHTML = `<img src="${myAvatar}">`;
-  else av.textContent = me ? me[0].toUpperCase() : '?';
-  document.getElementById('myName').textContent = '@' + me;
+  if (av) {
+    if (myAvatar) av.innerHTML = `<img src="${myAvatar}">`;
+    else { av.innerHTML=''; av.textContent = me ? me[0].toUpperCase() : '?'; }
+  }
+  // Tab bar avatar
+  const tabAv = document.getElementById('tabMyAv');
+  if (tabAv) {
+    if (myAvatar) tabAv.innerHTML = `<img src="${myAvatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    else { tabAv.innerHTML=''; tabAv.textContent = me ? me[0].toUpperCase() : '?'; tabAv.style.background = getAvatarColor(me||'?'); }
+  }
+  // Stories bar my avatar
+  const storyAv = document.getElementById('myStoryAv');
+  if (storyAv) {
+    if (myAvatar) storyAv.innerHTML = `<img src="${myAvatar}">`;
+    else { storyAv.textContent = me ? me[0].toUpperCase() : '?'; storyAv.style.background = getAvatarColor(me||'?'); }
+  }
+  // Name in sidebar (if element exists)
+  const nm = document.getElementById('myName');
+  if (nm) nm.textContent = '@' + me;
+  // Render stories bar
+  renderStoriesBar();
 }
 
 // ── Search ─────────────────────────────────────────────────────────────────
@@ -3868,6 +3930,7 @@ async function startCall(type='voice') {
   if (!activeChat || activeType !== 'peer') return;
   isVideoCall = (type === 'video');
   callWith = activeChat;
+  addCallLog(type === 'video' ? 'video' : 'outgoing', activeChat, 0);
   try {
     localStream = await navigator.mediaDevices.getUserMedia({
       audio: true,
@@ -4006,6 +4069,7 @@ async function handleCallSignal(d) {
     document.getElementById('incName').textContent = '@' + d.from;
     document.getElementById('incType').textContent = callIsVideo ? '📹 Видеозвонок' : '📞 Голосовой звонок';
     document.getElementById('incomingCall').classList.add('show');
+    addCallLog('incoming', d.from, 0);
     sendPushNotif(
       callIsVideo ? '📹 Видеозвонок' : '📞 Голосовой звонок',
       'от @' + d.from,
@@ -4062,7 +4126,146 @@ function handleCallStatus(d) {
 }
 
 // ── Wallet ─────────────────────────────────────────────────────────────────
-// ── FAB menu ───────────────────────────────────────────────────────────────
+// ── Tab bar ──────────────────────────────────────────────────────────────────
+function switchTab2(tab) {
+  ['calls','chats','settings'].forEach(t => {
+    const content = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+    const btn     = document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (content) content.style.display = t === tab ? 'flex' : 'none';
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+  if (tab === 'settings') openProfile();
+  if (tab === 'calls') renderCallLog();
+}
+
+// ── Top action menu ──────────────────────────────────────────────────────────
+function toggleTopMenu() {
+  const m = document.getElementById('topActMenu');
+  const o = document.getElementById('topActOverlay');
+  const open = m.style.display === 'block';
+  m.style.display = open ? 'none' : 'block';
+  o.style.display  = open ? 'none' : 'block';
+}
+function closeTopMenu() {
+  document.getElementById('topActMenu').style.display  = 'none';
+  document.getElementById('topActOverlay').style.display = 'none';
+}
+
+// ── Call log ─────────────────────────────────────────────────────────────────
+const callLog = JSON.parse(localStorage.getItem('sup_call_log') || '[]');
+function addCallLog(type, user, duration) {
+  callLog.unshift({ type, user, duration, time: Date.now() });
+  if (callLog.length > 100) callLog.pop();
+  localStorage.setItem('sup_call_log', JSON.stringify(callLog));
+}
+function renderCallLog() {
+  const el = document.getElementById('callsList');
+  if (!el) return;
+  if (!callLog.length) {
+    el.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--txt2)"><div style="font-size:48px;margin-bottom:12px">📞</div><div style="font-size:15px">Звонков пока нет</div></div>';
+    return;
+  }
+  el.innerHTML = callLog.map(c => {
+    const isMissed   = c.type === 'missed';
+    const isVideo    = c.type === 'video';
+    const isIncoming = c.type === 'incoming';
+    const icon = isVideo ? '📹' : isIncoming ? '📞' : isMissed ? '📞' : '📞';
+    const arrow = isMissed
+      ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2.5"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>'
+      : isIncoming
+        ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.5"><path d="M17 7L7 17M7 17h10M7 17V7"/></svg>'
+        : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2.5"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>';
+    const name  = getDisplayName(c.user) || '@' + c.user;
+    const color = isMissed ? '#e74c3c' : 'var(--txt)';
+    const timeStr = formatLastSeen(c.time);
+    const av = chatsData[c.user];
+    const avHtml = av?.avatar
+      ? `<img src="${av.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+      : `<span>${(c.user||'?')[0].toUpperCase()}</span>`;
+    return `<div onclick="openChatWith('${c.user}','${av?.avatar||''}',${!!av?.online})" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--brd);cursor:pointer">
+      <div style="width:48px;height:48px;border-radius:50%;background:${getAvatarColor(c.user)};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden">${avHtml}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:700;color:${color}">${name}</div>
+        <div style="font-size:13px;color:var(--txt2);display:flex;align-items:center;gap:4px;margin-top:2px">${arrow} ${isVideo?'Видеозвонок':isMissed?'Пропущенный':isIncoming?'Входящий':'Исходящий'}</div>
+      </div>
+      <div style="font-size:12px;color:var(--txt2)">${timeStr}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Stories ──────────────────────────────────────────────────────────────────
+const myStories = JSON.parse(localStorage.getItem('sup_my_stories') || '[]');
+
+function renderStoriesBar() {
+  const myAv = document.getElementById('myStoryAv');
+  if (myAv) {
+    if (myAvatar) myAv.innerHTML = `<img src="${myAvatar}">`;
+    else { myAv.textContent = me ? me[0].toUpperCase() : '?'; myAv.style.background = getAvatarColor(me); }
+  }
+  // Показываем аватарки пользователей из чатов
+  const container = document.getElementById('storiesContainer');
+  if (!container) return;
+  const peers = Object.values(chatsData).filter(c => c.username && !c.gid);
+  container.innerHTML = peers.slice(0, 10).map(c => {
+    const name = getDisplayName(c.username);
+    const color = getAvatarColor(c.username);
+    const avHtml = c.avatar ? `<img src="${c.avatar}">` : c.username[0].toUpperCase();
+    return `<div class="story-item" onclick="openUserStory('${c.username}')">
+      <div class="story-av-wrap has-story">
+        <div class="story-av" style="background:${color}">${avHtml}</div>
+      </div>
+      <div class="story-name">${name}</div>
+    </div>`;
+  }).join('');
+}
+
+function openMyStory() {
+  // Создаём input для выбора фото/видео
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*,video/*';
+  inp.onchange = async () => {
+    const f = inp.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      const story = { url: r.result, type: f.type.startsWith('video') ? 'video' : 'image', time: Date.now() };
+      myStories.unshift(story);
+      if (myStories.length > 20) myStories.pop();
+      localStorage.setItem('sup_my_stories', JSON.stringify(myStories));
+      toast('История добавлена! 🎉');
+      showStoryViewer([story], me);
+    };
+    r.readAsDataURL(f);
+  };
+  inp.click();
+}
+
+function openUserStory(username) {
+  toast(`Истории @${username} — скоро!`);
+}
+
+function showStoryViewer(stories, username) {
+  const v = document.createElement('div');
+  v.style.cssText = 'position:fixed;inset:0;z-index:500;background:#000;display:flex;flex-direction:column';
+  const s = stories[0];
+  const media = s.type === 'video'
+    ? `<video src="${s.url}" style="width:100%;height:100%;object-fit:contain" autoplay playsinline controls></video>`
+    : `<img src="${s.url}" style="width:100%;height:100%;object-fit:contain">`;
+  v.innerHTML = `
+    <div style="position:absolute;top:0;left:0;right:0;padding:16px;display:flex;align-items:center;gap:12px;z-index:2;background:linear-gradient(#000a,transparent)">
+      <div style="font-size:15px;font-weight:700;color:#fff">@${username}</div>
+      <div style="flex:1;height:3px;background:rgba(255,255,255,.3);border-radius:3px"><div style="height:100%;background:#fff;border-radius:3px;animation:storyProgress 5s linear forwards"></div></div>
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="border:none;background:none;color:#fff;font-size:24px;cursor:pointer">×</button>
+    </div>
+    <style>@keyframes storyProgress{from{width:0}to{width:100%}}</style>
+    ${media}`;
+  v.onclick = e => { if (e.target === v) v.remove(); };
+  document.body.appendChild(v);
+  setTimeout(() => v.remove(), 5500);
+}
+
+// ── updateMyUI — update tabbar avatar too ────────────────────────────────────
 let fabOpen = false;
 function toggleFab() {
   fabOpen ? closeFab() : openFab();
