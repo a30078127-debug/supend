@@ -199,9 +199,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
 .status-btn{padding:7px 13px;border:1.5px solid var(--brd);border-radius:20px;background:none;font-family:var(--font);font-size:13px;cursor:pointer;transition:.15s;color:var(--txt)}
 .status-btn.active{border-color:var(--ac);background:var(--ac-l);color:var(--ac);font-weight:700}
 /* ── Emoji reaction bar ────────────────────────── */
-.react-bar{display:flex;gap:6px;padding:10px 14px;background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.12);margin-bottom:6px}
-.react-bar-btn{font-size:24px;cursor:pointer;border:none;background:none;padding:4px;border-radius:10px;transition:.12s;line-height:1}
-.react-bar-btn:active{transform:scale(1.25)}
+.react-bar{display:flex;gap:4px;padding:10px 12px;background:#fff;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,.18);animation:ctxFadeIn .15s ease-out}
+.react-bar-btn{font-size:26px;cursor:pointer;border:none;background:none;padding:4px 5px;border-radius:12px;transition:.15s;line-height:1;display:flex;align-items:center;justify-content:center}
+.react-bar-btn:active{transform:scale(1.3);background:var(--hov)}
 .reactions-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;padding:0 4px}
 .react-chip{display:inline-flex;align-items:center;gap:4px;background:#f0f0f0;border:1.5px solid transparent;border-radius:12px;padding:3px 8px;cursor:pointer;font-size:13px;transition:.15s;user-select:none}
 .react-chip:hover,.react-chip.mine{background:rgba(26,188,156,.15);border-color:var(--ac)}
@@ -448,6 +448,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh
           <div class="my-name" id="myName">@username</div>
           <div class="my-status">● онлайн</div>
         </div>
+        <button id="installPwaBtn" onclick="installPwa(event)" title="Добавить на экран" style="display:none;padding:8px 14px;border:none;border-radius:12px;background:var(--ac);color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(26,188,156,.3);flex-shrink:0">
+          ⬇ Скачать
+        </button>
       </div>
       <div class="search-wrap">
         <div class="search-inp-wrap">
@@ -1428,6 +1431,8 @@ function doAuth() { doAuthStep1(); }
 function onAuthOk(d) {
   me = d.username; myBio = d.bio||''; myAvatar = d.avatar||'';
   mySup = d.sup||0; myRefCode = d.ref_code||'';
+  // Сохраняем сессию для автовхода
+  localStorage.setItem('sup_session', JSON.stringify({u: me, p: myPassword}));
   document.getElementById('authBtn').disabled = false;
   document.getElementById('authScreen').classList.add('hidden');
   document.getElementById('app').classList.add('visible');
@@ -1764,7 +1769,11 @@ function renderChatList(chats) {
     chatsData[key] = c;
     const isGroup = !!c.gid;
     const name = isGroup ? c.name : (getDisplayName ? getDisplayName(c.username) : '@' + c.username);
-    const avContent = c.avatar ? `<img src="${c.avatar}">` : (isGroup ? '👥' : c.username[0].toUpperCase());
+    const avContent = c.avatar
+      ? `<img src="${c.avatar}">`
+      : isGroup
+        ? `<span style="font-size:20px">👥</span>`
+        : `<span style="background:${getAvatarColor(c.username)};width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;border-radius:50%">${c.username[0].toUpperCase()}</span>`;
     const dot = (!isGroup && c.online) ? '<div class="online-dot"></div>' : '';
     const badge = c.unread > 0 ? `<div class="unread-badge">${c.unread}</div>` : '';
     const lock = (!isGroup && blacklist.has(c.username)) ? '🔒 ' : '';
@@ -2290,13 +2299,14 @@ function mkBubble(m) {
     const av = document.createElement('div');
     av.className = 'msg-av-sm';
     const sender = m.from;
-    if (m.mtype !== 'voice') {
-      // Show sender avatar
-      const cd = chatsData[sender];
-      if (cd && cd.avatar) av.innerHTML = `<img src="${cd.avatar}">`;
-      else av.textContent = sender ? sender[0].toUpperCase() : '?';
-      av.onclick = () => openViewProfile(sender);
+    const cd = chatsData[sender];
+    if (cd && cd.avatar) {
+      av.innerHTML = `<img src="${cd.avatar}">`;
+    } else {
+      av.style.background = getAvatarColor(sender || '?');
+      av.textContent = sender ? sender[0].toUpperCase() : '?';
     }
+    av.onclick = () => openViewProfile(sender);
     avRow.appendChild(av);
   }
 
@@ -2775,20 +2785,29 @@ function cancelReply() {
 
 function showMsgCtxAt(x, y, id, isOut, text, msg) {
   ctxMsgId = id; ctxMsgOut = isOut; ctxMsgText = text;
+
+  // Закрываем только chat-item меню, не msgCtxMenu и не reactBar
+  const chatMenu = document.getElementById('chatItemCtxMenu');
+  if (chatMenu) chatMenu.classList.remove('show');
+
   const menu    = document.getElementById('msgCtxMenu');
   const reactBr = document.getElementById('reactBar');
   const editBtn = document.getElementById('ctxEditBtn');
   if (editBtn) editBtn.style.display = isOut ? '' : 'none';
 
-  const menuW = 230, menuH = 320, barH = 64;
-  let left = Math.max(8, Math.min(x - menuW/2, window.innerWidth - menuW - 8));
-  let top  = y - menuH - barH - 16;
-  if (top < 60) top = y + 20;
-  top = Math.max(60, Math.min(top, window.innerHeight - menuH - barH - 20));
+  const menuW = 230, barH = 68;
+  const menuH = isOut ? 320 : 260; // у исходящих есть "Изменить"
 
-  // React bar над меню
-  reactBr.style.cssText = `display:block;left:${Math.max(8, Math.min(x - 200, window.innerWidth - 216))}px;top:${top}px`;
-  menu.style.cssText    = `left:${left}px;top:${top + barH + 6}px`;
+  let left = Math.max(8, Math.min(x - menuW/2, window.innerWidth - menuW - 8));
+  let barLeft = Math.max(8, Math.min(x - 180, window.innerWidth - 290));
+
+  // Размещаем над точкой нажатия
+  let top = y - menuH - barH - 16;
+  if (top < 60) top = Math.min(y + 10, window.innerHeight - menuH - barH - 20);
+  top = Math.max(60, top);
+
+  reactBr.style.cssText = `display:block;position:fixed;left:${barLeft}px;top:${top}px;z-index:501`;
+  menu.style.cssText    = `left:${left}px;top:${top + barH + 4}px`;
 
   // Оверлей
   let overlay = document.getElementById('ctxOverlay');
@@ -2796,9 +2815,9 @@ function showMsgCtxAt(x, y, id, isOut, text, msg) {
     overlay = document.createElement('div');
     overlay.id = 'ctxOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:499;background:rgba(0,0,0,.35)';
-    overlay.onclick = hideAllMenus;
     document.body.appendChild(overlay);
   }
+  overlay.onclick = hideAllMenus;
   overlay.style.display = 'block';
   menu.classList.add('show');
 }
@@ -3439,6 +3458,7 @@ function openAddMember() { openAddMemberFromContacts(); }
 
 function doLogout() {
   if (!confirm('Выйти?')) return;
+  localStorage.removeItem('sup_session');
   location.reload();
 }
 
@@ -4359,7 +4379,58 @@ function closeLightbox() {
   document.getElementById('lightbox').classList.remove('show');
 }
 
+// ── Avatar color ─────────────────────────────────────────────────────────────
+const AVATAR_COLORS = [
+  '#1ABC9C','#3498DB','#9B59B6','#E67E22','#E74C3C',
+  '#2ECC71','#F39C12','#1A78C2','#E91E63','#00BCD4',
+  '#FF5722','#607D8B','#795548','#009688','#673AB7'
+];
+function getAvatarColor(username) {
+  if (!username) return AVATAR_COLORS[0];
+  let hash = 0;
+  for (let i = 0; i < username.length; i++) hash = username.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+function makeAvatar(username, size = 'md') {
+  const color = getAvatarColor(username);
+  const letter = username ? username[0].toUpperCase() : '?';
+  return { color, letter };
+}
+let pwaPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  pwaPrompt = e;
+  const btn = document.getElementById('installPwaBtn');
+  if (btn) btn.style.display = '';
+});
+window.addEventListener('appinstalled', () => {
+  pwaPrompt = null;
+  const btn = document.getElementById('installPwaBtn');
+  if (btn) btn.style.display = 'none';
+  toast('✅ Supend установлен на экран!');
+});
+function installPwa(e) {
+  e.stopPropagation();
+  if (pwaPrompt) {
+    pwaPrompt.prompt();
+    pwaPrompt.userChoice.then(() => { pwaPrompt = null; });
+  } else {
+    // iOS Safari — нет beforeinstallprompt, показываем инструкцию
+    toast('На iOS: нажми «Поделиться» → «На экран Домой»');
+  }
+}
+
 // ── Init ────────────────────────────────────────────────────────────────────
+// Автовход: восстанавливаем сохранённые данные
+(function autoLogin() {
+  const saved = localStorage.getItem('sup_session');
+  if (saved) {
+    try {
+      const s = JSON.parse(saved);
+      if (s.u && s.p) { me = s.u; myPassword = s.p; }
+    } catch(e) {}
+  }
+})();
 connect();
 </script>
 </body>
