@@ -1873,58 +1873,134 @@ function closeQrPage() {
 
 // QR Scanner
 let qrScanInterval = null;
+let qrScanStream   = null;
+
 async function openQrScanner() {
   const page = document.getElementById('qrScannerPage');
   page.style.display = 'flex';
+
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    qrScanStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
     const video = document.getElementById('qrVideo');
-    video.srcObject = stream;
-    // Сканируем через BarcodeDetector если доступен
+    video.srcObject = qrScanStream;
+    await video.play();
+
+    // Попробуем BarcodeDetector (Chrome Android)
     if ('BarcodeDetector' in window) {
-      const detector = new BarcodeDetector({formats:['qr_code']});
+      const detector = new BarcodeDetector({ formats: ['qr_code'] });
       qrScanInterval = setInterval(async () => {
         try {
           const codes = await detector.detect(video);
           if (codes.length > 0) {
-            clearInterval(qrScanInterval);
-            const raw = codes[0].rawValue;
-            closeQrScanner();
-            handleQrResult(raw);
+            stopScanner();
+            handleQrResult(codes[0].rawValue);
           }
         } catch(e) {}
-      }, 300);
+      }, 250);
     } else {
-      toast('QR сканер не поддерживается в этом браузере');
+      // Fallback: jsQR через Canvas (iOS Safari, Firefox, etc.)
+      await loadJsQR();
+      const canvas = document.getElementById('qrCanvas');
+      const ctx    = canvas.getContext('2d');
+      qrScanInterval = setInterval(() => {
+        if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        try {
+          const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+          if (code && code.data) {
+            stopScanner();
+            handleQrResult(code.data);
+          }
+        } catch(e) {}
+      }, 250);
     }
   } catch(e) {
+    console.error('Camera error:', e);
     toast('Нет доступа к камере');
     page.style.display = 'none';
   }
 }
 
-function closeQrScanner() {
+function stopScanner() {
   clearInterval(qrScanInterval);
-  const video = document.getElementById('qrVideo');
-  if (video.srcObject) { video.srcObject.getTracks().forEach(t=>t.stop()); video.srcObject=null; }
+  qrScanInterval = null;
+  if (qrScanStream) { qrScanStream.getTracks().forEach(t => t.stop()); qrScanStream = null; }
+}
+
+function closeQrScanner() {
+  stopScanner();
   document.getElementById('qrScannerPage').style.display = 'none';
 }
 
+// Загружаем jsQR динамически
+function loadJsQR() {
+  return new Promise((resolve) => {
+    if (window.jsQR) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+    s.onload  = resolve;
+    s.onerror = resolve; // продолжаем даже если не загрузился
+    document.head.appendChild(s);
+  });
+}
+
 function handleQrResult(raw) {
+  console.log('[QR] scanned:', raw);
   try {
-    const u = new URL(raw);
-    const username = u.searchParams.get('qr');
-    if (username) {
-      toast(`Найден профиль @${username}`);
-      // Ищем пользователя
-      cmd({cmd:'search', username});
-      setTimeout(() => {
-        const cd = chatsData[username];
-        if (cd || username) openViewProfile(username);
-      }, 800);
+    let username = null;
+
+    // Пробуем распарсить как URL с параметром ?qr=
+    try {
+      const u = new URL(raw);
+      username = u.searchParams.get('qr');
+    } catch(e) {}
+
+    // Если не URL — пробуем как чистый логин
+    if (!username && raw && !raw.includes(' ')) {
+      username = raw.replace('@', '').trim();
     }
+
+    if (!username) { toast('Не удалось распознать QR-код'); return; }
+
+    toast(`🔍 Ищем @${username}...`);
+
+    // Закрываем все страницы QR
+    closeQrPage();
+
+    // Сначала ищем в уже известных чатах
+    if (chatsData[username]) {
+      const cd = chatsData[username];
+      openChatWith(username, cd.avatar, cd.online);
+      return;
+    }
+
+    // Запрашиваем с сервера и открываем чат
+    cmd({ cmd: 'search', username });
+
+    // Ждём ответа и открываем чат
+    const handler = (d) => {
+      if (d.type === 'search_result') {
+        if (d.found && d.username === username) {
+          openChatWith(d.username, d.avatar, d.online);
+        } else {
+          toast(`Пользователь @${username} не найден`);
+        }
+      }
+    };
+
+    // Временно слушаем следующий search_result
+    const origHandle = window._qrSearchHandler;
+    window._qrSearchHandler = handler;
+    setTimeout(() => { window._qrSearchHandler = null; }, 5000);
+
   } catch(e) {
-    toast('Неверный QR-код');
+    console.error('[QR] error:', e);
+    toast('Ошибка при обработке QR-кода');
   }
 }
 
@@ -2036,6 +2112,12 @@ function doSearch() {
 }
 
 function onSearchResult(d) {
+  // Если есть обработчик QR — отдаём ему
+  if (window._qrSearchHandler) {
+    const h = window._qrSearchHandler;
+    window._qrSearchHandler = null;
+    h(d); return;
+  }
   const res = document.getElementById('searchResult');
   if (!d.found) { res.style.display='none'; toast('Пользователь не найден'); return; }
   searchResult = d;
