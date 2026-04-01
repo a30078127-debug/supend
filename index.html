@@ -1249,26 +1249,46 @@ let activeGroupId = null;
 let authMode = 'login';
 
 // ── WebSocket ──────────────────────────────────────────────────────────────
+let isLoggedIn = false;
+let connectTimer = null;
+
 function connect() {
+  if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
+  clearTimeout(connectTimer);
+
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  try {
+    ws = new WebSocket(`${proto}://${location.host}/ws`);
+  } catch(e) {
+    console.error('WS create error:', e);
+    connectTimer = setTimeout(connect, 3000);
+    return;
+  }
+
   ws.onopen = () => {
-    console.log('WS connected');
+    console.log('[WS] connected');
     const st = document.getElementById('wsStatus');
     if (st) { st.textContent = '🟢 Соединение установлено'; st.style.color = '#1ABC9C'; }
     const btn = document.getElementById('authBtn');
     if (btn) btn.disabled = false;
-    // Автовход если есть сохранённая сессия
+    // Автовход если есть сессия
     if (me && myPassword) {
       cmd({ cmd:'login', username:me, password:myPassword });
     }
   };
-  ws.onclose = () => {
+
+  ws.onclose = (ev) => {
+    console.log('[WS] closed', ev.code);
     const st = document.getElementById('wsStatus');
     if (st) { st.textContent = '🔴 Переподключение...'; st.style.color = '#e53935'; }
-    setTimeout(connect, 2000);
+    connectTimer = setTimeout(connect, 2000);
   };
-  ws.onerror  = () => {};
+
+  ws.onerror = (e) => {
+    console.error('[WS] error', e);
+    // Не закрываем вручную — onclose сработает сам
+  };
+
   ws.onmessage = e => {
     try { handle(JSON.parse(e.data)); } catch(err) { console.error(err); }
   };
@@ -1435,20 +1455,29 @@ function doAuth() { doAuthStep1(); }
 function onAuthOk(d) {
   me = d.username; myBio = d.bio||''; myAvatar = d.avatar||'';
   mySup = d.sup||0; myRefCode = d.ref_code||'';
-  // Сохраняем сессию для автовхода
   localStorage.setItem('sup_session', JSON.stringify({u: me, p: myPassword}));
-  document.getElementById('authBtn') && (document.getElementById('authBtn').disabled = false);
-  document.getElementById('authScreen').classList.add('hidden');
-  document.getElementById('app').classList.add('visible');
-  updateMyUI();
-  updateSup(mySup);
-  cmd({ cmd:'get_chats' });
-  applyStoredCustom();
-  // Запрашиваем разрешение на уведомления — явный модал
-  setTimeout(askNotifPermission, 1500);
-  if (d.inv_bonus && d.inv_bonus > 0) {
-    addTx('Бонус за код приглашения', +d.inv_bonus, '🎁');
-    toast(`+${d.inv_bonus} SUP за код приглашения! 🎁`);
+  const btn = document.getElementById('authBtn');
+  if (btn) btn.disabled = false;
+
+  if (!isLoggedIn) {
+    isLoggedIn = true;
+    document.getElementById('authScreen').classList.add('hidden');
+    document.getElementById('app').classList.add('visible');
+    updateMyUI();
+    updateSup(mySup);
+    cmd({ cmd:'get_chats' });
+    applyStoredCustom();
+    setTimeout(askNotifPermission, 2000);
+    if (d.inv_bonus && d.inv_bonus > 0) {
+      addTx('Бонус за код приглашения', +d.inv_bonus, '🎁');
+      toast(`+${d.inv_bonus} SUP за код приглашения! 🎁`);
+    }
+  } else {
+    // Переподключение — обновляем данные без сброса UI
+    updateMyUI();
+    updateSup(d.sup || mySup);
+    cmd({ cmd:'get_chats' });
+    if (Notification.permission === 'granted') subscribePush();
   }
 }
 
@@ -1688,27 +1717,10 @@ function doAuth() {
   setTimeout(() => { btn.disabled = false; }, 10000);
 }
 
-function onAuthOk(d) {
-  me = d.username; myBio = d.bio||''; myAvatar = d.avatar||'';
-  mySup = d.sup||0; myRefCode = d.ref_code||'';
-  document.getElementById('authBtn').disabled = false;
-  document.getElementById('authScreen').classList.add('hidden');
-  document.getElementById('app').classList.add('visible');
-  updateMyUI();
-  updateSup(mySup);
-  cmd({ cmd:'get_chats' });
-  applyStoredCustom();
-  // Реф-бонус только при регистрации (inv_bonus > 0)
-  if (d.inv_bonus && d.inv_bonus > 0) {
-    addTx(`Бонус за код приглашения`, +d.inv_bonus, '🎁');
-    updateSup(mySup); // уже установлен выше
-    toast(`+${d.inv_bonus} SUP за код приглашения! 🎁`);
-  }
-}
-
 function onAuthErr(msg) {
-  document.getElementById('authErr').textContent = msg;
-  document.getElementById('authBtn').disabled = false;
+  document.getElementById('authErr') && (document.getElementById('authErr').textContent = msg);
+  const btn = document.getElementById('authBtn');
+  if (btn) btn.disabled = false;
 }
 
 function updateMyUI() {
@@ -3469,6 +3481,7 @@ function openAddMember() { openAddMemberFromContacts(); }
 function doLogout() {
   if (!confirm('Выйти?')) return;
   localStorage.removeItem('sup_session');
+  isLoggedIn = false;
   location.reload();
 }
 
@@ -4644,35 +4657,34 @@ function showIosInstallModal() {
 }
 
 // ── Init ────────────────────────────────────────────────────────────────────
-(function autoLogin() {
-  const saved = localStorage.getItem('sup_session');
-  if (saved) {
-    try {
-      const s = JSON.parse(saved);
-      if (s.u && s.p) {
-        me = s.u;
-        myPassword = s.p;
-        // Показываем экран загрузки вместо auth
-        const auth = document.getElementById('authScreen');
-        if (auth) {
-          auth.innerHTML = `
-            <div class="auth-logo" style="background:none;box-shadow:none;overflow:hidden;border-radius:24px">
-              <img src="/logo" style="width:80px;height:80px;object-fit:cover;border-radius:24px" onerror="this.parentElement.innerHTML='💬'">
-            </div>
-            <div class="auth-title">Supend</div>
-            <div style="margin-top:20px;color:var(--txt2);font-size:14px">⏳ Входим...</div>`;
-        }
-      }
-    } catch(e) {}
-  }
+// Восстанавливаем сессию до connect()
+(function restoreSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem('sup_session') || 'null');
+    if (s && s.u && s.p) {
+      me = s.u;
+      myPassword = s.p;
+      // Показываем экран загрузки
+      const auth = document.getElementById('authScreen');
+      if (auth) auth.innerHTML = `
+        <div class="auth-logo" style="background:none;box-shadow:none;overflow:hidden;border-radius:24px">
+          <img src="/logo" style="width:80px;height:80px;object-fit:cover;border-radius:24px" onerror="this.parentElement.textContent='💬'">
+        </div>
+        <div class="auth-title">Supend</div>
+        <div style="margin-top:20px;color:#888;font-size:15px">Входим...</div>`;
+    }
+  } catch(e) {}
 })();
 
-// Переподключаемся когда PWA возвращается на экран
+// Переподключение при возврате в PWA
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
-    // Если WS отвалился пока приложение было свёрнуто — переподключаемся
+  if (document.visibilityState === 'visible' && me && myPassword) {
     if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+      console.log('[PWA] resume — reconnecting');
       connect();
+    } else if (ws.readyState === WebSocket.OPEN && isLoggedIn) {
+      // WS жив — просто обновим чаты
+      cmd({ cmd:'get_chats' });
     }
   }
 });
