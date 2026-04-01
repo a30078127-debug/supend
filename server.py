@@ -56,88 +56,36 @@ def make_vapid_jwt(audience):
         return None
 
 async def send_web_push(subscription, payload_dict):
-    """Отправляем Web Push уведомление через протокол RFC 8291."""
+    """Отправляем Web Push через pywebpush."""
     try:
-        from cryptography.hazmat.primitives.asymmetric import ec
-        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-        from cryptography.hazmat.backends import default_backend
-
-        endpoint   = subscription['endpoint']
-        p256dh_raw = b64url_decode(subscription['keys']['p256dh'])
-        auth_raw   = b64url_decode(subscription['keys']['auth'])
-
-        # Получаем origin для VAPID
-        parsed   = urllib.parse.urlparse(endpoint)
-        audience = f'{parsed.scheme}://{parsed.netloc}'
-        jwt      = make_vapid_jwt(audience)
-        if not jwt: return
-
-        # Шифрование payload (RFC 8291 / ECDH + AES-GCM)
-        payload_bytes = json.dumps(payload_dict).encode('utf-8')
-
-        # Генерируем ephemeral ключ
-        eph_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
-        eph_pub = eph_key.public_key().public_bytes(
-            __import__('cryptography').hazmat.primitives.serialization.Encoding.X962,
-            __import__('cryptography').hazmat.primitives.serialization.PublicFormat.UncompressedPoint
-        )
-
-        # Восстанавливаем ключ получателя
-        from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-        receiver_key = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), p256dh_raw)
-        shared = eph_key.exchange(ec.ECDH(), receiver_key)
-
-        # HKDF для ключа и нонса
-        import hmac as _hmac
-        salt = os.urandom(16)
-
-        def hkdf(salt, ikm, info, length):
-            prk = _hmac.new(salt, ikm, 'sha256').digest()
-            t = b''
-            okm = b''
-            for i in range(1, (length + 31) // 32 + 1):
-                t = _hmac.new(prk, t + info + bytes([i]), 'sha256').digest()
-                okm += t
-            return okm[:length]
-
-        prk_key  = hkdf(auth_raw, shared + eph_pub + p256dh_raw,
-                       b'WebPush: info\x00' + p256dh_raw + eph_pub, 32)
-        cek      = hkdf(salt, prk_key, b'Content-Encoding: aes128gcm\x00', 16)
-        nonce    = hkdf(salt, prk_key, b'Content-Encoding: nonce\x00', 12)
-
-        # Шифруем
-        padded   = payload_bytes + b'\x02'  # record delimiter
-        cipher   = AESGCM(cek)
-        ciphertext = cipher.encrypt(nonce, padded, None)
-
-        # RFC 8291 header: salt(16) + rs(4) + idlen(1) + keyid(65)
-        rs = len(ciphertext).to_bytes(4, 'big')
-        body = salt + rs + bytes([len(eph_pub)]) + eph_pub + ciphertext
-
-        vapid_pub_raw = b64url_decode(VAPID_PUBLIC)
-        headers = {
-            'Content-Type':     'application/octet-stream',
-            'Content-Encoding': 'aes128gcm',
-            'Authorization':    f'vapid t={jwt},k={VAPID_PUBLIC}',
-            'TTL':              '86400',
-            'Urgency':          'high',
-        }
-        req = urllib.request.Request(endpoint, data=body, headers=headers, method='POST')
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            print(f'[Push] sent to {endpoint[:40]}... status={resp.status}')
+        from pywebpush import webpush, WebPushException
+        import asyncio
+        payload_str = json.dumps(payload_dict)
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, lambda: webpush(
+            subscription_info   = subscription,
+            data                = payload_str,
+            vapid_private_key   = VAPID_PRIVATE,
+            vapid_claims        = {'sub': VAPID_SUBJECT},
+            content_encoding    = 'aes128gcm',
+            ttl                 = 86400,
+        ))
+        print(f'[Push] ✅ sent to {subscription["endpoint"][:50]}')
     except Exception as ex:
-        print(f'[Push] error: {ex}')
+        print(f'[Push] ❌ error: {ex}')
 
 async def push_notif(username, title, body, tag='supend'):
     """Отправляем push всем подпискам пользователя."""
     subs = push_subs.get(username, [])
-    if not subs: return
+    if not subs:
+        return
     payload = {'title': title, 'body': body, 'tag': tag, 'icon': '/logo', 'badge': '/logo'}
     dead = []
     for sub in subs:
         try:
             await send_web_push(sub, payload)
-        except Exception:
+        except Exception as ex:
+            print(f'[Push] dead sub: {ex}')
             dead.append(sub)
     for d in dead:
         subs.remove(d)
