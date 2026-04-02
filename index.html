@@ -5380,6 +5380,12 @@ function onStoriesList(d) {
   d.peers.forEach(p => { serverStories[p.username] = p; });
   myServerStories = d.my || [];
 
+  // Если ждём открытия настроек историй — открываем
+  if (window._pendingOpenMyStories) {
+    window._pendingOpenMyStories = false;
+    _doOpenMyStories();
+  }
+
   const container = document.getElementById('storiesContainer');
   if (!container) return;
 
@@ -5494,11 +5500,16 @@ function openUserStory(username) {
 }
 
 function showMyStoriesViewer() {
+  if (myServerStories.length === 0) {
+    showTabBar();
+    toast('Нет активных историй');
+    return;
+  }
   storyViewerData = [{
     username: me,
     avatar: myAvatar,
-    displayName: '@' + me,
-    stories: myServerStories.map(s => ({ ...s, media: null })),
+    displayName: me,
+    stories: myServerStories.map(s => ({ id: s.id, type: s.type, ts: s.ts, views: s.views || [], media: null })),
     isMine: true
   }];
   storyViewerPeerIdx = 0;
@@ -5595,11 +5606,16 @@ function updateStoryUI(peer, story, mediaData) {
     }
   }
 
-  // Кнопка просмотров (только для своих)
+  // Кнопки: 👁 и + только для своих историй
   const viewsBtn = document.getElementById('svViewsBtn');
-  if (viewsBtn) viewsBtn.style.display = isMine ? 'flex' : 'none';
+  const addBtn   = document.getElementById('svAddBtn');
   const replyArea = document.getElementById('svReplyArea');
+  if (viewsBtn)  viewsBtn.style.display  = isMine ? 'flex' : 'none';
+  if (addBtn)    addBtn.style.display    = isMine ? 'flex' : 'none';
   if (replyArea) replyArea.style.display = isMine ? 'none' : 'flex';
+  // Счётчик просмотров
+  const vcEl = document.getElementById('svViewsCount');
+  if (vcEl && story.views) vcEl.textContent = story.views.length;
 }
 
 function startStoryProgress(story) {
@@ -5734,17 +5750,26 @@ function sendStoryReply() {
 // Кнопка «Мои истории» в настройках — открывает просмотрщик своих историй
 function openMyStoriesSettings() {
   hideTabBar();
-  // Запрашиваем свежие истории с сервера, потом открываем
+  // Флаг — ждём ответ от сервера
+  window._pendingOpenMyStories = true;
   cmd({ cmd: 'get_stories' });
-  // Ждём ответа через небольшой таймаут
+  // Таймаут на случай медленного соединения
   setTimeout(() => {
-    if (myServerStories.length === 0) {
-      toast('У тебя нет активных историй');
-      showTabBar();
-    } else {
-      showMyStoriesViewer();
-    }
-  }, 600);
+    if (!window._pendingOpenMyStories) return; // уже обработано
+    window._pendingOpenMyStories = false;
+    _doOpenMyStories();
+  }, 1500);
+}
+
+function _doOpenMyStories() {
+  if (myServerStories.length === 0) {
+    // Предложим добавить историю
+    const confirmed = confirm('У тебя нет активных историй. Добавить сейчас?');
+    if (confirmed) { showTabBar(); addNewStory(); }
+    else { showTabBar(); }
+  } else {
+    showMyStoriesViewer();
+  }
 }
 
 // ── updateMyUI — update tabbar avatar too ────────────────────────────────────
@@ -7040,8 +7065,9 @@ connect();
     </div>
     <div style="flex:1"></div>
     <!-- Views button (only for own stories) -->
-    <button id="svViewsBtn" onclick="showStoryViews()" style="display:none;border:none;background:rgba(255,255,255,.15);border-radius:50%;width:36px;height:36px;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(4px)">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+    <button id="svViewsBtn" onclick="showStoryViews()" style="display:none;border:none;background:rgba(255,255,255,.15);border-radius:20px;padding:6px 10px;align-items:center;gap:5px;cursor:pointer;backdrop-filter:blur(4px)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span id="svViewsCount" style="color:#fff;font-size:13px;font-weight:600">0</span>
     </button>
     <!-- Add story button (own) -->
     <button onclick="closeStoryViewer();addNewStory()" style="border:none;background:rgba(255,255,255,.15);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(4px)" id="svAddBtn">
