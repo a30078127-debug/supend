@@ -163,7 +163,12 @@ body.dark .no-chat .sub{color:#636366}
 body.dark #qrPage{background:#1c1c1e}
 /* Themes page */
 body.dark #themesPage > div:last-child{background:#000}
-/* ── Settings page dark ─────────────────────────── */
+body.dark #settingsDataPage,body.dark #dataSubPage{background:#000}
+body.dark #settingsDataPage > div:first-child,body.dark #dataSubPage > div:first-child{background:#1c1c1e;border-color:#2c2c2e}
+body.dark #settingsDataPage [style*="background:var(--sb)"],body.dark #dataSubPage [style*="background:var(--sb)"]{background:#1c1c1e !important}
+body.dark #settingsDataPage [style*="border-bottom:1px solid var(--brd)"],body.dark #dataSubPage [style*="border-bottom:1px solid var(--brd)"]{border-color:#2c2c2e !important}
+body.dark #settingsDataPage select{color:#8d8e93;background:#1c1c1e}
+body.dark #dataSubPage label{color:#fff}
 body.dark #settingsPage{background:#000}
 body.dark #settingsPage > div:first-child{background:#1c1c1e;border-color:#2c2c2e}
 /* Profile card */
@@ -806,6 +811,13 @@ body.dark .smart-reply-btn{background:rgba(26,188,156,.08)}
         <div style="flex:1;font-size:16px">Уведомления и звуки</div>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
+      <div onclick="openSettingsData()" style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
+        <div style="width:32px;height:32px;border-radius:8px;background:#34c759;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>
+        </div>
+        <div style="flex:1;font-size:16px">Данные и память</div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
       <div onclick="openSettingsThemes()" style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
         <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
@@ -1044,6 +1056,153 @@ body.dark .smart-reply-btn{background:rgba(26,188,156,.08)}
     </div>
     <button class="btn-save" onclick="saveThemeSchedule()">Сохранить расписание</button>
     <button onclick="clearThemeSchedule()" style="width:100%;padding:13px;border:none;border-radius:14px;background:none;color:var(--danger);font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;margin-top:8px">Отключить расписание</button>
+  </div>
+</div>
+
+<!-- Data & Memory fullpage -->
+<div class="fullpage" id="settingsDataPage" style="z-index:97;background:#f2f2f7">
+  <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--brd);flex-shrink:0;background:var(--sb)">
+    <button onclick="closeFullPage('settingsDataPage');showTabBar()" style="border:none;background:none;font-size:26px;font-weight:700;cursor:pointer;color:var(--ac);padding:0;margin-right:8px;line-height:1">‹</button>
+    <div style="flex:1;font-size:17px;font-weight:700;color:var(--txt)">Данные и память</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:16px 16px calc(16px + env(safe-area-inset-bottom))">
+
+    <!-- Donut chart -->
+    <div style="background:var(--sb);border-radius:16px;padding:20px 16px;margin-bottom:16px;text-align:center">
+      <canvas id="dataDonut" width="200" height="200" style="max-width:180px;margin:0 auto 12px;display:block"></canvas>
+      <div style="font-size:22px;font-weight:800;color:var(--txt)" id="dataTotalSize">0 МБ</div>
+      <div style="font-size:13px;color:#8e8e93;margin-top:4px">Использование памяти</div>
+      <!-- Legend -->
+      <div id="dataLegend" style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:14px"></div>
+    </div>
+
+    <!-- Storage items -->
+    <div style="background:var(--sb);border-radius:14px;overflow:hidden;margin-bottom:16px" id="dataItemsList"></div>
+
+    <!-- Clear cache button -->
+    <button onclick="clearAppCache()" style="width:100%;padding:16px;border:none;border-radius:16px;background:var(--ac);color:#fff;font-family:var(--font);font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(26,188,156,.3);margin-bottom:16px" id="clearCacheBtn">
+      Очистить кэш · <span id="clearCacheSize">0 МБ</span>
+    </button>
+
+    <!-- Section: Auto-delete -->
+    <div style="font-size:12px;font-weight:700;color:#8e8e93;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding:0 4px">Автоудаление кэша медиа</div>
+    <div style="background:var(--sb);border-radius:14px;overflow:hidden;margin-bottom:16px">
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--brd);cursor:pointer">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:32px;height:32px;border-radius:8px;background:#007aff;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <span style="font-size:16px;color:var(--txt)">Личные чаты</span>
+        </div>
+        <select id="autodelPrivate" onchange="saveDataSettings()" style="border:none;background:none;color:#8e8e93;font-family:var(--font);font-size:15px;cursor:pointer;outline:none">
+          <option value="0">Никогда</option><option value="7">1 неделя</option>
+          <option value="30" selected>1 месяц</option><option value="90">3 месяца</option>
+        </select>
+      </label>
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:32px;height:32px;border-radius:8px;background:#34c759;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <span style="font-size:16px;color:var(--txt)">Группы</span>
+        </div>
+        <select id="autodelGroups" onchange="saveDataSettings()" style="border:none;background:none;color:#8e8e93;font-family:var(--font);font-size:15px;cursor:pointer;outline:none">
+          <option value="0">Никогда</option><option value="7" selected>1 неделя</option>
+          <option value="30">1 месяц</option><option value="90">3 месяца</option>
+        </select>
+      </label>
+    </div>
+
+    <!-- Section: Auto-download -->
+    <div style="font-size:12px;font-weight:700;color:#8e8e93;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding:0 4px">Автозагрузка медиа</div>
+    <div style="background:var(--sb);border-radius:14px;overflow:hidden;margin-bottom:16px">
+      <div onclick="openDataSubPage('wifi')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--brd);cursor:pointer" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
+        <div style="width:32px;height:32px;border-radius:8px;background:#007aff;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:16px;color:var(--txt)">Через Wi-Fi</div>
+          <div style="font-size:13px;color:#8e8e93;margin-top:2px" id="wifiSummary">Медиа до 15 МБ</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div onclick="openDataSubPage('mobile')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
+        <div style="width:32px;height:32px;border-radius:8px;background:#34c759;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:16px;color:var(--txt)">Через мобильную сеть</div>
+          <div style="font-size:13px;color:#8e8e93;margin-top:2px" id="mobileSummary">Медиа до 10 МБ</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+
+    <!-- Reset -->
+    <div style="background:var(--sb);border-radius:14px;overflow:hidden;margin-bottom:8px">
+      <div onclick="resetDataSettings()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 16px;cursor:pointer;color:#8e8e93" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=''">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        <span style="font-size:15px">Сбросить настройки</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Data sub-page: WiFi / Mobile -->
+<div class="fullpage" id="dataSubPage" style="z-index:98;background:#f2f2f7">
+  <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--brd);flex-shrink:0;background:var(--sb)">
+    <button onclick="closeFullPage('dataSubPage')" style="border:none;background:none;font-size:26px;font-weight:700;cursor:pointer;color:var(--ac);padding:0;margin-right:8px;line-height:1">‹</button>
+    <div style="flex:1;font-size:17px;font-weight:700;color:var(--txt)" id="dataSubTitle">Через Wi-Fi</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:16px">
+    <!-- Auto download toggle -->
+    <div style="background:var(--sb);border-radius:14px;overflow:hidden;margin-bottom:16px">
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:16px">
+        <span style="font-size:16px;color:var(--txt);font-weight:500">Загружать автоматически</span>
+        <input type="checkbox" id="autoDownloadToggle" checked onchange="saveDataSettings()" style="width:44px;height:26px;accent-color:var(--ac)">
+      </label>
+    </div>
+    <!-- Traffic level -->
+    <div style="font-size:12px;font-weight:700;color:#8e8e93;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding:0 4px">Расход трафика</div>
+    <div style="background:var(--sb);border-radius:14px;padding:16px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:#8e8e93;margin-bottom:10px">
+        <span>Низкий</span><span>Средний</span><span>Высокий</span>
+      </div>
+      <input type="range" id="trafficLevel" min="0" max="2" value="1" onchange="saveDataSettings()" style="width:100%;accent-color:var(--ac)">
+    </div>
+    <!-- Media limits -->
+    <div style="font-size:12px;font-weight:700;color:#8e8e93;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding:0 4px">Загружать мультимедиа</div>
+    <div style="background:var(--sb);border-radius:14px;overflow:hidden;margin-bottom:16px">
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--brd)">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:32px;height:32px;border-radius:8px;background:#ff9500;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+          <div><div style="font-size:16px;color:var(--txt)">Фотографии</div><div style="font-size:13px;color:#8e8e93" id="photoLimitLabel">Включено</div></div>
+        </div>
+        <input type="checkbox" id="autoPhoto" checked onchange="saveDataSettings()" style="width:44px;height:26px;accent-color:var(--ac)">
+      </label>
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--brd)">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:32px;height:32px;border-radius:8px;background:#ff2d55;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+          <div>
+            <div style="font-size:16px;color:var(--txt)">Видео</div>
+            <div style="font-size:13px;color:#8e8e93">До <span id="videoLimitVal">15</span> МБ</div>
+          </div>
+        </div>
+        <input type="range" id="videoLimit" min="5" max="50" value="15" step="5" onchange="document.getElementById('videoLimitVal').textContent=this.value;saveDataSettings()" style="width:80px;accent-color:var(--ac)">
+      </label>
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:32px;height:32px;border-radius:8px;background:#007aff;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <div>
+            <div style="font-size:16px;color:var(--txt)">Файлы</div>
+            <div style="font-size:13px;color:#8e8e93">До <span id="fileLimitVal">3</span> МБ</div>
+          </div>
+        </div>
+        <input type="range" id="fileLimit" min="1" max="20" value="3" step="1" onchange="document.getElementById('fileLimitVal').textContent=this.value;saveDataSettings()" style="width:80px;accent-color:var(--ac)">
+      </label>
+    </div>
+    <div style="font-size:13px;color:#8e8e93;padding:0 4px">Голосовые сообщения всегда загружаются автоматически.</div>
   </div>
 </div>
 
@@ -6015,6 +6174,143 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inp.value.trim()) hideSmartReplies();
   });
 });
+
+// ── Data & Memory ─────────────────────────────────────────────────────────────
+let dataSettings = JSON.parse(localStorage.getItem('sup_data_settings') || '{}');
+let currentDataSubType = 'wifi';
+
+function openSettingsData() {
+  hideTabBar();
+  renderDataPage();
+  openFullPageAnimated('settingsDataPage');
+}
+
+function renderDataPage() {
+  const cats = [
+    { key: 'messages', label: 'Сообщения', color: '#1ABC9C' },
+    { key: 'media',    label: 'Медиа',     color: '#007aff' },
+    { key: 'voice',    label: 'Голосовые', color: '#af52de' },
+    { key: 'cache',    label: 'Кэш',       color: '#ff9500' },
+    { key: 'other',    label: 'Другое',    color: '#8e8e93' },
+  ];
+  const lsSize = JSON.stringify(localStorage).length;
+  const totalKB = Math.round(lsSize / 1024);
+  const sizes = {
+    messages: Math.round(totalKB * 0.38),
+    media:    Math.round(totalKB * 0.30),
+    voice:    Math.round(totalKB * 0.15),
+    cache:    Math.round(totalKB * 0.10),
+    other:    Math.round(totalKB * 0.07),
+  };
+  const totalEl = document.getElementById('dataTotalSize');
+  if (totalEl) totalEl.textContent = totalKB > 1024 ? (totalKB/1024).toFixed(1)+' МБ' : totalKB+' КБ';
+  const cacheKB = sizes.cache + sizes.other;
+  const clearSize = document.getElementById('clearCacheSize');
+  if (clearSize) clearSize.textContent = cacheKB > 1024 ? (cacheKB/1024).toFixed(1)+' МБ' : cacheKB+' КБ';
+
+  drawDonut(cats.map(c => ({ ...c, value: sizes[c.key] })));
+
+  const legend = document.getElementById('dataLegend');
+  if (legend) legend.innerHTML = cats.map(c =>
+    `<div style="display:flex;align-items:center;gap:5px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${c.color};flex-shrink:0"></div>
+      <span style="font-size:12px;color:#8e8e93">${c.label}</span>
+    </div>`).join('');
+
+  const list = document.getElementById('dataItemsList');
+  if (list) list.innerHTML = cats.map((c, i) => {
+    const kb = sizes[c.key];
+    const sizeStr = kb > 1024 ? (kb/1024).toFixed(1)+' МБ' : kb+' КБ';
+    const pct = totalKB > 0 ? Math.round(kb/totalKB*100) : 0;
+    return `<div style="display:flex;align-items:center;gap:14px;padding:14px 16px;${i<cats.length-1?'border-bottom:1px solid var(--brd)':''}">
+      <div style="width:12px;height:12px;border-radius:50%;background:${c.color};flex-shrink:0"></div>
+      <div style="flex:1;font-size:15px;color:var(--txt)">${c.label} <span style="color:#8e8e93;font-size:13px">${pct}%</span></div>
+      <div style="font-size:14px;color:#8e8e93">${sizeStr}</div>
+    </div>`;
+  }).join('');
+}
+
+function drawDonut(data) {
+  const canvas = document.getElementById('dataDonut');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height, cx=W/2, cy=H/2, outerR=80, innerR=52;
+  ctx.clearRect(0,0,W,H);
+  const total = data.reduce((s,d)=>s+d.value,0)||1;
+  let angle = -Math.PI/2;
+  const gap = 0.03;
+  data.forEach(d => {
+    if (!d.value) return;
+    const sweep = (d.value/total)*(Math.PI*2 - gap*data.length);
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR, angle+gap/2, angle+sweep+gap/2);
+    ctx.arc(cx, cy, innerR, angle+sweep+gap/2, angle+gap/2, true);
+    ctx.closePath();
+    ctx.fillStyle = d.color;
+    ctx.fill();
+    angle += sweep+gap;
+  });
+}
+
+function clearAppCache() {
+  if (!confirm('Очистить кэш? Медиа можно будет загрузить снова.')) return;
+  const keep = ['sup_session','sup_status','sup_friends','sup_bl','sup_muted',
+    'sup_folders','sup_theme','sup_theme_schedules','sup_notif_settings',
+    'sup_data_settings','sup_call_log'];
+  Object.keys(localStorage).forEach(k => {
+    if (k.startsWith('sup_') && !keep.includes(k)) localStorage.removeItem(k);
+  });
+  toast('✅ Кэш очищен');
+  renderDataPage();
+}
+
+function openDataSubPage(type) {
+  currentDataSubType = type;
+  hideTabBar();
+  const title = document.getElementById('dataSubTitle');
+  if (title) title.textContent = type==='wifi' ? 'Через Wi-Fi' : 'Через мобильную сеть';
+  const s = dataSettings[type]||{};
+  const setVal = (id, v) => { const el=document.getElementById(id); if(el) el.value=v; };
+  const setTxt = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  const autoT = document.getElementById('autoDownloadToggle');
+  if (autoT) autoT.checked = s.auto!==false;
+  setVal('trafficLevel', s.traffic??(type==='wifi'?2:1));
+  setVal('videoLimit', s.video??(type==='wifi'?15:10));
+  setTxt('videoLimitVal', s.video??(type==='wifi'?15:10));
+  setVal('fileLimit', s.file??(type==='wifi'?3:1));
+  setTxt('fileLimitVal', s.file??(type==='wifi'?3:1));
+  openFullPageAnimated('dataSubPage');
+}
+
+function saveDataSettings() {
+  if (!currentDataSubType) return;
+  if (!dataSettings[currentDataSubType]) dataSettings[currentDataSubType]={};
+  const get = id => document.getElementById(id);
+  dataSettings[currentDataSubType].auto    = get('autoDownloadToggle')?.checked!==false;
+  dataSettings[currentDataSubType].traffic = parseInt(get('trafficLevel')?.value??1);
+  dataSettings[currentDataSubType].video   = parseInt(get('videoLimit')?.value??15);
+  dataSettings[currentDataSubType].file    = parseInt(get('fileLimit')?.value??3);
+  localStorage.setItem('sup_data_settings', JSON.stringify(dataSettings));
+  updateDataSummaries();
+}
+
+function updateDataSummaries() {
+  const ws = dataSettings.wifi||{}, ms = dataSettings.mobile||{};
+  const wEl=document.getElementById('wifiSummary'), mEl=document.getElementById('mobileSummary');
+  if (wEl) wEl.textContent = `Медиа до ${ws.video??15} МБ · Файлы до ${ws.file??3} МБ`;
+  if (mEl) mEl.textContent = `Медиа до ${ms.video??10} МБ · Файлы до ${ms.file??1} МБ`;
+}
+
+function resetDataSettings() {
+  if (!confirm('Сбросить настройки загрузки?')) return;
+  dataSettings = {};
+  localStorage.setItem('sup_data_settings', JSON.stringify(dataSettings));
+  updateDataSummaries();
+  toast('Настройки сброшены');
+}
+
+updateDataSummaries();
+
 function openGlobalSearch() {
   hideTabBar();
   document.getElementById('searchBubble').style.display = 'none';

@@ -778,11 +778,16 @@ async def media_handler(request):
     return web.Response(body=data, content_type=mime, headers=headers)
 
 async def manifest_handler(request):
+    logo_path = 'logo.jpg'
+    icon_type = 'image/jpeg' if os.path.exists(logo_path) else 'image/svg+xml'
     m = {"name":"Supend","short_name":"Supend","start_url":"/","display":"standalone",
-         "background_color":"#ffffff","theme_color":"#1ABC9C",
-         "icons":[{"src":"/logo","sizes":"192x192","type":"image/jpeg"},
-                  {"src":"/logo","sizes":"512x512","type":"image/jpeg"}]}
-    return web.Response(text=json.dumps(m), content_type='application/json')
+         "background_color":"#1ABC9C","theme_color":"#1ABC9C",
+         "icons":[
+             {"src":"/logo","sizes":"192x192","type":icon_type,"purpose":"any maskable"},
+             {"src":"/logo","sizes":"512x512","type":icon_type,"purpose":"any maskable"}
+         ]}
+    return web.Response(text=json.dumps(m), content_type='application/json',
+                        headers={'Cache-Control':'no-cache'})
 
 async def vapid_handler(request):
     return web.Response(
@@ -800,16 +805,22 @@ async def sw_handler(request):
         return web.Response(text='// SW not found', content_type='application/javascript')
 
 async def logo_handler(request):
-    # Отдаём логотип из файла logo.jpg если он есть
     logo_path = 'logo.jpg'
     if os.path.exists(logo_path):
         with open(logo_path, 'rb') as f:
             data = f.read()
         return web.Response(body=data, content_type='image/jpeg',
                           headers={'Cache-Control':'public,max-age=86400'})
-    # Fallback — SVG логотип
-    svg = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#1ABC9C"/><text x="96" y="130" font-size="100" text-anchor="middle" fill="white" font-family="Arial">S</text></svg>'
-    return web.Response(body=svg, content_type='image/svg+xml')
+    # Fallback — красивый SVG с буквой S
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">'
+        '<rect width="512" height="512" rx="112" fill="#1ABC9C"/>'
+        '<text x="256" y="360" font-size="320" font-weight="bold" '
+        'text-anchor="middle" fill="white" font-family="Arial,sans-serif">S</text>'
+        '</svg>'
+    ).encode('utf-8')
+    return web.Response(body=svg, content_type='image/svg+xml',
+                        headers={'Cache-Control':'public,max-age=3600'})
 
 async def translate_handler(request):
     try:
