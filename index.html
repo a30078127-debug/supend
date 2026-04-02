@@ -9,7 +9,9 @@
 <meta name="apple-mobile-web-app-title" content="Supend">
 <meta name="theme-color" content="#1ABC9C">
 <link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/logo">
+<link rel="apple-touch-icon" href="/icon.png">
+<link rel="apple-touch-icon" sizes="192x192" href="/icon.png">
+<link rel="apple-touch-icon" sizes="512x512" href="/icon.png">
 <meta name="apple-mobile-web-app-title" content="Supend">
 <title>Supend</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -5554,6 +5556,9 @@ function onStoriesList(d) {
   d.peers.forEach(p => { serverStories[p.username] = p; });
   myServerStories = d.my || [];
 
+  // Сохраняем метаданные своих историй локально
+  if (myServerStories.length > 0) saveMyStoriesLocal();
+
   // Если ждём открытия настроек историй — открываем
   if (window._pendingOpenMyStories) {
     window._pendingOpenMyStories = false;
@@ -5641,14 +5646,25 @@ function addNewStory() {
 
 function onStoryPosted(d) {
   toast('История опубликована! 🎉');
-  // Обновляем список и открываем просмотр
   cmd({ cmd: 'get_stories' });
-  // Через небольшую задержку открываем просмотрщик своих историй
   setTimeout(() => {
-    if (myServerStories.length > 0 || d.story_id) {
+    if (myServerStories.length > 0) {
       showMyStoriesViewer();
     }
   }, 800);
+}
+
+// ── Сохраняем свои истории локально как резерв ────────────────────────────────
+function saveMyStoriesLocal() {
+  // Сохраняем только метаданные (без медиа — слишком тяжело)
+  const meta = myServerStories.map(s => ({ id: s.id, type: s.type, ts: s.ts, views: s.views || [] }));
+  localStorage.setItem('sup_my_stories_meta', JSON.stringify(meta));
+}
+
+function loadMyStoriesLocal() {
+  try {
+    return JSON.parse(localStorage.getItem('sup_my_stories_meta') || '[]');
+  } catch(e) { return []; }
 }
 
 // ── Просмотр историй пользователя ─────────────────────────────────────────
@@ -6031,8 +6047,18 @@ function openMyStoriesSettings() {
 }
 
 function _doOpenMyStories() {
+  // Если сервер не вернул истории — проверяем локальный кэш метаданных
   if (myServerStories.length === 0) {
-    // Предложим добавить историю
+    const localMeta = loadMyStoriesLocal();
+    const now = Math.floor(Date.now() / 1000);
+    const valid = localMeta.filter(s => now - s.ts < 86400);
+    if (valid.length > 0) {
+      // Есть локальные метаданные — показываем просмотрщик, медиа загрузится с сервера
+      myServerStories = valid;
+    }
+  }
+
+  if (myServerStories.length === 0) {
     const confirmed = confirm('У тебя нет активных историй. Добавить сейчас?');
     if (confirmed) { showTabBar(); addNewStory(); }
     else { showTabBar(); }

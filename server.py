@@ -783,8 +783,10 @@ async def manifest_handler(request):
     m = {"name":"Supend","short_name":"Supend","start_url":"/","display":"standalone",
          "background_color":"#1ABC9C","theme_color":"#1ABC9C",
          "icons":[
-             {"src":"/logo","sizes":"192x192","type":icon_type,"purpose":"any maskable"},
-             {"src":"/logo","sizes":"512x512","type":icon_type,"purpose":"any maskable"}
+             {"src":"/logo","sizes":"192x192","type":icon_type,"purpose":"any"},
+             {"src":"/logo","sizes":"512x512","type":icon_type,"purpose":"any"},
+             {"src":"/icon.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+             {"src":"/icon.png","sizes":"512x512","type":"image/png","purpose":"any maskable"},
          ]}
     return web.Response(text=json.dumps(m), content_type='application/json',
                         headers={'Cache-Control':'no-cache'})
@@ -822,7 +824,45 @@ async def logo_handler(request):
     return web.Response(body=svg, content_type='image/svg+xml',
                         headers={'Cache-Control':'public,max-age=3600'})
 
-async def translate_handler(request):
+async def icon_png_handler(request):
+    """Отдаём PNG иконку для PWA home screen."""
+    # Пробуем сконвертировать logo.jpg в PNG через pillow если доступен
+    try:
+        from PIL import Image
+        import io
+        if os.path.exists('logo.jpg'):
+            with Image.open('logo.jpg') as img:
+                img = img.resize((512, 512), Image.LANCZOS)
+                buf = io.BytesIO()
+                img.save(buf, format='PNG')
+                return web.Response(body=buf.getvalue(), content_type='image/png',
+                                   headers={'Cache-Control':'public,max-age=86400'})
+    except Exception:
+        pass
+
+    # Fallback: SVG → отдаём как PNG с правильным Content-Type через data URL trick
+    # На самом деле отдаём хорошо сформированный SVG, но с PNG content-type некоторые браузеры принимают
+    # Лучший fallback — base64 PNG 1x1 зелёного цвета расширенный до нужного размера
+    # Генерируем минимальный PNG 192x192 #1ABC9C программно
+    import struct, zlib
+
+    def make_png(width, height, r, g, b):
+        def chunk(name, data):
+            c = struct.pack('>I', len(data)) + name + data
+            return c + struct.pack('>I', zlib.crc32(name + data) & 0xffffffff)
+        sig = b'\x89PNG\r\n\x1a\n'
+        ihdr = chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0))
+        # Scanlines: filter byte (0) + RGB pixels
+        raw = b''
+        row = b'\x00' + bytes([r, g, b] * width)
+        for _ in range(height): raw += row
+        idat = chunk(b'IDAT', zlib.compress(raw))
+        iend = chunk(b'IEND', b'')
+        return sig + ihdr + idat + iend
+
+    png_data = make_png(192, 192, 0x1A, 0xBC, 0x9C)
+    return web.Response(body=png_data, content_type='image/png',
+                       headers={'Cache-Control':'public,max-age=86400'})
     try:
         body = await request.json()
         text = body.get('text', '').strip()
@@ -908,6 +948,7 @@ async def main():
     app.router.add_get('/vapid-key',      vapid_handler)
     app.router.add_get('/sw.js',          sw_handler)
     app.router.add_get('/logo',           logo_handler)
+    app.router.add_get('/icon.png',       icon_png_handler)
     app.router.add_post('/translate',    translate_handler)
     app.router.add_post('/smart-replies', smart_replies_handler)
     runner = web.AppRunner(app)
