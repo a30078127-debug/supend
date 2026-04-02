@@ -727,28 +727,34 @@ body.dark .smart-reply-btn{background:rgba(26,188,156,.08)}
     <div id="tabChats" class="tab-content">
       <!-- Pinned: Favorites + Archive (always on top) -->
       <div id="pinnedItems">
-        <!-- Favorites -->
+        <!-- Favorites - always shown -->
         <div class="pinned-item" id="favoritesItem" onclick="openFavorites()">
-          <div class="pinned-av" style="background:linear-gradient(135deg,#007aff,#5856d6)">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <div class="pinned-av" style="background:var(--ac)">
+            <!-- Telegram-style bookmark icon -->
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="white" stroke="none">
+              <path d="M5 3a2 2 0 0 0-2 2v16l7-3 7 3V5a2 2 0 0 0-2-2H5z"/>
+            </svg>
           </div>
-          <div>
+          <div style="flex:1;min-width:0">
             <div class="pinned-name">Избранное</div>
-            <div class="pinned-sub" id="favLastMsg">Сохраняй сообщения здесь</div>
+            <div class="pinned-sub" id="favLastMsg" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Сохраняй сообщения здесь</div>
           </div>
-          <div style="flex:1"></div>
-          <div style="font-size:12px;color:var(--txt2)" id="favLastTime"></div>
+          <div style="font-size:12px;color:var(--txt2);flex-shrink:0" id="favLastTime"></div>
         </div>
-        <!-- Archive -->
+        <!-- Archive - shown only when has chats -->
         <div class="pinned-item" id="archiveItem" onclick="openArchive()" style="display:none">
-          <div class="pinned-av" style="background:linear-gradient(135deg,#636366,#48484a)">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          <div class="pinned-av" style="background:var(--ac)">
+            <!-- Telegram-style archive box icon -->
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 8v13H3V8"/>
+              <path d="M1 3h22v5H1z" fill="white" stroke="none"/>
+              <path d="M10 12h4"/>
+            </svg>
           </div>
-          <div>
+          <div style="flex:1;min-width:0">
             <div class="pinned-name">Архив</div>
             <div class="pinned-sub" id="archiveCount">0 чатов</div>
           </div>
-          <div style="flex:1"></div>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
       </div>
@@ -1251,29 +1257,43 @@ body.dark .smart-reply-btn{background:rgba(26,188,156,.08)}
   <div class="chats-list" id="archiveChatsList" style="flex:1;overflow-y:auto"></div>
 </div>
 
-<!-- Favorites chat page -->
-<div class="fullpage" id="favoritesPage" style="z-index:96">
-  <div style="display:flex;align-items:center;padding:8px 16px;border-bottom:1px solid var(--brd);flex-shrink:0;background:var(--sb)">
-    <button onclick="closeFavorites()" style="border:none;background:none;font-size:26px;font-weight:700;cursor:pointer;color:var(--ac);padding:0;margin-right:8px;line-height:1">‹</button>
-    <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#007aff,#5856d6);display:flex;align-items:center;justify-content:center;margin-right:10px;flex-shrink:0">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+<!-- Favorites chat page - full featured like a real chat -->
+<div class="fullpage" id="favoritesPage" style="z-index:96;display:flex;flex-direction:column">
+  <!-- Header -->
+  <div class="chat-head" style="display:flex;align-items:center;padding:10px 12px;flex-shrink:0">
+    <button onclick="closeFavorites()" style="border:none;background:none;font-size:26px;font-weight:700;cursor:pointer;color:var(--ac);padding:0;margin-right:4px;line-height:1">‹</button>
+    <div style="width:40px;height:40px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;margin-right:10px;flex-shrink:0">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M5 3a2 2 0 0 0-2 2v16l7-3 7 3V5a2 2 0 0 0-2-2H5z"/></svg>
     </div>
-    <div>
-      <div style="font-size:16px;font-weight:700;color:var(--txt)">Избранное</div>
+    <div style="flex:1">
+      <div class="head-name" style="font-size:16px;font-weight:700">Избранное</div>
       <div style="font-size:12px;color:var(--ac)">Только для меня</div>
     </div>
   </div>
-  <!-- Messages -->
-  <div id="favMessages" style="flex:1;overflow-y:auto;padding:12px;background:var(--chat-bg)"></div>
-  <!-- Input -->
-  <div style="background:var(--sb);padding:10px 12px;border-top:1px solid var(--brd);display:flex;align-items:center;gap:10px;flex-shrink:0">
-    <textarea id="favInp" placeholder="Сохрани что-нибудь..." rows="1" oninput="autoH(this)"
-      style="flex:1;border:1.5px solid var(--brd);border-radius:22px;padding:10px 16px;font-family:var(--font);font-size:15px;color:var(--txt);outline:none;resize:none;background:#fafafa;max-height:120px"
-      onfocus="this.style.borderColor='var(--ac)'" onblur="this.style.borderColor='var(--brd)'"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFavorite()}"></textarea>
-    <button onclick="sendFavorite()" style="width:42px;height:42px;border:none;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;box-shadow:0 2px 8px rgba(26,188,156,.3)">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-    </button>
+
+  <!-- Messages area -->
+  <div id="favMessages" class="messages" style="flex:1;overflow-y:auto;padding:8px 12px;background:var(--chat-bg)"></div>
+
+  <!-- Input area - same as regular chat -->
+  <div class="inp-area" id="favInpArea">
+    <!-- Reply bar -->
+    <div class="reply-bar" id="favReplyBar" style="display:none">
+      <span style="color:var(--ac)">↩</span>
+      <div><div class="reply-bar-text" id="favReplyText"></div></div>
+      <button onclick="cancelFavReply()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--txt2)">×</button>
+    </div>
+    <div class="inp-row">
+      <div class="inp-extra-btns">
+        <button class="inp-btn" onclick="triggerFavFile()" title="Фото/файл">📎</button>
+      </div>
+      <textarea class="msg-textarea" id="favInp" placeholder="Заметка..." rows="1"
+        oninput="autoH(this)"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFavorite()}"></textarea>
+      <button class="send-btn" onclick="sendFavorite()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      </button>
+    </div>
+    <input type="file" id="favFileInp" style="display:none" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" onchange="sendFavFile(this)">
   </div>
 </div>
 
@@ -6514,11 +6534,20 @@ function unarchiveAndOpen(key) {
 // Фильтруем архивные чаты из основного списка
 const _origRenderChatList = typeof renderChatList !== 'undefined' ? renderChatList : null;
 
-// ── Favorites ─────────────────────────────────────────────────────────────────
+// ── Favorites - full chat ─────────────────────────────────────────────────────
+let favReplyTo = null;
+
+function saveFavMsgs() { localStorage.setItem('sup_favorites', JSON.stringify(favoriteMessages)); }
+
 function openFavorites() {
   hideTabBar();
   renderFavMessages();
   openFullPageAnimated('favoritesPage');
+  setTimeout(() => {
+    const msgs = document.getElementById('favMessages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+    document.getElementById('favInp')?.focus();
+  }, 320);
 }
 
 function closeFavorites() {
@@ -6530,12 +6559,127 @@ function sendFavorite() {
   const inp  = document.getElementById('favInp');
   const text = inp?.value.trim();
   if (!text) return;
-  favoriteMessages.push({ text, ts: Date.now(), id: Date.now().toString() });
+  const msg = {
+    id: Date.now().toString(),
+    text,
+    ts: Date.now(),
+    type: 'text',
+    replyTo: favReplyTo
+  };
+  favoriteMessages.push(msg);
   saveFavMsgs();
   inp.value = '';
   autoH(inp);
-  renderFavMessages();
-  _updateFavPreview();
+  cancelFavReply();
+  appendFavBubble(msg);
+  _updateFavPreview(text);
+  const msgs = document.getElementById('favMessages');
+  if (msgs) msgs.scrollTop = msgs.scrollHeight;
+}
+
+function sendFavFile(input) {
+  const f = input.files[0];
+  if (!f) return;
+  const isImg = f.type.startsWith('image');
+  const isVid = f.type.startsWith('video');
+  const isAud = f.type.startsWith('audio');
+  const r = new FileReader();
+  r.onload = () => {
+    const msg = {
+      id: Date.now().toString(),
+      ts: Date.now(),
+      type: isImg ? 'image' : isVid ? 'video' : isAud ? 'audio' : 'file',
+      media: r.result,
+      fileName: f.name
+    };
+    favoriteMessages.push(msg);
+    saveFavMsgs();
+    appendFavBubble(msg);
+    const sub = isImg?'Фото':isVid?'Видео':isAud?'Голосовое':f.name;
+    _updateFavPreview(sub);
+    const msgs = document.getElementById('favMessages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+  };
+  r.readAsDataURL(f);
+  input.value = '';
+}
+
+function triggerFavFile() { document.getElementById('favFileInp')?.click(); }
+
+function cancelFavReply() {
+  favReplyTo = null;
+  const bar = document.getElementById('favReplyBar');
+  if (bar) bar.style.display = 'none';
+}
+
+function deleteFavMsg(id) {
+  favoriteMessages = favoriteMessages.filter(m => m.id !== id);
+  saveFavMsgs();
+  const el = document.getElementById('fav_' + id);
+  if (el) { el.style.opacity='0'; el.style.transition='.2s'; setTimeout(()=>el.remove(), 200); }
+  // Обновляем превью
+  if (favoriteMessages.length > 0) {
+    const last = favoriteMessages[favoriteMessages.length-1];
+    _updateFavPreview(last.text || (last.type==='image'?'Фото':last.type==='video'?'Видео':'Файл'));
+  } else {
+    const el2 = document.getElementById('favLastMsg');
+    if (el2) el2.textContent = 'Сохраняй сообщения здесь';
+    const te = document.getElementById('favLastTime');
+    if (te) te.textContent = '';
+  }
+}
+
+function replyFavMsg(id, text) {
+  favReplyTo = { id, text };
+  const bar = document.getElementById('favReplyBar');
+  const rt = document.getElementById('favReplyText');
+  if (bar) bar.style.display = 'flex';
+  if (rt) rt.textContent = text?.slice(0,60) || 'Сообщение';
+  document.getElementById('favInp')?.focus();
+}
+
+function appendFavBubble(msg) {
+  const el = document.getElementById('favMessages');
+  if (!el) return;
+  const div = document.createElement('div');
+  div.id = 'fav_' + msg.id;
+  div.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:4px';
+  const t = new Date(msg.ts).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
+  let content = '';
+  if (msg.type === 'text') {
+    const replyHtml = msg.replyTo ? `<div style="border-left:3px solid rgba(255,255,255,.7);padding-left:8px;margin-bottom:6px;font-size:12px;opacity:.85">${msg.replyTo.text?.slice(0,60)||''}</div>` : '';
+    content = `${replyHtml}<div style="font-size:15px;line-height:1.4;word-break:break-word">${msg.text}</div>`;
+  } else if (msg.type === 'image') {
+    content = `<img src="${msg.media}" style="max-width:200px;max-height:200px;border-radius:12px;display:block">`;
+  } else if (msg.type === 'video') {
+    content = `<video src="${msg.media}" controls style="max-width:200px;border-radius:12px;display:block" playsinline></video>`;
+  } else if (msg.type === 'audio') {
+    content = `<audio src="${msg.media}" controls style="max-width:200px"></audio>`;
+  } else {
+    content = `<div style="font-size:14px">📎 ${msg.fileName||'Файл'}</div>`;
+  }
+  div.innerHTML = `
+    <div style="max-width:78%;background:var(--ac);color:#fff;border-radius:16px 16px 4px 16px;padding:10px 12px;position:relative"
+      oncontextmenu="showFavCtx(event,'${msg.id}','${(msg.text||'').replace(/'/g,"\\'")}');return false">
+      ${content}
+      <div style="font-size:11px;color:rgba(255,255,255,.7);text-align:right;margin-top:3px">${t}</div>
+    </div>`;
+  el.appendChild(div);
+}
+
+function showFavCtx(e, id, text) {
+  e.preventDefault();
+  // Убираем старые меню
+  document.querySelectorAll('.fav-ctx').forEach(el => el.remove());
+  const menu = document.createElement('div');
+  menu.className = 'fav-ctx ctx-menu';
+  menu.style.cssText = `position:fixed;right:16px;z-index:999;background:var(--sb);border-radius:14px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.2);min-width:160px;top:${Math.min(e.clientY, window.innerHeight-160)}px`;
+  menu.innerHTML = `
+    <div class="ctx-item" onclick="replyFavMsg('${id}','${text?.replace(/'/g,"\\'")||''}');this.closest('.fav-ctx').remove()">↩ Ответить</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" style="color:var(--danger)" onclick="deleteFavMsg('${id}');this.closest('.fav-ctx').remove()">🗑 Удалить</div>`;
+  document.body.appendChild(menu);
+  setTimeout(() => document.addEventListener('click', () => menu.remove(), {once:true}), 10);
 }
 
 function renderFavMessages() {
@@ -6543,37 +6687,37 @@ function renderFavMessages() {
   if (!el) return;
   if (!favoriteMessages.length) {
     el.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--txt2)">
-      <div style="font-size:50px;margin-bottom:14px">💙</div>
-      <div style="font-size:16px;font-weight:700;color:var(--txt)">Избранное</div>
-      <div style="font-size:14px;margin-top:8px;line-height:1.5">Пересылай сюда важные<br>сообщения, фото и заметки</div>
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="white"><path d="M5 3a2 2 0 0 0-2 2v16l7-3 7 3V5a2 2 0 0 0-2-2H5z"/></svg>
+      </div>
+      <div style="font-size:17px;font-weight:700;color:var(--txt);margin-bottom:8px">Избранное</div>
+      <div style="font-size:14px;line-height:1.5">Пересылай сюда важные сообщения,<br>фото, документы и ссылки</div>
     </div>`;
     return;
   }
-  el.innerHTML = favoriteMessages.map(m => {
-    const t = new Date(m.ts).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
-    return `<div style="display:flex;justify-content:flex-end;margin-bottom:6px">
-      <div style="max-width:78%;background:var(--ac);color:#fff;border-radius:16px 16px 4px 16px;padding:10px 14px">
-        <div style="font-size:15px;line-height:1.4;word-break:break-word">${m.text}</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.7);text-align:right;margin-top:3px">${t}</div>
-      </div>
-    </div>`;
-  }).join('');
-  el.scrollTop = el.scrollHeight;
+  el.innerHTML = '';
+  favoriteMessages.forEach(m => appendFavBubble(m));
 }
 
-function _updateFavPreview() {
-  const last = favoriteMessages[favoriteMessages.length-1];
-  if (!last) return;
+function _updateFavPreview(text) {
   const el = document.getElementById('favLastMsg');
   const te = document.getElementById('favLastTime');
-  if (el) el.textContent = last.text.slice(0,40);
-  if (te) te.textContent = new Date(last.ts).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
+  if (el) el.textContent = (text||'').slice(0,40);
+  if (te) te.textContent = new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
 }
 
 // ── Инициализация пинов ───────────────────────────────────────────────────────
 function initPinnedItems() {
   updateArchiveBlock();
-  _updateFavPreview();
+  // Восстанавливаем превью избранного
+  if (favoriteMessages.length > 0) {
+    const last = favoriteMessages[favoriteMessages.length-1];
+    const text = last.text || (last.type==='image'?'Фото':last.type==='video'?'Видео':'Файл');
+    const el = document.getElementById('favLastMsg');
+    const te = document.getElementById('favLastTime');
+    if (el) el.textContent = text.slice(0,40);
+    if (te) te.textContent = new Date(last.ts).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
+  }
 }
 
 function openGlobalSearch() {
