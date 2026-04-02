@@ -3174,7 +3174,7 @@ function ctxChatBlock() {
 }
 
 // ── Swipe logic ────────────────────────────────────────────────────────────
-const SWIPE_PEEK   = 160; // первый свайп — показать кнопки (ширина 2 кнопок)
+const SWIPE_PEEK   = 240; // три кнопки: Звук + Удалить + Архив
 const SWIPE_FULL   = 9999; // второй свайп — удалить
 
 function addSwipe(wrap, el, key) {
@@ -6485,8 +6485,12 @@ function updateArchiveBlock() {
   const item = document.getElementById('archiveItem');
   const cnt  = document.getElementById('archiveCount');
   if (!item) return;
+  // pinned-item uses flex display
   item.style.display = archivedChats.length > 0 ? 'flex' : 'none';
-  if (cnt) cnt.textContent = `${archivedChats.length} чат${archivedChats.length===1?'':'ов'}`;
+  if (cnt) {
+    const n = archivedChats.length;
+    cnt.textContent = `${n} чат${n===1?'':n<5?'а':'ов'}`;
+  }
 }
 
 function openArchive() {
@@ -6709,7 +6713,7 @@ function _updateFavPreview(text) {
 // ── Инициализация пинов ───────────────────────────────────────────────────────
 function initPinnedItems() {
   updateArchiveBlock();
-  // Восстанавливаем превью избранного
+  // Превью избранного
   if (favoriteMessages.length > 0) {
     const last = favoriteMessages[favoriteMessages.length-1];
     const text = last.text || (last.type==='image'?'Фото':last.type==='video'?'Видео':'Файл');
@@ -6718,6 +6722,132 @@ function initPinnedItems() {
     if (el) el.textContent = text.slice(0,40);
     if (te) te.textContent = new Date(last.ts).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
   }
+  // Свайп и long-press для Избранного
+  initFavoritesSwipe();
+}
+
+function initFavoritesSwipe() {
+  const favItem = document.getElementById('favoritesItem');
+  if (!favItem) return;
+
+  // Long-press → закрепить / в папку
+  let pressTimer = null;
+  favItem.addEventListener('touchstart', () => {
+    pressTimer = setTimeout(() => showFavLongPress(), 500);
+  }, {passive:true});
+  favItem.addEventListener('touchend', () => clearTimeout(pressTimer), {passive:true});
+  favItem.addEventListener('touchmove', () => clearTimeout(pressTimer), {passive:true});
+  favItem.addEventListener('contextmenu', e => { e.preventDefault(); showFavLongPress(); });
+
+  // Свайп влево → показать кнопку Удалить
+  let sx = 0, sy = 0, isH = null, dragging = false, off = 0;
+  const PEEK = 80;
+
+  favItem.addEventListener('touchstart', e => {
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+    dragging = true; isH = null;
+    favItem.style.transition = 'none';
+  }, {passive:true});
+
+  favItem.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const dx = e.touches[0].clientX - sx;
+    const dy = e.touches[0].clientY - sy;
+    if (isH === null) {
+      if (Math.abs(dx) > Math.abs(dy) + 3) isH = true;
+      else if (Math.abs(dy) > Math.abs(dx) + 3) isH = false;
+      else return;
+    }
+    if (!isH) return;
+    const newOff = Math.max(-PEEK - 10, Math.min(0, dx));
+    favItem.style.transform = `translateX(${newOff}px)`;
+    // Показываем кнопку удалить
+    let btn = document.getElementById('favDeleteBtn');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.id = 'favDeleteBtn';
+      btn.style.cssText = 'position:absolute;right:0;top:0;bottom:0;width:80px;background:#e74c3c;border:none;color:#fff;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px';
+      btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Удалить`;
+      btn.onclick = () => {
+        favoriteMessages = [];
+        saveFavMsgs();
+        const lm = document.getElementById('favLastMsg');
+        const lt = document.getElementById('favLastTime');
+        if (lm) lm.textContent = 'Сохраняй сообщения здесь';
+        if (lt) lt.textContent = '';
+        resetFavSwipe();
+        toast('Избранное очищено');
+      };
+      favItem.style.position = 'relative';
+      favItem.style.overflow = 'hidden';
+      favItem.appendChild(btn);
+    }
+    off = newOff;
+  }, {passive:true});
+
+  function resetFavSwipe() {
+    favItem.style.transition = 'transform .25s';
+    favItem.style.transform = 'translateX(0)';
+    off = 0;
+  }
+
+  favItem.addEventListener('touchend', () => {
+    if (!dragging || isH === false) { dragging = false; return; }
+    dragging = false;
+    if (off < -40) {
+      favItem.style.transition = 'transform .25s';
+      favItem.style.transform = `translateX(-${PEEK}px)`;
+      // Закрываем по клику вне
+      setTimeout(() => document.addEventListener('click', resetFavSwipe, {once:true}), 50);
+    } else {
+      resetFavSwipe();
+    }
+  }, {passive:true});
+}
+
+function showFavLongPress() {
+  // Меню: закрепить + добавить в папку
+  document.querySelectorAll('.fav-lp-menu').forEach(e => e.remove());
+  const menu = document.createElement('div');
+  menu.className = 'fav-lp-menu ctx-menu';
+  menu.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:800;background:var(--sb);border-radius:14px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.2);min-width:200px';
+
+  const isPinned = pinnedChats && pinnedChats.has('__favorites__');
+  menu.innerHTML = `
+    <div class="ctx-item" onclick="toggleFavPin();this.closest('.fav-lp-menu').remove()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/></svg>
+      ${isPinned ? 'Открепить' : 'Закрепить'}
+    </div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" onclick="showAddFavToFolder();this.closest('.fav-lp-menu').remove()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      Добавить в папку
+    </div>`;
+  document.body.appendChild(menu);
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:799';
+  overlay.onclick = () => { menu.remove(); overlay.remove(); };
+  document.body.appendChild(overlay);
+}
+
+function toggleFavPin() {
+  if (!pinnedChats) return;
+  if (pinnedChats.has('__favorites__')) {
+    pinnedChats.delete('__favorites__');
+    toast('Избранное откреплено');
+  } else {
+    pinnedChats.add('__favorites__');
+    toast('📌 Избранное закреплено');
+    // Перемещаем favoritesItem в самый верх
+  }
+  localStorage.setItem('sup_pinned', JSON.stringify([...pinnedChats]));
+}
+
+function showAddFavToFolder() {
+  // Открываем модал добавления в папку для избранного
+  ctxChatKey = '__favorites__';
+  ctxChatIsGroup = false;
+  showAddToFolderModal();
 }
 
 function openGlobalSearch() {
