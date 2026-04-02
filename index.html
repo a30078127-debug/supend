@@ -719,11 +719,7 @@ body.dark #themeScheduleModal input#scheduleCity::placeholder{color:#636366}
 
 <!-- Calls fullscreen page -->
 <div class="fullpage" id="callsPage">
-  <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--brd);flex-shrink:0">
-    <div style="flex:1;font-size:20px;font-weight:800">Звонки</div>
-    <button onclick="closeFullPage('callsPage')" style="border:none;background:var(--ac-l);color:var(--ac);padding:7px 16px;border-radius:20px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">Готово</button>
-  </div>
-  <div id="callsPageList" style="flex:1;overflow-y:auto"></div>
+  <div id="callsPageList" style="flex:1;overflow-y:auto;padding-top:8px"></div>
 </div>
 
 <!-- Settings fullscreen page -->
@@ -4978,11 +4974,12 @@ function doCreateFolder() {
 let currentTab = 'chats';
 const TAB_ORDER = ['calls', 'chats', 'settings'];
 
+// direction: null = кнопка (без анимации), 'left'/'right' = свайп (с анимацией)
 function switchTab2(tab, direction) {
   const prevTab = currentTab;
   currentTab = tab;
 
-  // Update active buttons
+  // Обновляем кнопки таббара
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   const activeBtn = document.getElementById(
     tab === 'calls' ? 'tabBtnCalls' : tab === 'settings' ? 'tabBtnSettings' : 'tabBtnChats'
@@ -4990,25 +4987,23 @@ function switchTab2(tab, direction) {
   if (activeBtn) activeBtn.classList.add('active');
   animateTabIndicator(tab);
 
-  // Determine slide direction if not provided
-  if (!direction) {
-    const prevIdx = TAB_ORDER.indexOf(prevTab);
-    const newIdx  = TAB_ORDER.indexOf(tab);
-    direction = newIdx > prevIdx ? 'left' : 'right';
-  }
-
   if (tab === 'calls') {
     renderCallLog2();
-    if (prevTab !== 'chats') closeFullPageInstant('settingsPage');
-    openFullPageSlide('callsPage', direction);
+    closeFullPageInstant('settingsPage');
+    direction ? openFullPageSlide('callsPage', direction) : openFullPage('callsPage');
   } else if (tab === 'settings') {
     fillSettingsPage();
-    if (prevTab !== 'chats') closeFullPageInstant('callsPage');
-    openFullPageSlide('settingsPage', direction);
+    closeFullPageInstant('callsPage');
+    direction ? openFullPageSlide('settingsPage', direction) : openFullPage('settingsPage');
   } else {
-    // Chats — close all fullpages with slide
-    closeFullPageSlide('callsPage', direction === 'right' ? 'left' : 'right');
-    closeFullPageSlide('settingsPage', direction);
+    // Чаты
+    if (direction) {
+      closeFullPageSlide('callsPage', direction === 'right' ? 'right' : 'left');
+      closeFullPageSlide('settingsPage', direction === 'left' ? 'left' : 'right');
+    } else {
+      closeFullPageInstant('callsPage');
+      closeFullPageInstant('settingsPage');
+    }
   }
 }
 
@@ -5065,10 +5060,11 @@ function closeFullPageSlide(id, direction) {
 
     const idx = TAB_ORDER.indexOf(currentTab);
     if (dx < 0 && idx < TAB_ORDER.length - 1) {
-      // Свайп влево → следующая вкладка
+      // Свайп влево по экрану → переходим вперёд (calls→chats→settings)
+      // При свайпе влево контент "улетает" влево, новый приходит справа
       switchTab2(TAB_ORDER[idx + 1], 'left');
     } else if (dx > 0 && idx > 0) {
-      // Свайп вправо → предыдущая вкладка
+      // Свайп вправо по экрану → переходим назад
       switchTab2(TAB_ORDER[idx - 1], 'right');
     }
   }
@@ -5738,12 +5734,17 @@ function sendStoryReply() {
 // Кнопка «Мои истории» в настройках — открывает просмотрщик своих историй
 function openMyStoriesSettings() {
   hideTabBar();
-  if (myServerStories.length === 0) {
-    toast('У тебя нет активных историй');
-    showTabBar();
-    return;
-  }
-  showMyStoriesViewer();
+  // Запрашиваем свежие истории с сервера, потом открываем
+  cmd({ cmd: 'get_stories' });
+  // Ждём ответа через небольшой таймаут
+  setTimeout(() => {
+    if (myServerStories.length === 0) {
+      toast('У тебя нет активных историй');
+      showTabBar();
+    } else {
+      showMyStoriesViewer();
+    }
+  }, 600);
 }
 
 // ── updateMyUI — update tabbar avatar too ────────────────────────────────────
