@@ -836,6 +836,56 @@ async def translate_handler(request):
         print(f'[translate] error: {e}')
         return web.Response(text=json.dumps({'result': f'Ошибка перевода: {str(e)}'}), content_type='application/json')
 
+# ── Smart replies via Google Gemini ───────────────────────────────────────────
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+
+async def smart_replies_handler(request):
+    if not GEMINI_API_KEY:
+        return web.Response(text=json.dumps({'replies': []}), content_type='application/json')
+    try:
+        body = await request.json()
+        message = body.get('message', '').strip()
+        if not message or len(message) > 500:
+            return web.Response(text=json.dumps({'replies': []}), content_type='application/json')
+
+        prompt = (
+            f"Message: \"{message}\"\n\n"
+            "You are a smart reply assistant. Generate 3-4 very short reply options (max 5 words each) in the SAME LANGUAGE as the message. "
+            "Only suggest replies if the message is a question or conversational (needs a response). "
+            "If the message is just a statement that doesn't need a reply, return empty list. "
+            "Return ONLY a JSON array of strings, nothing else. Example: [\"Yes!\", \"Not sure\", \"Tell me more\"]"
+        )
+
+        api_url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}'
+        payload = json.dumps({
+            'contents': [{'parts': [{'text': prompt}]}],
+            'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 100}
+        }).encode()
+
+        req = urllib.request.Request(
+            api_url,
+            data=payload,
+            headers={'Content-Type': 'application/json'},
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode())
+
+        # Extract text from response
+        text = data['candidates'][0]['content']['parts'][0]['text'].strip()
+        # Clean markdown if present
+        text = text.replace('```json', '').replace('```', '').strip()
+        replies = json.loads(text)
+        if not isinstance(replies, list):
+            replies = []
+        # Filter: max 5 words, max 4 items
+        replies = [r for r in replies if isinstance(r, str) and len(r.split()) <= 6][:4]
+        return web.Response(text=json.dumps({'replies': replies}), content_type='application/json')
+
+    except Exception as e:
+        print(f'[smart_replies] error: {e}')
+        return web.Response(text=json.dumps({'replies': []}), content_type='application/json')
+
 async def main():
     port = int(os.environ.get('PORT', 8080))
     app  = web.Application(client_max_size=50*1024*1024)
@@ -848,6 +898,7 @@ async def main():
     app.router.add_get('/sw.js',          sw_handler)
     app.router.add_get('/logo',           logo_handler)
     app.router.add_post('/translate',    translate_handler)
+    app.router.add_post('/smart-replies', smart_replies_handler)
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, '0.0.0.0', port).start()

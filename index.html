@@ -420,6 +420,11 @@ body.dark #themeScheduleModal input#scheduleCity::placeholder{color:#636366}
 .msg-textarea{flex:1;border:1.5px solid var(--brd);border-radius:22px;padding:10px 16px;font-family:var(--font);font-size:15px;color:var(--txt);outline:none;resize:none;max-height:120px;line-height:1.5;transition:.2s;background:#fafafa}
 .msg-textarea:focus{border-color:var(--ac);background:#fff}
 .send-btn{width:42px;height:42px;border:none;border-radius:50%;background:var(--ac);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:.15s;box-shadow:0 2px 8px rgba(26,188,156,.3)}
+/* Smart replies */
+#smartReplies::-webkit-scrollbar{display:none}
+.smart-reply-btn{flex-shrink:0;padding:7px 14px;border:1.5px solid var(--ac);border-radius:18px;background:transparent;color:var(--ac);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:.12s}
+.smart-reply-btn:active{background:var(--ac-l)}
+body.dark .smart-reply-btn{background:rgba(26,188,156,.08)}
 .send-btn:active{transform:scale(.93)}
 .rec-indicator{display:none;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(26,188,156,.08),rgba(26,188,156,.04));border:1.5px solid rgba(26,188,156,.25);border-radius:16px;padding:12px 14px}
 .rec-indicator.show{display:flex}
@@ -1085,6 +1090,8 @@ body.dark #themeScheduleModal input#scheduleCity::placeholder{color:#636366}
 
       <!-- Input area -->
       <div class="inp-area">
+        <!-- Smart replies -->
+        <div id="smartReplies" style="display:none;flex-direction:row;gap:8px;padding:4px 0 2px;overflow-x:auto;scrollbar-width:none;flex-shrink:0"></div>
         <div class="reply-bar" id="replyBar">
           <span style="color:var(--ac)">↩</span>
           <div>
@@ -3093,6 +3100,7 @@ function openGroupChat(gid, name, avatar) {
 
 function showActiveChat() {
   hideTabBar();
+  hideSmartReplies();
   document.getElementById('noChatPlaceholder').style.display = 'none';
   const ac = document.getElementById('activeChat');
   ac.style.display = 'flex'; ac.style.flexDirection = 'column';
@@ -3135,7 +3143,13 @@ function onMessage(d) {
   if (isActive) {
     appendBubble(d);
     document.getElementById('messages').scrollTop = 9999999;
-    if (d.from !== me) cmd({ cmd:'mark_read', with:d.from });
+    if (d.from !== me) {
+      cmd({ cmd:'mark_read', with:d.from });
+      // Запрашиваем умные ответы для входящего сообщения
+      if (d.text && d.text.length < 300) {
+        requestSmartReplies(d.text);
+      }
+    }
   } else if (d.from !== me) {
     const name = getDisplayName(d.from) || ('@' + d.from);
     const body = d.mtype === 'voice' ? '🎤 Голосовое' : d.mtype === 'image' ? '📷 Фото' : (d.text||'').slice(0,60);
@@ -3449,6 +3463,7 @@ function scrollToMsg(msgId) {
 // ── Send ───────────────────────────────────────────────────────────────────
 function sendMsg() {
   if (!activeChat) return;
+  hideSmartReplies();
   const inp = document.getElementById('msgInp');
   const text = inp.value.trim();
   if (!text) return;
@@ -5936,7 +5951,70 @@ function renderTx() {
     </div>`).join('');
 }
 
-// ── Global search ─────────────────────────────────────────────────────────────
+// ── Smart Replies ─────────────────────────────────────────────────────────────
+let smartReplyTimer = null;
+
+function requestSmartReplies(text) {
+  // Только в личных чатах, не в группах
+  if (activeType !== 'peer') return;
+  // Не запрашиваем если поле уже заполнено
+  if (document.getElementById('msgInp')?.value.trim()) return;
+
+  clearTimeout(smartReplyTimer);
+  // Небольшая задержка чтобы не спамить
+  smartReplyTimer = setTimeout(async () => {
+    try {
+      const resp = await fetch('/smart-replies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+      const data = await resp.json();
+      showSmartReplies(data.replies || []);
+    } catch(e) {
+      // Тихо игнорируем ошибки
+    }
+  }, 300);
+}
+
+function showSmartReplies(replies) {
+  const bar = document.getElementById('smartReplies');
+  if (!bar) return;
+  if (!replies.length) {
+    bar.style.display = 'none';
+    bar.innerHTML = '';
+    return;
+  }
+  bar.style.display = 'flex';
+  bar.innerHTML = replies.map(r =>
+    `<button class="smart-reply-btn" onclick="useSuggestion(this.textContent)">${r}</button>`
+  ).join('');
+}
+
+function useSuggestion(text) {
+  const inp = document.getElementById('msgInp');
+  if (!inp) return;
+  inp.value = text;
+  autoH(inp);
+  hideSmartReplies();
+  inp.focus();
+  // Отправляем сразу
+  sendMsg();
+}
+
+function hideSmartReplies() {
+  const bar = document.getElementById('smartReplies');
+  if (bar) { bar.style.display = 'none'; bar.innerHTML = ''; }
+  clearTimeout(smartReplyTimer);
+}
+
+// Скрываем когда пользователь начинает вводить
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('msgInp');
+  if (inp) inp.addEventListener('input', () => {
+    if (inp.value.trim()) hideSmartReplies();
+  });
+});
 function openGlobalSearch() {
   hideTabBar();
   document.getElementById('searchBubble').style.display = 'none';
