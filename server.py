@@ -863,31 +863,25 @@ async def icon_png_handler(request):
     png_data = make_png(192, 192, 0x1A, 0xBC, 0x9C)
     return web.Response(body=png_data, content_type='image/png',
                        headers={'Cache-Control':'public,max-age=86400'})
+
+async def translate_handler(request):
     try:
         body = await request.json()
         text = body.get('text', '').strip()
         lang = body.get('lang', 'en')
         if not text:
             return web.Response(text=json.dumps({'result': ''}), content_type='application/json')
-
-        # Бесплатный Google Translate (без ключа)
         import urllib.parse
         encoded = urllib.parse.quote(text)
         url = f'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl={lang}&dt=t&q={encoded}'
-
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode('utf-8'))
-            # Структура: [[[переведённый текст, оригинал, ...], ...], ...]
-            translated = ''.join(
-                part[0] for part in data[0] if part and part[0]
-            )
+            translated = ''.join(part[0] for part in data[0] if part and part[0])
         return web.Response(text=json.dumps({'result': translated}), content_type='application/json')
     except Exception as e:
         print(f'[translate] error: {e}')
         return web.Response(text=json.dumps({'result': f'Ошибка перевода: {str(e)}'}), content_type='application/json')
-
-# ── Smart replies via Google Gemini ───────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 
 async def smart_replies_handler(request):
