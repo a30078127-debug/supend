@@ -4976,44 +4976,111 @@ function doCreateFolder() {
 // ── Fullscreen pages (Calls, Settings) ───────────────────────────────────────
 // ── switchTab2 — tabbar always visible ───────────────────────────────────────
 let currentTab = 'chats';
+const TAB_ORDER = ['calls', 'chats', 'settings'];
 
-function switchTab2(tab) {
+function switchTab2(tab, direction) {
   const prevTab = currentTab;
   currentTab = tab;
 
-  // Update active state
+  // Update active buttons
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   const activeBtn = document.getElementById(
     tab === 'calls' ? 'tabBtnCalls' : tab === 'settings' ? 'tabBtnSettings' : 'tabBtnChats'
   );
   if (activeBtn) activeBtn.classList.add('active');
-
-  // Animate indicator
   animateTabIndicator(tab);
 
-  // Page transitions
+  // Determine slide direction if not provided
+  if (!direction) {
+    const prevIdx = TAB_ORDER.indexOf(prevTab);
+    const newIdx  = TAB_ORDER.indexOf(tab);
+    direction = newIdx > prevIdx ? 'left' : 'right';
+  }
+
   if (tab === 'calls') {
     renderCallLog2();
-    if (prevTab === 'settings') {
-      closeFullPageInstant('settingsPage');
-      openFullPage('callsPage');
-    } else {
-      openFullPage('callsPage');
-    }
+    if (prevTab !== 'chats') closeFullPageInstant('settingsPage');
+    openFullPageSlide('callsPage', direction);
   } else if (tab === 'settings') {
     fillSettingsPage();
-    if (prevTab === 'calls') {
-      closeFullPageInstant('callsPage');
-      openFullPage('settingsPage');
-    } else {
-      openFullPage('settingsPage');
-    }
+    if (prevTab !== 'chats') closeFullPageInstant('callsPage');
+    openFullPageSlide('settingsPage', direction);
   } else {
-    // Back to chats — close all fullpages
-    closeFullPageSmooth('callsPage');
-    closeFullPageSmooth('settingsPage');
+    // Chats — close all fullpages with slide
+    closeFullPageSlide('callsPage', direction === 'right' ? 'left' : 'right');
+    closeFullPageSlide('settingsPage', direction);
   }
 }
+
+function openFullPageSlide(id, direction) {
+  const p = document.getElementById(id);
+  if (!p) return;
+  p.style.transition = 'none';
+  p.style.transform = direction === 'left' ? 'translateX(100%)' : 'translateX(-100%)';
+  p.style.display = 'flex';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      p.style.transition = 'transform .28s cubic-bezier(.4,0,.2,1)';
+      p.style.transform = 'translateX(0)';
+    });
+  });
+}
+
+function closeFullPageSlide(id, direction) {
+  const p = document.getElementById(id);
+  if (!p || p.style.display === 'none') return;
+  p.style.transition = 'transform .28s cubic-bezier(.4,0,.2,1)';
+  p.style.transform = direction === 'left' ? 'translateX(-100%)' : 'translateX(100%)';
+  setTimeout(() => { p.style.display = 'none'; }, 290);
+}
+
+// ── Swipe between tabs ────────────────────────────────────────────────────────
+(function initTabSwipe() {
+  let startX = 0, startY = 0, startTime = 0;
+  const THRESHOLD = 60; // px минимальный свайп
+  const MAX_Y = 80;     // не реагируем если сильно по вертикали
+
+  function onStart(x, y) {
+    startX = x; startY = y; startTime = Date.now();
+  }
+  function onEnd(x, y) {
+    // Не работает внутри чата, историй, и других страниц поверх
+    const chatOpen = document.getElementById('chatView')?.classList.contains('open');
+    const storyOpen = document.getElementById('storyViewer')?.style.display === 'flex';
+    const qrOpen = document.getElementById('qrPage')?.style.display !== 'none' &&
+                   document.getElementById('qrPage')?.style.display !== '';
+    if (chatOpen || storyOpen || qrOpen) return;
+    // Нельзя свайпать если открыт sub-page настроек
+    const subOpen = ['settingsFoldersPage','settingsNotifsPage','themesPage']
+      .some(id => {
+        const el = document.getElementById(id);
+        return el && el.style.display !== 'none' && el.style.transform === 'translateX(0px)';
+      });
+    if (subOpen) return;
+
+    const dx = x - startX;
+    const dy = Math.abs(y - startY);
+    const dt = Date.now() - startTime;
+    if (Math.abs(dx) < THRESHOLD || dy > MAX_Y || dt > 500) return;
+
+    const idx = TAB_ORDER.indexOf(currentTab);
+    if (dx < 0 && idx < TAB_ORDER.length - 1) {
+      // Свайп влево → следующая вкладка
+      switchTab2(TAB_ORDER[idx + 1], 'left');
+    } else if (dx > 0 && idx > 0) {
+      // Свайп вправо → предыдущая вкладка
+      switchTab2(TAB_ORDER[idx - 1], 'right');
+    }
+  }
+
+  // Touch
+  document.addEventListener('touchstart', e => {
+    onStart(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    onEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+  }, { passive: true });
+})();
 
 function animateTabIndicator(tab) {
   const bar = document.getElementById('mainTabBar');
@@ -5368,19 +5435,48 @@ function addNewStory() {
     const f = inp.files[0];
     if (!f) return;
     toast('Загружаем историю...');
-    const r = new FileReader();
-    r.onload = () => {
-      const mtype = f.type.startsWith('video') ? 'video' : 'image';
-      cmd({ cmd: 'post_story', media: r.result, mtype });
+
+    if (f.type.startsWith('video')) {
+      // Видео — отправляем как есть, но ограничиваем 20MB
+      if (f.size > 20 * 1024 * 1024) { toast('Видео слишком большое (макс. 20MB)'); return; }
+      const r = new FileReader();
+      r.onload = () => cmd({ cmd: 'post_story', media: r.result, mtype: 'video' });
+      r.readAsDataURL(f);
+      return;
+    }
+
+    // Фото — сжимаем через Canvas до 800x800 макс
+    const img = new Image();
+    const url = URL.createObjectURL(f);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const MAX = 900;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else       { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.82);
+      cmd({ cmd: 'post_story', media: compressed, mtype: 'image' });
     };
-    r.readAsDataURL(f);
+    img.src = url;
   };
   inp.click();
 }
 
 function onStoryPosted(d) {
   toast('История опубликована! 🎉');
+  // Обновляем список и открываем просмотр
   cmd({ cmd: 'get_stories' });
+  // Через небольшую задержку открываем просмотрщик своих историй
+  setTimeout(() => {
+    if (myServerStories.length > 0 || d.story_id) {
+      showMyStoriesViewer();
+    }
+  }, 800);
 }
 
 // ── Просмотр историй пользователя ─────────────────────────────────────────
