@@ -301,7 +301,7 @@ body.dark #themeScheduleModal input#scheduleCity::placeholder{color:#636366}
 .swipe-btn-archive{background:#636366}
 .swipe-btn svg{flex-shrink:0}
 /* Archive & Favorites pinned items */
-.pinned-item{display:flex;align-items:center;gap:14px;padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--brd);background:var(--sb);transition:.15s}
+.pinned-item{display:flex;align-items:center;gap:14px;padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--brd);background:var(--sb);transition:.15s;position:relative;overflow:hidden}
 .pinned-item:active{background:var(--ac-l)}
 .pinned-av{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px}
 .pinned-name{font-size:16px;font-weight:700;color:var(--txt)}
@@ -1308,6 +1308,14 @@ body.dark .smart-reply-btn{background:rgba(26,188,156,.08)}
     <div class="inp-row">
       <div class="inp-extra-btns">
         <button class="inp-btn" onclick="triggerFavFile()" title="Фото/файл">📎</button>
+        <button class="inp-btn mic-btn" id="favVoiceBtn" onmousedown="startFavRec()" ontouchstart="startFavRec()" title="Голосовое">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8.5" y="1" width="7" height="13" rx="3.5" fill="#1ABC9C"/>
+            <path d="M5 11C5 14.866 8.13401 18 12 18C15.866 18 19 14.866 19 11" stroke="#1ABC9C" stroke-width="2" stroke-linecap="round"/>
+            <line x1="12" y1="18" x2="12" y2="22" stroke="#1ABC9C" stroke-width="2" stroke-linecap="round"/>
+            <line x1="9" y1="22" x2="15" y2="22" stroke="#1ABC9C" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
       </div>
       <textarea class="msg-textarea" id="favInp" placeholder="Заметка..." rows="1"
         oninput="autoH(this)"
@@ -1316,7 +1324,7 @@ body.dark .smart-reply-btn{background:rgba(26,188,156,.08)}
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
       </button>
     </div>
-    <input type="file" id="favFileInp" style="display:none" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" onchange="sendFavFile(this)">
+    <input type="file" id="favFileInp" style="display:none" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" multiple onchange="openMediaEditor(this, 'fav')">
   </div>
 </div>
 
@@ -1423,7 +1431,7 @@ body.dark .smart-reply-btn{background:rgba(26,188,156,.08)}
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
           </button>
         </div>
-        <input type="file" id="fileInp" style="display:none" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" multiple onchange="sendFile(this)">
+        <input type="file" id="fileInp" style="display:none" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" multiple onchange="openMediaEditor(this, 'chat')">
       </div>
     </div>
   </div>
@@ -7201,10 +7209,313 @@ function applyLanguage(code) {
   if (ai) { const pn=ai.querySelector('.pinned-name'); if(pn&&t['Архив']) pn.textContent=t['Архив']; }
 }
 
-// Применяем язык при старте
-if (currentLang !== 'ru') applyLanguage(currentLang);
+// ── Media Editor ──────────────────────────────────────────────────────────────
+let meFiles = [];       // все выбранные файлы
+let meIndex = 0;        // текущий индекс
+let meTarget = 'chat';  // 'chat' или 'fav'
+let meFilter_ = 'none';
+let moreFileInp = null;
 
-// Bonus animations CSS
+function openMediaEditor(input, target) {
+  if (!input.files.length) return;
+  meFiles = Array.from(input.files);
+  meIndex = 0;
+  meTarget = target;
+  meFilter_ = 'none';
+  input.value = '';
+  document.getElementById('mediaEditor').style.display = 'flex';
+  meRenderThumbs();
+  meShowCurrent();
+}
+
+function closeMediaEditor() {
+  document.getElementById('mediaEditor').style.display = 'none';
+  meFiles = [];
+  document.getElementById('meCaption').value = '';
+  document.getElementById('meImg').style.display = 'none';
+  document.getElementById('meVideo').style.display = 'none';
+}
+
+function addMoreMedia() {
+  if (!moreFileInp) {
+    moreFileInp = document.createElement('input');
+    moreFileInp.type = 'file';
+    moreFileInp.multiple = true;
+    moreFileInp.accept = 'image/*,video/*';
+    moreFileInp.onchange = () => {
+      meFiles = [...meFiles, ...Array.from(moreFileInp.files)];
+      moreFileInp.value = '';
+      meRenderThumbs();
+      meShowCurrent();
+    };
+  }
+  moreFileInp.click();
+}
+
+function meNavigate(dir) {
+  meIndex = Math.max(0, Math.min(meFiles.length - 1, meIndex + dir));
+  meShowCurrent();
+}
+
+function meShowCurrent() {
+  const f = meFiles[meIndex];
+  if (!f) return;
+  const isImg = f.type.startsWith('image');
+  const isVid = f.type.startsWith('video');
+  const url = URL.createObjectURL(f);
+
+  const imgEl = document.getElementById('meImg');
+  const vidEl = document.getElementById('meVideo');
+  const tools = document.getElementById('meTools');
+  document.getElementById('meCounter').textContent = `${meIndex+1} из ${meFiles.length}`;
+  document.getElementById('mePrev').style.display = meIndex > 0 ? 'flex' : 'none';
+  document.getElementById('meNext').style.display = meIndex < meFiles.length-1 ? 'flex' : 'none';
+
+  if (isImg) {
+    imgEl.style.display = 'block'; vidEl.style.display = 'none';
+    imgEl.style.filter = meFilter_ !== 'none' ? meFilter_ : '';
+    imgEl.onload = () => URL.revokeObjectURL(imgEl.src);
+    imgEl.src = url;
+    tools.style.display = 'flex';
+  } else if (isVid) {
+    imgEl.style.display = 'none'; vidEl.style.display = 'block';
+    vidEl.src = url;
+    tools.style.display = 'none';
+  }
+
+  // Update thumb active
+  document.querySelectorAll('.me-thumb').forEach((t,i) => t.classList.toggle('active', i === meIndex));
+}
+
+function meRenderThumbs() {
+  const el = document.getElementById('meThumbs');
+  el.innerHTML = '';
+  meFiles.forEach((f, i) => {
+    const isImg = f.type.startsWith('image');
+    const url = URL.createObjectURL(f);
+    if (isImg) {
+      const img = document.createElement('img');
+      img.className = 'me-thumb' + (i === meIndex ? ' active' : '');
+      img.src = url;
+      img.onclick = () => { meIndex = i; meShowCurrent(); };
+      el.appendChild(img);
+    } else {
+      const div = document.createElement('div');
+      div.className = 'me-thumb' + (i === meIndex ? ' active' : '');
+      div.style.cssText = 'background:#222;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px';
+      div.textContent = '🎥';
+      div.onclick = () => { meIndex = i; meShowCurrent(); };
+      el.appendChild(div);
+    }
+  });
+}
+
+function meFilter(filter) {
+  meFilter_ = filter;
+  const imgEl = document.getElementById('meImg');
+  imgEl.style.filter = filter !== 'none' ? filter : '';
+}
+
+function meCrop() { toast('Зажми и потяни для обрезки (скоро)'); }
+
+async function mediaSendAll() {
+  const caption = document.getElementById('meCaption').value.trim();
+  closeMediaEditor();
+  for (const file of meFiles) {
+    if (meTarget === 'fav') {
+      await _sendFavMediaFile(file, caption);
+    } else {
+      await _sendChatMediaFile(file, caption);
+    }
+  }
+}
+
+async function _sendChatMediaFile(file, caption) {
+  if (!activeChat) return;
+  const isImg = file.type.startsWith('image/');
+  const isVid = file.type.startsWith('video/');
+  const isAud = file.type.startsWith('audio/');
+  const mtype = isImg ? 'image' : isVid ? 'video' : isAud ? 'voice' : 'file';
+  const blobUrl = URL.createObjectURL(file);
+  const localMsg = { id:'local_'+Date.now(), from:me, text:caption||file.name, time:Date.now(), tstr:tstr(), mtype, url:blobUrl, filename:file.name };
+  appendBubble(localMsg);
+  document.getElementById('messages').scrollTop = 9999999;
+  const url = await uploadMedia(file);
+  if (!url) return;
+  const base = { cmd:'send_msg', mtype, url, filename:file.name, text:caption||file.name };
+  if (activeType === 'group') cmd({...base, gid:activeChat});
+  else cmd({...base, to:activeChat});
+}
+
+async function _sendFavMediaFile(file, caption) {
+  const isImg = file.type.startsWith('image');
+  const isVid = file.type.startsWith('video');
+  const isAud = file.type.startsWith('audio');
+  const r = new FileReader();
+  r.onload = () => {
+    const msg = {
+      id: Date.now().toString() + Math.random(),
+      ts: Date.now(),
+      type: isImg ? 'image' : isVid ? 'video' : isAud ? 'audio' : 'file',
+      media: r.result,
+      fileName: file.name,
+      caption
+    };
+    favoriteMessages.push(msg);
+    saveFavMsgs();
+    appendFavBubble(msg);
+    _updateFavPreview(caption || (isImg?'Фото':isVid?'Видео':'Файл'));
+    const msgs = document.getElementById('favMessages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+  };
+  r.readAsDataURL(file);
+}
+
+// Override old sendFile to use editor
+async function sendFile(inp) { openMediaEditor(inp, 'chat'); }
+function sendFavFile(inp) { openMediaEditor(inp, 'fav'); }
+
+// ── Fav voice recording ───────────────────────────────────────────────────────
+let favMediaRec = null, favRecStream = null, favRecChunks = [], favRecTimer = null;
+
+async function startFavRec() {
+  if (favMediaRec) return;
+  try {
+    favRecStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const opts = (!isSafari && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) ? {mimeType:'audio/webm;codecs=opus'} : {};
+    favMediaRec = new MediaRecorder(favRecStream, opts);
+    favRecChunks = [];
+    favMediaRec.ondataavailable = e => { if (e.data.size > 0) favRecChunks.push(e.data); };
+    favMediaRec.onstop = async () => {
+      const blob = new Blob(favRecChunks, {type: favMediaRec.mimeType || 'audio/webm'});
+      const r = new FileReader();
+      r.onload = () => {
+        const msg = {id:Date.now().toString(), ts:Date.now(), type:'audio', media:r.result};
+        favoriteMessages.push(msg);
+        saveFavMsgs();
+        appendFavBubble(msg);
+        _updateFavPreview('🎤 Голосовое');
+        const msgs = document.getElementById('favMessages');
+        if (msgs) msgs.scrollTop = msgs.scrollHeight;
+      };
+      r.readAsDataURL(blob);
+      favRecStream.getTracks().forEach(t => t.stop());
+      favMediaRec = null; favRecStream = null;
+    };
+    favMediaRec.start();
+    toast('🎤 Запись...');
+    // Stop on touchend/mouseup
+    const stop = () => { if (favMediaRec && favMediaRec.state !== 'inactive') favMediaRec.stop(); document.removeEventListener('touchend', stop); document.removeEventListener('mouseup', stop); };
+    document.addEventListener('touchend', stop, {once:true});
+    document.addEventListener('mouseup', stop, {once:true});
+  } catch(e) { toast('Нет доступа к микрофону'); }
+}
+
+// ── Lightbox for fav images ───────────────────────────────────────────────────
+function openFavImgLightbox(src) {
+  const lb = document.getElementById('lightbox') || (() => {
+    const d = document.createElement('div');
+    d.id = 'lightbox'; d.style.cssText = 'position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.95);display:flex;align-items:center;justify-content:center';
+    d.onclick = () => d.style.display = 'none';
+    document.body.appendChild(d); return d;
+  })();
+  lb.innerHTML = `<img src="${src}" style="max-width:95vw;max-height:90vh;object-fit:contain;border-radius:8px">`;
+  lb.style.display = 'flex';
+}
+
+// ── Fix favorites swipe width ─────────────────────────────────────────────────
+// Перезаписываем appendFavBubble для поддержки лайтбокса и подписи
+const _origAppendFavBubble = appendFavBubble;
+window.appendFavBubble = function(msg) {
+  const el = document.getElementById('favMessages');
+  if (!el) return;
+  const div = document.createElement('div');
+  div.id = 'fav_' + msg.id;
+  div.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:4px';
+  const t = new Date(msg.ts).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
+
+  let content = '';
+  if (msg.type === 'text') {
+    const replyHtml = msg.replyTo ? `<div style="border-left:3px solid rgba(255,255,255,.7);padding-left:8px;margin-bottom:6px;font-size:12px;opacity:.85">${msg.replyTo.text?.slice(0,60)||''}</div>` : '';
+    content = `${replyHtml}<div style="font-size:15px;line-height:1.4;word-break:break-word">${msg.text}</div>`;
+  } else if (msg.type === 'image') {
+    content = `<img src="${msg.media}" onclick="openFavImgLightbox('${msg.media}')" style="max-width:200px;max-height:200px;border-radius:12px;display:block;cursor:pointer">`;
+    if (msg.caption) content += `<div style="font-size:13px;margin-top:4px;opacity:.9">${msg.caption}</div>`;
+  } else if (msg.type === 'video') {
+    content = `<video src="${msg.media}" controls style="max-width:200px;border-radius:12px;display:block" playsinline></video>`;
+    if (msg.caption) content += `<div style="font-size:13px;margin-top:4px;opacity:.9">${msg.caption}</div>`;
+  } else if (msg.type === 'audio') {
+    content = `<audio src="${msg.media}" controls style="max-width:220px"></audio>`;
+  } else {
+    content = `<div style="font-size:14px">📎 ${msg.fileName||'Файл'}</div>`;
+  }
+
+  div.innerHTML = `<div style="max-width:78%;background:var(--ac);color:#fff;border-radius:16px 16px 4px 16px;padding:10px 12px;position:relative" oncontextmenu="showFavCtx(event,'${msg.id}','${(msg.text||'').replace(/'/g,"\\'").replace(/\n/g,' ')}');return false">
+    ${content}
+    <div style="font-size:11px;color:rgba(255,255,255,.7);text-align:right;margin-top:3px">${t}</div>
+  </div>`;
+  el.appendChild(div);
+};
+
+// ── Fix favorites swipe - limit delete button width to item width ─────────────
+// Уже исправлено в initFavoritesSwipe через overflow:hidden на favoritesItem
+
+// ── Full translation system ───────────────────────────────────────────────────
+// Расширяем TRANS для полного покрытия интерфейса
+const TRANS_EXTRA = {
+  en: {
+    'Заметка...':'Note...', 'Голосовое...':'Voice note...',
+    'В архив':'Archive', 'Удалить':'Delete', 'Вернуть':'Restore',
+    'Закрепить':'Pin', 'Открепить':'Unpin',
+    'Добавить в папку':'Add to folder',
+    'Ежедневные бонусы':'Daily bonuses',
+    'Забрать':'Claim', 'Следующий бонус через:':'Next bonus in:',
+    'Серия:':'Streak:', 'день':'day', 'дня':'days', 'дней':'days',
+    'Получено':'Received', 'Бонус зачислен на кошелёк!':'Bonus added to wallet!',
+    'Назад':'Back', 'Кошелёк':'Wallet',
+    'История':'History', 'Баланс':'Balance', 'Перевести':'Send',
+    'Сохраняй сообщения здесь':'Save messages here',
+    'Пересылай сюда важные сообщения,':'Forward important messages,',
+    'Выбери чат':'Select a chat', 'Нет чатов. Найди кого-то!':'No chats. Find someone!',
+    'Моя история':'My Story', 'Добавить подпись...':'Add a caption...',
+    'Обрезать':'Crop', 'Оригинал':'Original', 'Яркий':'Vivid', 'Светло':'Bright',
+    'Размыть':'Blur', 'Контраст':'Contrast', 'Сепия':'Sepia',
+    'В сети':'Online', 'не в сети':'offline',
+    'Выйти':'Log out', 'Изм.':'Edit',
+    'Отправлено':'Sent','Получено':'Received',
+  }
+};
+
+// Объединяем переводы при старте языка
+const _origSetLanguage = setLanguage;
+window.setLanguage = function(code) {
+  _origSetLanguage(code);
+  applyLanguageExtra(code);
+};
+
+function applyLanguageExtra(code) {
+  const t = {...(TRANS[code]||{}), ...(TRANS_EXTRA[code]||{})};
+  if (!Object.keys(t).length) return;
+  // Подпись к медиа
+  const mc = document.getElementById('meCaption');
+  if (mc && t['Добавить подпись...']) mc.placeholder = t['Добавить подпись...'];
+  // Заметка в избранном
+  const fi = document.getElementById('favInp');
+  if (fi && t['Заметка...']) fi.placeholder = t['Заметка...'];
+  // No chat
+  const nc = document.querySelector('.no-chat .title');
+  if (nc && t['Выбери чат']) nc.textContent = t['Выбери чат'];
+  const ns = document.querySelector('.no-chat .sub');
+  if (ns && t['Нет чатов. Найди кого-то!']) ns.textContent = t['Нет чатов. Найди кого-то!'];
+}
+
+// Применяем при старте если язык сохранён
+if (currentLang && currentLang !== 'ru') {
+  applyLanguage(currentLang);
+  applyLanguageExtra(currentLang);
+}
+
 const _bonusStyle = document.createElement('style');
 _bonusStyle.textContent = `
 @keyframes bonusPulse{0%,100%{box-shadow:0 0 0 0 rgba(26,188,156,.5)}50%{box-shadow:0 0 0 12px rgba(26,188,156,0)}}
@@ -8502,6 +8813,58 @@ connect();
     <div style="background:var(--sb);border-radius:14px;margin:0 16px;overflow:hidden" id="languageList"></div>
   </div>
 </div>
+
+<!-- ── Media Editor ─────────────────────────────────────────────────── -->
+<div id="mediaEditor" style="position:fixed;inset:0;z-index:900;background:#000;display:none;flex-direction:column">
+  <!-- Header -->
+  <div style="display:flex;align-items:center;padding:12px 16px;flex-shrink:0;background:rgba(0,0,0,.8)">
+    <button onclick="closeMediaEditor()" style="border:none;background:rgba(255,255,255,.15);color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    <div style="flex:1;text-align:center;color:#fff;font-size:15px;font-weight:600" id="meCounter">1 из 1</div>
+    <button onclick="addMoreMedia()" style="border:none;background:rgba(255,255,255,.15);color:#fff;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer">+ Ещё</button>
+  </div>
+
+  <!-- Preview area -->
+  <div style="flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
+    <!-- Canvas for editing -->
+    <canvas id="meCanvas" style="max-width:100%;max-height:100%;object-fit:contain;display:none"></canvas>
+    <img id="meImg" style="max-width:100%;max-height:100%;object-fit:contain;display:none">
+    <video id="meVideo" style="max-width:100%;max-height:100%;object-fit:contain;display:none" controls playsinline muted></video>
+
+    <!-- Navigation arrows -->
+    <button id="mePrev" onclick="meNavigate(-1)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);border:none;background:rgba(0,0,0,.5);color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:none">‹</button>
+    <button id="meNext" onclick="meNavigate(1)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:rgba(0,0,0,.5);color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:none">›</button>
+  </div>
+
+  <!-- Thumbnails strip (multi-select) -->
+  <div id="meThumbs" style="display:flex;gap:6px;padding:8px 12px;overflow-x:auto;flex-shrink:0;scrollbar-width:none;min-height:70px;background:rgba(0,0,0,.6)"></div>
+
+  <!-- Edit tools (images only) -->
+  <div id="meTools" style="display:flex;gap:6px;padding:6px 12px;overflow-x:auto;flex-shrink:0;background:rgba(0,0,0,.7);scrollbar-width:none">
+    <button class="me-tool" onclick="meCrop()">✂️ Обрезать</button>
+    <button class="me-tool" onclick="meFilter('none')">🌅 Оригинал</button>
+    <button class="me-tool" onclick="meFilter('grayscale(100%)')">⬛ Ч/Б</button>
+    <button class="me-tool" onclick="meFilter('sepia(100%)')">🟤 Сепия</button>
+    <button class="me-tool" onclick="meFilter('saturate(200%)')">🌈 Яркий</button>
+    <button class="me-tool" onclick="meFilter('brightness(1.3)')">☀️ Светло</button>
+    <button class="me-tool" onclick="meFilter('contrast(1.4)')">🔲 Контраст</button>
+    <button class="me-tool" onclick="meFilter('blur(2px)')">🌫 Размыть</button>
+  </div>
+
+  <!-- Caption + Send -->
+  <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(0,0,0,.8);flex-shrink:0">
+    <input id="meCaption" placeholder="Добавить подпись..." style="flex:1;background:rgba(255,255,255,.12);border:none;border-radius:22px;padding:10px 16px;color:#fff;font-family:var(--font);font-size:15px;outline:none">
+    <button onclick="mediaSendAll()" style="border:none;background:var(--ac);color:#fff;width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 16px rgba(26,188,156,.4)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    </button>
+  </div>
+</div>
+
+<style>
+.me-tool{flex-shrink:0;border:none;background:rgba(255,255,255,.12);color:#fff;border-radius:20px;padding:6px 12px;font-family:var(--font);font-size:13px;cursor:pointer;white-space:nowrap}
+.me-tool:active{background:rgba(255,255,255,.25)}
+.me-thumb{width:54px;height:54px;border-radius:8px;object-fit:cover;cursor:pointer;flex-shrink:0;border:2px solid transparent;opacity:.7;transition:.15s}
+.me-thumb.active{border-color:var(--ac);opacity:1}
+</style>
 
 </body>
 </html>
