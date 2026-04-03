@@ -1440,7 +1440,10 @@ body.dark .smart-reply-btn{background:rgba(26,188,156,.08)}
 <!-- Lightbox -->
 <div id="lightbox" onclick="closeLightbox()">
   <button class="close" onclick="closeLightbox()">×</button>
-  <img id="lightboxImg" src="" alt="">
+  <button onclick="event.stopPropagation();lbNav(-1)" id="lbPrev" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:22px;cursor:pointer;display:none">‹</button>
+  <img id="lightboxImg" src="" alt="" onclick="event.stopPropagation()">
+  <button onclick="event.stopPropagation();lbNav(1)" id="lbNext" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:22px;cursor:pointer;display:none">›</button>
+  <div id="lbCounter" style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.7);font-size:14px;display:none"></div>
 </div>
 
 <!-- Toast -->
@@ -2276,6 +2279,8 @@ function handle(d) {
     case 'story_new':      onStoryNew(d);     break;
     case 'story_media':    onStoryMedia(d);   break;
     case 'story_views':    onStoryViews(d);   break;
+    // Typing
+    case 'typing':         onTyping(d);       break;
   }
 }
 
@@ -3025,6 +3030,8 @@ function savePinned() { localStorage.setItem('sup_pinned', JSON.stringify([...pi
 function renderChatList(chats) {
   const list = document.getElementById('chatsList');
   list.innerHTML = '';
+  // Всегда обновляем архив
+  updateArchiveBlock();
   if (!chats || !chats.length) {
     list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--txt2);font-size:14px">Нет чатов. Найди кого-то!</div>';
     return;
@@ -3430,11 +3437,10 @@ function onHistory(d) {
 }
 
 function markTicksRead() {
-  // Обновляем все серые галочки на двойные белые (как в Telegram)
   document.querySelectorAll('.msg-tick').forEach(tick => {
-    tick.innerHTML = `<svg width="16" height="11" viewBox="0 0 16 11" fill="none">
-      <path d="M1 5.5L5 9.5L11 2" stroke="rgba(255,255,255,0.85)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M5.5 9.5L11.5 2.5L15 2" stroke="rgba(255,255,255,0.85)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    tick.innerHTML = `<svg width="17" height="11" viewBox="0 0 17 11" fill="none">
+      <path d="M1 5.5L4.8 9.5L10.5 2" stroke="var(--ac)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M6 9.5L11.5 2.5L16 2" stroke="var(--ac)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`;
   });
 }
@@ -3685,7 +3691,12 @@ function mkBubble(m) {
   if (mtype === 'image' && m.url) {
     const img = document.createElement('img');
     img.className = 'msg-img'; img.src = m.url;
-    img.onclick = () => { document.getElementById('lightboxImg').src=m.url; document.getElementById('lightbox').classList.add('show'); };
+    img.onclick = () => {
+      // Собираем все фото из текущего чата для листания
+      const allImgs = Array.from(document.querySelectorAll('.msg-img')).map(i => i.src);
+      const idx = allImgs.indexOf(m.url);
+      openLightbox(allImgs, Math.max(0, idx));
+    };
     bubble.appendChild(img);
   } else if (mtype === 'video' && m.url) {
     const vid = document.createElement('video');
@@ -3747,20 +3758,20 @@ function mkBubble(m) {
   meta.className = 'msg-time';
   if (m.edited) { const em=document.createElement('span');em.className='edited-mark';em.textContent='изм. ';meta.appendChild(em); }
   meta.appendChild(document.createTextNode(m.tstr || formatTime(m.time)));
-    // Галочки для исходящих — точно как в Telegram
+    // Галочки — точно как в Telegram
   if (isOut) {
     const tick = document.createElement('span');
     tick.className = 'msg-tick';
     tick.id = 'tick_' + m.id;
     tick.innerHTML = m.read
-      // Две белые галочки = прочитано (как в Telegram)
-      ? `<svg width="16" height="11" viewBox="0 0 16 11" fill="none">
-           <path d="M1 5.5L5 9.5L11 2" stroke="rgba(255,255,255,0.85)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-           <path d="M5.5 9.5L11.5 2.5L15 2" stroke="rgba(255,255,255,0.85)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      // Прочитано: две галочки цвета бренда
+      ? `<svg width="17" height="11" viewBox="0 0 17 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+           <path d="M1 5.5L4.8 9.5L10.5 2" stroke="var(--ac)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+           <path d="M6 9.5L11.5 2.5L16 2" stroke="var(--ac)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
          </svg>`
-      // Одна серая = отправлено, не прочитано
-      : `<svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-           <path d="M1 5.5L4.5 9L10 2" stroke="rgba(255,255,255,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      // Не прочитано: одна серая галочка
+      : `<svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+           <path d="M1 5.5L4.5 9L10 2" stroke="#aaaaaa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
          </svg>`;
     meta.appendChild(tick);
   }
@@ -7466,16 +7477,64 @@ function meCrop() { toast('Зажми и потяни для обрезки (с�
 
 async function mediaSendAll() {
   const caption = document.getElementById('meCaption').value.trim();
-  const filesToSend = [...meFiles]; // копия до закрытия
+  const filesToSend = [...meFiles];
   const target = meTarget;
   closeMediaEditor();
-  for (const file of filesToSend) {
-    if (target === 'fav') {
-      await _sendFavMediaFile(file, caption);
+
+  if (target === 'fav') {
+    // В избранное — каждый файл отдельно с общей подписью на последнем
+    for (let i = 0; i < filesToSend.length; i++) {
+      await _sendFavMediaFile(filesToSend[i], i === filesToSend.length - 1 ? caption : '');
+    }
+    return;
+  }
+
+  // В чат — изображения группируем как альбом
+  if (!activeChat) return;
+  const imgs = filesToSend.filter(f => f.type.startsWith('image/'));
+  const others = filesToSend.filter(f => !f.type.startsWith('image/'));
+
+  // Отправляем изображения как альбом
+  if (imgs.length > 0) {
+    if (imgs.length === 1) {
+      await _sendChatMediaFile(imgs[0], caption);
     } else {
-      await _sendChatMediaFile(file, caption);
+      // Создаём превью-альбом локально
+      const albumId = 'album_' + Date.now();
+      const urls = imgs.map(f => URL.createObjectURL(f));
+      appendAlbumBubble(urls, caption, albumId);
+      document.getElementById('messages').scrollTop = 9999999;
+      // Загружаем и отправляем каждое фото
+      const uploadedUrls = [];
+      for (const img of imgs) {
+        const url = await uploadMedia(img);
+        if (url) uploadedUrls.push(url);
+      }
+      // Удаляем локальный превью
+      document.getElementById(albumId)?.remove();
+      // Отправляем как отдельные сообщения — первое с подписью
+      for (let i = 0; i < uploadedUrls.length; i++) {
+        const base = { cmd:'send_msg', mtype:'image', url:uploadedUrls[i], filename:`photo_${i+1}.jpg`, text: i === uploadedUrls.length-1 ? caption : '' };
+        if (activeType === 'group') cmd({...base, gid:activeChat});
+        else cmd({...base, to:activeChat});
+      }
     }
   }
+
+  // Остальные файлы — по одному
+  for (const f of others) {
+    await _sendChatMediaFile(f, caption);
+  }
+}
+
+function appendAlbumBubble(urls, caption, albumId) {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg out';
+  wrap.id = albumId;
+  const cols = urls.length <= 2 ? urls.length : urls.length <= 4 ? 2 : 3;
+  const grid = urls.map(u => `<img src="${u}" style="width:${cols===1?'200':cols===2?'120':'80'}px;height:${cols===1?'160':cols===2?'120':'80'}px;object-fit:cover;border-radius:6px">`).join('');
+  wrap.innerHTML = `<div class="contentWrap"><div class="bubble" style="padding:6px;background:var(--out)"><div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:3px">${grid}</div>${caption?`<div class="bubble-text" style="padding:4px 4px 0;font-size:14px">${caption}</div>`:''}</div></div>`;
+  document.getElementById('messages')?.appendChild(wrap);
 }
 
 async function _sendChatMediaFile(file, caption) {
@@ -7562,14 +7621,7 @@ async function startFavRec() {
 
 // ── Lightbox for fav images ───────────────────────────────────────────────────
 function openFavImgLightbox(src) {
-  const lb = document.getElementById('lightbox') || (() => {
-    const d = document.createElement('div');
-    d.id = 'lightbox'; d.style.cssText = 'position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.95);display:flex;align-items:center;justify-content:center';
-    d.onclick = () => d.style.display = 'none';
-    document.body.appendChild(d); return d;
-  })();
-  lb.innerHTML = `<img src="${src}" style="max-width:95vw;max-height:90vh;object-fit:contain;border-radius:8px">`;
-  lb.style.display = 'flex';
+  openLightbox([src], 0);
 }
 
 // ── Fix favorites swipe width ─────────────────────────────────────────────────
@@ -8545,6 +8597,52 @@ function positionMenu(menu, e) {
 
 function closeLightbox() {
   document.getElementById('lightbox').classList.remove('show');
+  window._lbImages = [];
+  window._lbIndex = 0;
+}
+
+let _lbTouchStartX = 0;
+document.addEventListener('DOMContentLoaded', () => {
+  const lb = document.getElementById('lightbox');
+  if (!lb) return;
+  lb.addEventListener('touchstart', e => { _lbTouchStartX = e.touches[0].clientX; }, {passive:true});
+  lb.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - _lbTouchStartX;
+    if (Math.abs(dx) > 50) lbNav(dx < 0 ? 1 : -1);
+  }, {passive:true});
+});
+
+function openLightbox(urls, startIndex) {
+  window._lbImages = Array.isArray(urls) ? urls : [urls];
+  window._lbIndex  = startIndex || 0;
+  lbShow();
+  document.getElementById('lightbox').classList.add('show');
+}
+
+function lbShow() {
+  const urls = window._lbImages || [];
+  const idx  = window._lbIndex || 0;
+  const img = document.getElementById('lightboxImg');
+  if (img) img.src = urls[idx] || '';
+  const prev = document.getElementById('lbPrev');
+  const next = document.getElementById('lbNext');
+  const ctr  = document.getElementById('lbCounter');
+  if (prev) prev.style.display = (urls.length > 1 && idx > 0) ? 'flex' : 'none';
+  if (next) next.style.display = (urls.length > 1 && idx < urls.length-1) ? 'flex' : 'none';
+  if (ctr)  { ctr.style.display = urls.length > 1 ? 'block' : 'none'; ctr.textContent = `${idx+1} / ${urls.length}`; }
+}
+
+function lbNav(dir) {
+  const urls = window._lbImages || [];
+  const newIdx = Math.max(0, Math.min(urls.length-1, (window._lbIndex||0) + dir));
+  window._lbIndex = newIdx;
+  const img = document.getElementById('lightboxImg');
+  if (img) {
+    img.style.opacity = '0';
+    img.style.transition = 'opacity .15s';
+    setTimeout(() => { img.src = urls[newIdx]; img.style.opacity = '1'; }, 150);
+  }
+  lbShow();
 }
 
 // ── Avatar color ─────────────────────────────────────────────────────────────
