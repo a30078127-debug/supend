@@ -364,8 +364,10 @@ body.dark #themeScheduleModal input#scheduleCity::placeholder{color:#636366}
 .bubble.voice-outer{padding:12px 14px}
 .out .bubble{background:var(--out);color:var(--out-t);border-bottom-right-radius:4px}
 .in .bubble{background:var(--in);color:var(--in-t);border-bottom-left-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
-.msg-time{font-size:11px;margin-top:3px;padding:0 4px}
-.out .msg-time{color:rgba(255,255,255,.65);text-align:right}
+.msg-time{font-size:11px;margin-top:3px;padding:0 4px;display:flex;align-items:center;gap:2px}
+.msg-tick{display:inline-flex;align-items:center;margin-left:2px;flex-shrink:0}
+.msg-tick{display:inline-flex;align-items:center;margin-left:2px;flex-shrink:0}
+.out .msg-time{color:rgba(255,255,255,.65);text-align:right;justify-content:flex-end}
 .in .msg-time{color:var(--txt2)}
 .edited-mark{font-size:10px;opacity:.7;margin-left:4px}
 .msg-sender{font-size:11px;font-weight:700;color:var(--ac);margin-bottom:3px;padding:0 2px}
@@ -435,7 +437,12 @@ body.dark #themeScheduleModal input#scheduleCity::placeholder{color:#636366}
 .msg-textarea:focus{border-color:var(--ac);background:#fff}
 .send-btn{width:42px;height:42px;border:none;border-radius:50%;background:var(--ac);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:.15s;box-shadow:0 2px 8px rgba(26,188,156,.3)}
 /* Smart replies */
-#smartReplies::-webkit-scrollbar{display:none}
+.typing-dots{display:inline-flex;gap:1px;align-items:flex-end;margin-left:1px}
+.typing-dots span{width:3px;height:3px;border-radius:50%;background:var(--ac);display:inline-block;animation:typingBounce 1.2s infinite ease-in-out}
+.typing-dots span:nth-child(1){animation-delay:0s}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+@keyframes typingBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
 .smart-reply-btn{flex-shrink:0;padding:7px 14px;border:1.5px solid var(--ac);border-radius:18px;background:transparent;color:var(--ac);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:.12s}
 .smart-reply-btn:active{background:var(--ac-l)}
 body.dark .smart-reply-btn{background:rgba(26,188,156,.08)}
@@ -1395,7 +1402,7 @@ body.dark .smart-reply-btn{background:rgba(26,188,156,.08)}
             </button>
           </div>
           <textarea class="msg-textarea" id="msgInp" placeholder="Сообщение..." rows="1"
-            oninput="autoH(this)" onkeydown="inpKey(event)"></textarea>
+            oninput="autoH(this);sendTyping()" onkeydown="inpKey(event)"></textarea>
           <button class="send-btn" onclick="sendMsg()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
           </button>
@@ -2365,7 +2372,7 @@ function onAuthOk(d) {
     cmd({ cmd:'get_chats' });
     applyStoredCustom();
     setTimeout(askNotifPermission, 2000);
-    setTimeout(initPinnedItems, 300);
+    setTimeout(initPinnedItems, 100);
     if (d.inv_bonus && d.inv_bonus > 0) {
       addTx('Бонус за код приглашения', +d.inv_bonus, '🎁');
       toast(`+${d.inv_bonus} SUP за код приглашения! 🎁`);
@@ -3381,7 +3388,6 @@ function closeChat() {
 // ── History ────────────────────────────────────────────────────────────────
 function onHistory(d) {
   const msgs = document.getElementById('messages');
-  // Clear local_ bubbles
   msgs.querySelectorAll('[id^="msg_local_"]').forEach(e => e.remove());
   const existingIds = new Set([...msgs.querySelectorAll('.msg-wrap')].map(e => e.dataset.msgId));
   const isRightChat = d.gid ? (activeChat === d.gid) : (activeChat === d.with);
@@ -3391,6 +3397,15 @@ function onHistory(d) {
     if (!existingIds.has(m.id)) { appendBubble(m); added++; }
   });
   if (added > 0) msgs.scrollTop = msgs.scrollHeight;
+  // Если мы читаем чат — помечаем все исходящие как прочитанные
+  if (!d.gid) markTicksRead();
+}
+
+function markTicksRead() {
+  // Обновляем все серые галочки на зелёные двойные
+  document.querySelectorAll('.msg-tick').forEach(tick => {
+    tick.innerHTML = `<svg width="16" height="11" viewBox="0 0 16 11" fill="none"><path d="M1 5.5L4.5 9L8 5.5" stroke="var(--ac)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 5.5L8.5 9L15 2" stroke="var(--ac)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  });
 }
 
 // ── Messages ───────────────────────────────────────────────────────────────
@@ -3477,6 +3492,38 @@ function onProfileUpdate(d) {
     chatsData[d.username].avatar = d.avatar;
     chatsData[d.username].bio = d.bio;
   }
+}
+
+// ── Typing indicator ──────────────────────────────────────────────────────────
+let typingTimer = null;
+let isTypingSent = false;
+
+function sendTyping() {
+  if (!activeChat || activeType !== 'peer') return;
+  if (!isTypingSent) {
+    cmd({ cmd: 'typing', to: activeChat });
+    isTypingSent = true;
+  }
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(() => { isTypingSent = false; }, 3000);
+}
+
+function onTyping(d) {
+  if (d.from !== activeChat || activeType !== 'peer') return;
+  const st = document.getElementById('headStatus');
+  if (!st) return;
+  st.innerHTML = '<span style="color:var(--ac);font-weight:600">печатает</span><span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>';
+  st.className = 'head-status on';
+  clearTimeout(window._typingClear);
+  window._typingClear = setTimeout(() => {
+    const cd = chatsData[activeChat];
+    if (cd) {
+      st.innerHTML = '';
+      st.textContent = cd.online ? '● онлайн · зашифровано' : '○ не в сети';
+      st.style.color = '';
+      st.className = 'head-status ' + (cd.online ? 'on' : 'off');
+    }
+  }, 3000);
 }
 
 function onUserOnline(username, isOnline) {
@@ -3664,11 +3711,28 @@ function mkBubble(m) {
     bubble.appendChild(span);
   }
 
-  // Time + edited
+  // Time + edited + read status (for outgoing)
   const meta = document.createElement('div');
   meta.className = 'msg-time';
   if (m.edited) { const em=document.createElement('span');em.className='edited-mark';em.textContent='изм. ';meta.appendChild(em); }
   meta.appendChild(document.createTextNode(m.tstr || formatTime(m.time)));
+    // Галочки для исходящих
+  if (isOut) {
+    const tick = document.createElement('span');
+    tick.className = 'msg-tick';
+    tick.id = 'tick_' + m.id;
+    tick.innerHTML = m.read
+      // Две цветные галочки = прочитано
+      ? `<svg width="18" height="12" viewBox="0 0 18 12" fill="none">
+           <path d="M1 6L4.5 9.5L9 4" stroke="rgba(255,255,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+           <path d="M6 6L9.5 9.5L17 2" stroke="rgba(255,255,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+         </svg>`
+      // Одна серая = отправлено, не прочитано
+      : `<svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+           <path d="M1.5 5.5L4.5 8.5L9.5 2" stroke="rgba(255,255,255,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+         </svg>`;
+    meta.appendChild(tick);
+  }
 
   contentWrap.appendChild(bubble);
   contentWrap.appendChild(meta);
@@ -6728,106 +6792,136 @@ function initPinnedItems() {
 
 function initFavoritesSwipe() {
   const favItem = document.getElementById('favoritesItem');
-  if (!favItem) return;
+  if (!favItem || favItem._swipeInited) return;
+  favItem._swipeInited = true;
+  favItem.style.position = 'relative';
+  favItem.style.overflow = 'hidden';
 
-  // Long-press → закрепить / в папку
-  let pressTimer = null;
-  favItem.addEventListener('touchstart', () => {
-    pressTimer = setTimeout(() => showFavLongPress(), 500);
-  }, {passive:true});
-  favItem.addEventListener('touchend', () => clearTimeout(pressTimer), {passive:true});
-  favItem.addEventListener('touchmove', () => clearTimeout(pressTimer), {passive:true});
-  favItem.addEventListener('contextmenu', e => { e.preventDefault(); showFavLongPress(); });
+  // Кнопка удалить (скрыта за правым краем)
+  const delBtn = document.createElement('div');
+  delBtn.style.cssText = 'position:absolute;right:0;top:0;bottom:0;width:0;background:#e74c3c;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#fff;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;overflow:hidden;transition:width .2s';
+  delBtn.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Удалить';
+  delBtn.onclick = () => deleteFavoritesFull();
+  favItem.appendChild(delBtn);
 
-  // Свайп влево → показать кнопку Удалить
-  let sx = 0, sy = 0, isH = null, dragging = false, off = 0;
+  // Внутренний контейнер для сдвига
+  const inner = document.createElement('div');
+  inner.style.cssText = 'display:contents';
+  // Переносим дочерние элементы (кроме delBtn) в inner
+  const children = Array.from(favItem.children).filter(c => c !== delBtn);
+  children.forEach(c => inner.appendChild(c));
+  favItem.insertBefore(inner, delBtn);
+
+  // Создаём обёртку со сдвигом
+  const mover = document.createElement('div');
+  mover.style.cssText = 'display:flex;align-items:center;gap:14px;padding:12px 16px;cursor:pointer;background:var(--sb);position:relative;z-index:1;transition:transform .25s cubic-bezier(.4,0,.2,1);width:100%';
+  Array.from(inner.children).forEach(c => mover.appendChild(c));
+  inner.appendChild(mover);
+
+  mover.onclick = () => { if (Math.abs(curOff) < 8) openFavorites(); };
+
   const PEEK = 80;
+  let sx = 0, dragging = false, isH = null, curOff = 0;
 
-  favItem.addEventListener('touchstart', e => {
-    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
-    dragging = true; isH = null;
-    favItem.style.transition = 'none';
+  mover.addEventListener('touchstart', e => {
+    sx = e.touches[0].clientX; dragging = true; isH = null;
+    mover.style.transition = 'none'; delBtn.style.transition = 'none';
   }, {passive:true});
 
-  favItem.addEventListener('touchmove', e => {
+  mover.addEventListener('touchmove', e => {
     if (!dragging) return;
     const dx = e.touches[0].clientX - sx;
-    const dy = e.touches[0].clientY - sy;
-    if (isH === null) {
-      if (Math.abs(dx) > Math.abs(dy) + 3) isH = true;
-      else if (Math.abs(dy) > Math.abs(dx) + 3) isH = false;
-      else return;
-    }
+    const dy = e.touches[0].clientY - (e.touches[0].clientY - 0);
+    if (isH === null) { isH = Math.abs(dx) > 5 ? true : null; if (!isH) return; }
     if (!isH) return;
-    const newOff = Math.max(-PEEK - 10, Math.min(0, dx));
-    favItem.style.transform = `translateX(${newOff}px)`;
-    // Показываем кнопку удалить
-    let btn = document.getElementById('favDeleteBtn');
-    if (!btn) {
-      btn = document.createElement('button');
-      btn.id = 'favDeleteBtn';
-      btn.style.cssText = 'position:absolute;right:0;top:0;bottom:0;width:80px;background:#e74c3c;border:none;color:#fff;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px';
-      btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Удалить`;
-      btn.onclick = () => {
-        favoriteMessages = [];
-        saveFavMsgs();
-        const lm = document.getElementById('favLastMsg');
-        const lt = document.getElementById('favLastTime');
-        if (lm) lm.textContent = 'Сохраняй сообщения здесь';
-        if (lt) lt.textContent = '';
-        resetFavSwipe();
-        toast('Избранное очищено');
-      };
-      favItem.style.position = 'relative';
-      favItem.style.overflow = 'hidden';
-      favItem.appendChild(btn);
-    }
-    off = newOff;
+    const newOff = Math.min(0, Math.max(-(window.innerWidth), curOff + dx));
+    mover.style.transform = `translateX(${newOff}px)`;
+    delBtn.style.width = Math.min(window.innerWidth, Math.max(0, -newOff)) + 'px';
+    delBtn.style.transition = 'none';
   }, {passive:true});
 
-  function resetFavSwipe() {
-    favItem.style.transition = 'transform .25s';
-    favItem.style.transform = 'translateX(0)';
-    off = 0;
-  }
-
-  favItem.addEventListener('touchend', () => {
-    if (!dragging || isH === false) { dragging = false; return; }
-    dragging = false;
-    if (off < -40) {
-      favItem.style.transition = 'transform .25s';
-      favItem.style.transform = `translateX(-${PEEK}px)`;
-      // Закрываем по клику вне
-      setTimeout(() => document.addEventListener('click', resetFavSwipe, {once:true}), 50);
+  mover.addEventListener('touchend', e => {
+    if (!dragging) return; dragging = false;
+    const finalX = parseFloat(mover.style.transform.replace(/[^\d.-]/g,'') || '0') * -1;
+    mover.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1)';
+    delBtn.style.transition = 'width .25s cubic-bezier(.4,0,.2,1)';
+    if (finalX > window.innerWidth * 0.4) {
+      deleteFavoritesFull();
+    } else if (finalX > 30) {
+      mover.style.transform = `translateX(-${PEEK}px)`;
+      delBtn.style.width = PEEK + 'px';
+      curOff = -PEEK;
+      setTimeout(() => {
+        const close = (ev) => {
+          if (!favItem.contains(ev.target)) {
+            mover.style.transition = 'transform .25s';
+            mover.style.transform = 'translateX(0)';
+            delBtn.style.transition = 'width .25s';
+            delBtn.style.width = '0';
+            curOff = 0;
+            document.removeEventListener('touchstart', close);
+          }
+        };
+        document.addEventListener('touchstart', close, {passive:true});
+      }, 100);
     } else {
-      resetFavSwipe();
+      mover.style.transform = 'translateX(0)';
+      delBtn.style.width = '0';
+      curOff = 0;
     }
   }, {passive:true});
+
+  // Long-press
+  let pt = null;
+  mover.addEventListener('touchstart', () => { pt = setTimeout(showFavLongPress, 550); }, {passive:true});
+  mover.addEventListener('touchend', () => clearTimeout(pt), {passive:true});
+  mover.addEventListener('touchmove', () => clearTimeout(pt), {passive:true});
+  favItem.addEventListener('contextmenu', e => { e.preventDefault(); showFavLongPress(); });
+}
+
+function deleteFavoritesFull() {
+  favoriteMessages = [];
+  saveFavMsgs();
+  const item = document.getElementById('favoritesItem');
+  if (item) {
+    item.style.transition = 'opacity .3s, max-height .35s, padding .35s';
+    item.style.opacity = '0';
+    item.style.overflow = 'hidden';
+    item.style.maxHeight = item.offsetHeight + 'px';
+    setTimeout(() => { item.style.maxHeight = '0'; item.style.padding = '0'; }, 50);
+    setTimeout(() => { item.style.display = 'none'; }, 370);
+  }
+  toast('Избранное удалено из чатов');
 }
 
 function showFavLongPress() {
-  // Меню: закрепить + добавить в папку
-  document.querySelectorAll('.fav-lp-menu').forEach(e => e.remove());
+  document.querySelectorAll('.fav-lp-menu,.fav-lp-overlay').forEach(e => e.remove());
+
+  const overlay = document.createElement('div');
+  overlay.className = 'fav-lp-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:799;background:rgba(0,0,0,.2)';
+  document.body.appendChild(overlay);
+
   const menu = document.createElement('div');
-  menu.className = 'fav-lp-menu ctx-menu';
-  menu.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:800;background:var(--sb);border-radius:14px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.2);min-width:200px';
+  menu.className = 'fav-lp-menu';
+  menu.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:800;background:var(--sb);border-radius:16px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.25);min-width:220px;animation:ctxFadeIn .15s ease-out';
 
   const isPinned = pinnedChats && pinnedChats.has('__favorites__');
   menu.innerHTML = `
-    <div class="ctx-item" onclick="toggleFavPin();this.closest('.fav-lp-menu').remove()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/></svg>
-      ${isPinned ? 'Открепить' : 'Закрепить'}
+    <div style="padding:12px 16px;border-bottom:1px solid var(--brd)">
+      <div style="font-size:13px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px">Избранное</div>
+    </div>
+    <div class="ctx-item" onclick="toggleFavPin();document.querySelectorAll('.fav-lp-menu,.fav-lp-overlay').forEach(e=>e.remove())">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="margin-right:10px;flex-shrink:0"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/></svg>
+      <span>${isPinned ? 'Открепить' : 'Закрепить'}</span>
     </div>
     <div class="ctx-sep"></div>
-    <div class="ctx-item" onclick="showAddFavToFolder();this.closest('.fav-lp-menu').remove()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-      Добавить в папку
+    <div class="ctx-item" onclick="showAddFavToFolder();document.querySelectorAll('.fav-lp-menu,.fav-lp-overlay').forEach(e=>e.remove())">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="margin-right:10px;flex-shrink:0"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <span>Добавить в папку</span>
     </div>`;
   document.body.appendChild(menu);
-  const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:799';
   overlay.onclick = () => { menu.remove(); overlay.remove(); };
-  document.body.appendChild(overlay);
 }
 
 function toggleFavPin() {
