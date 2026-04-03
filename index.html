@@ -735,24 +735,9 @@ body.dark .smart-reply-btn{background:rgba(26,188,156,.08)}
     <div id="tabChats" class="tab-content">
       <!-- Pinned: Favorites + Archive (always on top) -->
       <div id="pinnedItems">
-        <!-- Favorites - always shown -->
-        <div class="pinned-item" id="favoritesItem" onclick="openFavorites()">
-          <div class="pinned-av" style="background:var(--ac)">
-            <!-- Telegram-style bookmark icon -->
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="white" stroke="none">
-              <path d="M5 3a2 2 0 0 0-2 2v16l7-3 7 3V5a2 2 0 0 0-2-2H5z"/>
-            </svg>
-          </div>
-          <div style="flex:1;min-width:0">
-            <div class="pinned-name">Избранное</div>
-            <div class="pinned-sub" id="favLastMsg" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Сохраняй сообщения здесь</div>
-          </div>
-          <div style="font-size:12px;color:var(--txt2);flex-shrink:0" id="favLastTime"></div>
-        </div>
-        <!-- Archive - shown only when has chats -->
+        <!-- Archive - always on top, shown when has chats -->
         <div class="pinned-item" id="archiveItem" onclick="openArchive()" style="display:none">
           <div class="pinned-av" style="background:var(--ac)">
-            <!-- Telegram-style archive box icon -->
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 8v13H3V8"/>
               <path d="M1 3h22v5H1z" fill="white" stroke="none"/>
@@ -764,6 +749,17 @@ body.dark .smart-reply-btn{background:rgba(26,188,156,.08)}
             <div class="pinned-sub" id="archiveCount">0 чатов</div>
           </div>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <!-- Favorites -->
+        <div class="pinned-item" id="favoritesItem" onclick="openFavorites()">
+          <div class="pinned-av" style="background:var(--ac)">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M5 3a2 2 0 0 0-2 2v16l7-3 7 3V5a2 2 0 0 0-2-2H5z"/></svg>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div class="pinned-name">Избранное</div>
+            <div class="pinned-sub" id="favLastMsg" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Сохраняй сообщения здесь</div>
+          </div>
+          <div style="font-size:12px;color:var(--txt2);flex-shrink:0" id="favLastTime"></div>
         </div>
       </div>
       <div class="chats-list" id="chatsList"></div>
@@ -2206,6 +2202,9 @@ let searchResult = null;
 let viewingPeer = null;
 let activeGroupId = null;
 let authMode = 'login';
+// Archived & Favorites — объявляем рано чтобы renderChatList мог использовать
+let archivedChats = JSON.parse(localStorage.getItem('sup_archived') || '[]');
+let favoriteMessages = JSON.parse(localStorage.getItem('sup_favorites') || '[]');
 
 // ── WebSocket ──────────────────────────────────────────────────────────────
 let isLoggedIn = false;
@@ -3468,14 +3467,17 @@ function onHistory(d) {
 
 function markTicksRead() {
   document.querySelectorAll('.msg-tick').forEach(tick => {
-    tick.innerHTML = `<svg width="17" height="11" viewBox="0 0 17 11" fill="none">
-      <path d="M1 5.5L4.8 9.5L10.5 2" stroke="var(--ac)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M6 9.5L11.5 2.5L16 2" stroke="var(--ac)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    tick.innerHTML = `<svg width="15" height="11" viewBox="0 0 15 11" fill="none">
+      <path d="M0.5 5.5L3.5 8.5L8 3" stroke="var(--ac)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M4.5 8.5L7.5 5.5L14 0.5" stroke="var(--ac)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`;
   });
 }
 
 // ── Messages ───────────────────────────────────────────────────────────────
+// Album buffer: group photos with same album_id
+const _albumBuffer = {};
+
 function onMessage(d) {
   const other = (d.from === me ? d.to : d.from);
   const isActive = activeChat === other && activeType === 'peer';
@@ -3487,12 +3489,27 @@ function onMessage(d) {
   }
 
   if (isActive) {
-    appendBubble(d);
+    // Группировка альбома
+    if (d.album_id && d.album_total > 1) {
+      if (!_albumBuffer[d.album_id]) _albumBuffer[d.album_id] = [];
+      _albumBuffer[d.album_id].push(d);
+      if (_albumBuffer[d.album_id].length >= d.album_total) {
+        // Все фото получены — рендерим как альбом
+        const photos = _albumBuffer[d.album_id].sort((a,b) => a.album_idx - b.album_idx);
+        const urls = photos.map(p => p.url);
+        const cap = photos[photos.length-1].text || '';
+        const albumBubbleId = 'recv_album_' + d.album_id;
+        appendAlbumBubble(urls, cap, albumBubbleId, false);
+        delete _albumBuffer[d.album_id];
+      }
+      // Без appendBubble — ждём все фото
+    } else {
+      appendBubble(d);
+    }
     document.getElementById('messages').scrollTop = 9999999;
     if (d.from !== me) {
       cmd({ cmd:'mark_read', with:d.from });
-      // Запрашиваем умные ответы для входящего сообщения
-      if (d.text && d.text.length < 300) {
+      if (d.text && d.text.length < 300 && !d.album_id) {
         requestSmartReplies(d.text);
       }
     }
@@ -3794,14 +3811,14 @@ function mkBubble(m) {
     tick.className = 'msg-tick';
     tick.id = 'tick_' + m.id;
     tick.innerHTML = m.read
-      // Прочитано: две галочки цвета бренда
-      ? `<svg width="17" height="11" viewBox="0 0 17 11" fill="none" xmlns="http://www.w3.org/2000/svg">
-           <path d="M1 5.5L4.8 9.5L10.5 2" stroke="var(--ac)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-           <path d="M6 9.5L11.5 2.5L16 2" stroke="var(--ac)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      // Прочитано: две галочки — точно как в Telegram, перекрашены в цвет бренда
+      ? `<svg width="15" height="11" viewBox="0 0 15 11" fill="none">
+           <path d="M0.5 5.5L3.5 8.5L8 3" stroke="var(--ac)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+           <path d="M4.5 8.5L7.5 5.5L14 0.5" stroke="var(--ac)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
          </svg>`
-      // Не прочитано: одна серая галочка
-      : `<svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
-           <path d="M1 5.5L4.5 9L10 2" stroke="#aaaaaa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      // Не прочитано: одна серая
+      : `<svg width="10" height="11" viewBox="0 0 10 11" fill="none">
+           <path d="M0.5 5.5L3.5 8.5L9.5 1" stroke="#aaaaaa" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
          </svg>`;
     meta.appendChild(tick);
   }
@@ -6637,8 +6654,7 @@ function resetDataSettings() {
 updateDataSummaries();
 
 // ── Archive & Favorites ───────────────────────────────────────────────────────
-let archivedChats = JSON.parse(localStorage.getItem('sup_archived') || '[]');
-let favoriteMessages = JSON.parse(localStorage.getItem('sup_favorites') || '[]');
+// (archivedChats и favoriteMessages объявлены в начале файла)
 
 function saveArchived() { localStorage.setItem('sup_archived', JSON.stringify(archivedChats)); }
 function saveFavMsgs()  { localStorage.setItem('sup_favorites', JSON.stringify(favoriteMessages)); }
@@ -7572,59 +7588,107 @@ async function mediaSendAll() {
   closeMediaEditor();
 
   if (target === 'fav') {
-    // В избранное — каждый файл отдельно с общей подписью на последнем
     for (let i = 0; i < filesToSend.length; i++) {
       await _sendFavMediaFile(filesToSend[i], i === filesToSend.length - 1 ? caption : '');
     }
     return;
   }
 
-  // В чат — изображения группируем как альбом
   if (!activeChat) return;
-  const imgs = filesToSend.filter(f => f.type.startsWith('image/'));
+
+  const imgs   = filesToSend.filter(f => f.type.startsWith('image/'));
   const others = filesToSend.filter(f => !f.type.startsWith('image/'));
 
-  // Отправляем изображения как альбом
-  if (imgs.length > 0) {
-    if (imgs.length === 1) {
-      await _sendChatMediaFile(imgs[0], caption);
-    } else {
-      // Создаём превью-альбом локально
-      const albumId = 'album_' + Date.now();
-      const urls = imgs.map(f => URL.createObjectURL(f));
-      appendAlbumBubble(urls, caption, albumId);
-      document.getElementById('messages').scrollTop = 9999999;
-      // Загружаем и отправляем каждое фото
-      const uploadedUrls = [];
-      for (const img of imgs) {
-        const url = await uploadMedia(img);
-        if (url) uploadedUrls.push(url);
-      }
-      // Удаляем локальный превью
-      document.getElementById(albumId)?.remove();
-      // Отправляем как отдельные сообщения — первое с подписью
-      for (let i = 0; i < uploadedUrls.length; i++) {
-        const base = { cmd:'send_msg', mtype:'image', url:uploadedUrls[i], filename:`photo_${i+1}.jpg`, text: i === uploadedUrls.length-1 ? caption : '' };
-        if (activeType === 'group') cmd({...base, gid:activeChat});
-        else cmd({...base, to:activeChat});
-      }
+  // Изображения — одним альбомом
+  if (imgs.length === 1) {
+    await _sendChatMediaFile(imgs[0], caption);
+  } else if (imgs.length > 1) {
+    // Показываем локальный превью-альбом
+    const blobUrls = imgs.map(f => URL.createObjectURL(f));
+    const albumId = 'album_' + Date.now();
+    appendAlbumBubble(blobUrls, caption, albumId, true);
+    document.getElementById('messages').scrollTop = 9999999;
+
+    // Загружаем все фото
+    const uploadedUrls = [];
+    for (const img of imgs) {
+      const url = await uploadMedia(img);
+      if (url) uploadedUrls.push(url);
+    }
+
+    // Убираем локальный превью
+    document.getElementById(albumId)?.remove();
+
+    if (uploadedUrls.length === 0) return;
+
+    // Отправляем как одно grouped сообщение (массив урлов в тексте через разделитель)
+    // Каждое фото — отдельная команда, но БЕЗ задержки чтобы шли пакетом
+    for (let i = 0; i < uploadedUrls.length; i++) {
+      const isLast = i === uploadedUrls.length - 1;
+      const base = {
+        cmd: 'send_msg', mtype: 'image',
+        url: uploadedUrls[i],
+        filename: `photo_${i+1}.jpg`,
+        text: isLast ? caption : '',
+        album_id: albumId, // метка группировки
+        album_idx: i,
+        album_total: uploadedUrls.length
+      };
+      if (activeType === 'group') cmd({...base, gid: activeChat});
+      else cmd({...base, to: activeChat});
     }
   }
 
-  // Остальные файлы — по одному
+  // Другие файлы
   for (const f of others) {
     await _sendChatMediaFile(f, caption);
   }
 }
 
-function appendAlbumBubble(urls, caption, albumId) {
+function appendAlbumBubble(urls, caption, albumId, isLocal) {
+  const msgsEl = document.getElementById('messages');
+  if (!msgsEl) return;
+  const n = urls.length;
+  const cols = n <= 2 ? n : n <= 4 ? 2 : 3;
+  const size = cols === 1 ? 220 : cols === 2 ? 130 : 90;
+
   const wrap = document.createElement('div');
   wrap.className = 'msg out';
   wrap.id = albumId;
-  const cols = urls.length <= 2 ? urls.length : urls.length <= 4 ? 2 : 3;
-  const grid = urls.map(u => `<img src="${u}" style="width:${cols===1?'200':cols===2?'120':'80'}px;height:${cols===1?'160':cols===2?'120':'80'}px;object-fit:cover;border-radius:6px">`).join('');
-  wrap.innerHTML = `<div class="contentWrap"><div class="bubble" style="padding:6px;background:var(--out)"><div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:3px">${grid}</div>${caption?`<div class="bubble-text" style="padding:4px 4px 0;font-size:14px">${caption}</div>`:''}</div></div>`;
-  document.getElementById('messages')?.appendChild(wrap);
+
+  const cw = document.createElement('div');
+  cw.className = 'contentWrap';
+
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  bub.style.cssText = `padding:4px;background:var(--out);cursor:pointer`;
+
+  const grid = document.createElement('div');
+  grid.style.cssText = `display:grid;grid-template-columns:repeat(${cols},${size}px);gap:2px;border-radius:14px;overflow:hidden`;
+
+  urls.forEach((url, i) => {
+    const img = document.createElement('img');
+    img.src = url;
+    img.style.cssText = `width:${size}px;height:${size}px;object-fit:cover;display:block`;
+    if (!isLocal) {
+      img.onclick = () => openLightbox(urls, i);
+    }
+    grid.appendChild(img);
+  });
+
+  bub.appendChild(grid);
+
+  if (caption) {
+    const cap = document.createElement('div');
+    cap.className = 'bubble-text';
+    cap.style.cssText = 'padding:4px 8px 2px;font-size:14px';
+    cap.textContent = caption;
+    bub.appendChild(cap);
+  }
+
+  cw.appendChild(bub);
+  wrap.appendChild(cw);
+  msgsEl.appendChild(wrap);
 }
 
 async function _sendChatMediaFile(file, caption) {
